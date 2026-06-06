@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { SearchIcon } from "@/components/icons";
 import VendorCard from "@/components/vendors/VendorCard";
-import { matchesVendorEntry } from "@/lib/search";
+import {
+  filterVendorEntries,
+  getSellerWalletsWithMatchingAuctionTitles,
+} from "@/lib/search";
 import type { VendorDirectoryEntry } from "@/lib/vendors";
 
 type FilterTab = "all" | "verified" | "top-rated" | "most-followers";
@@ -69,14 +72,39 @@ export default function VendorDirectory({
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [sort, setSort] = useState<SortOption>("followers");
+  const [titleMatchWallets, setTitleMatchWallets] = useState<Set<string>>(
+    new Set()
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTitleMatches() {
+      if (!search.trim()) {
+        setTitleMatchWallets(new Set());
+        return;
+      }
+
+      try {
+        const wallets = await getSellerWalletsWithMatchingAuctionTitles(search);
+        if (!cancelled) setTitleMatchWallets(wallets);
+      } catch {
+        if (!cancelled) setTitleMatchWallets(new Set());
+      }
+    }
+
+    loadTitleMatches();
+    return () => {
+      cancelled = true;
+    };
+  }, [search]);
 
   const filtered = useMemo(() => {
-    const result = vendors.filter(
-      (entry) =>
-        matchesVendorEntry(entry, search) && applyFilter(entry, activeTab)
+    const result = filterVendorEntries(vendors, search, titleMatchWallets).filter(
+      (entry) => applyFilter(entry, activeTab)
     );
     return sortEntries(result, sort);
-  }, [vendors, search, activeTab, sort]);
+  }, [vendors, search, titleMatchWallets, activeTab, sort]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

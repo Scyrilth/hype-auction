@@ -33,7 +33,47 @@ export function matchesVendorEntry(
     return true;
   }
 
-  return auctionTitles.some((title) => title.toLowerCase().includes(q));
+  if (auctionTitles.some((title) => title.toLowerCase().includes(q))) {
+    return true;
+  }
+
+  return false;
+}
+
+/** Wallets of sellers with auction titles matching the query. */
+export async function getSellerWalletsWithMatchingAuctionTitles(
+  query: string
+): Promise<Set<string>> {
+  const q = normalizeSearchQuery(query);
+  if (!q) return new Set();
+
+  const { data, error } = await supabase
+    .from("auctions")
+    .select("seller_wallet, title")
+    .ilike("title", `%${q}%`);
+
+  if (error) throw error;
+
+  return new Set(
+    (data ?? [])
+      .map((row) => row.seller_wallet as string)
+      .filter(Boolean)
+  );
+}
+
+export function filterVendorEntries(
+  entries: VendorDirectoryEntry[],
+  query: string,
+  walletsFromAuctionTitles: Set<string> = new Set()
+): VendorDirectoryEntry[] {
+  const q = normalizeSearchQuery(query);
+  if (!q) return entries;
+
+  return entries.filter(
+    (entry) =>
+      matchesVendorEntry(entry, q) ||
+      walletsFromAuctionTitles.has(entry.vendor.wallet_address)
+  );
 }
 
 export interface VendorSearchHit {
@@ -122,9 +162,10 @@ export async function performGlobalSearch(
 
   const now = new Date().toISOString();
 
-  const [vendorDirectory, { data: liveRows }, { data: pastRows }] =
+  const [vendorDirectory, titleMatchWallets, { data: liveRows }, { data: pastRows }] =
     await Promise.all([
       getVendorDirectory(),
+      getSellerWalletsWithMatchingAuctionTitles(q),
       supabase
         .from("auctions")
         .select("*")
@@ -153,9 +194,8 @@ export async function performGlobalSearch(
     ])
   );
 
-  const vendors = vendorDirectory
-    .filter((entry) => matchesVendorEntry(entry, q))
-    .map((entry) => ({
+  const vendors = filterVendorEntries(vendorDirectory, q, titleMatchWallets).map(
+    (entry) => ({
       shopSlug: entry.shopSlug,
       shopName:
         entry.vendor.shop_name ??
@@ -165,7 +205,8 @@ export async function performGlobalSearch(
       isVerified: entry.vendor.is_verified,
       isLive: entry.isLive,
       categories: entry.categories,
-    }));
+    })
+  );
 
   const categoryCounts = new Map<string, number>();
   for (const auction of allAuctions) {
