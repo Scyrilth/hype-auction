@@ -5,10 +5,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { ChevronDownIcon } from "@/components/icons";
-
-function shortenAddress(address: string, chars = 4) {
-  return `${address.slice(0, chars)}...${address.slice(-chars)}`;
-}
+import { shortenAddress } from "@/lib/format";
 
 export default function WalletNav() {
   const { connection } = useConnection();

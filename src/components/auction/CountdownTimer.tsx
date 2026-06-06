@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { getSecondsUntil } from "@/lib/format";
+
 function formatTime(totalSeconds: number) {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
@@ -9,18 +11,19 @@ function formatTime(totalSeconds: number) {
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
-export default function CountdownTimer({ initialSeconds = 18 }: { initialSeconds?: number }) {
-  const [seconds, setSeconds] = useState(initialSeconds);
+export default function CountdownTimer({ endTime }: { endTime: string }) {
+  const [seconds, setSeconds] = useState(() => getSecondsUntil(endTime));
 
   useEffect(() => {
-    if (seconds <= 0) return;
-    const id = setInterval(() => setSeconds((s) => Math.max(0, s - 1)), 1000);
+    const tick = () => setSeconds(getSecondsUntil(endTime));
+    tick();
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [seconds]);
+  }, [endTime]);
 
   return (
     <span className="font-mono text-2xl font-bold tracking-wider text-live-red">
-      {formatTime(seconds)}
+      {seconds <= 0 ? "00:00:00" : formatTime(seconds)}
     </span>
   );
 }
