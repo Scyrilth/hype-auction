@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { SearchIcon } from "@/components/icons";
 import VendorCard from "@/components/vendors/VendorCard";
+import { matchesVendorEntry } from "@/lib/search";
 import type { VendorDirectoryEntry } from "@/lib/vendors";
 
 type FilterTab = "all" | "verified" | "top-rated" | "most-followers";
@@ -22,24 +23,6 @@ const sortOptions: { id: SortOption; label: string }[] = [
   { id: "sales", label: "Most Sales" },
   { id: "newest", label: "Newest" },
 ];
-
-function matchesSearch(entry: VendorDirectoryEntry, query: string) {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-
-  const { vendor } = entry;
-  const haystack = [
-    vendor.shop_name,
-    vendor.username,
-    vendor.bio,
-    vendor.wallet_address,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return haystack.includes(q);
-}
 
 function applyFilter(entry: VendorDirectoryEntry, tab: FilterTab) {
   switch (tab) {
@@ -89,7 +72,8 @@ export default function VendorDirectory({
 
   const filtered = useMemo(() => {
     const result = vendors.filter(
-      (entry) => matchesSearch(entry, search) && applyFilter(entry, activeTab)
+      (entry) =>
+        matchesVendorEntry(entry, search) && applyFilter(entry, activeTab)
     );
     return sortEntries(result, sort);
   }, [vendors, search, activeTab, sort]);
@@ -112,7 +96,7 @@ export default function VendorDirectory({
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by shop name or username..."
+          placeholder="Search by name, category, or items sold..."
           className="w-full rounded-xl border border-border bg-surface py-3 pl-11 pr-4 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </div>

@@ -1,18 +1,14 @@
+import GlobalSearchBar from "@/components/search/GlobalSearchBar";
 import WalletNav from "@/components/WalletNav";
-import { BellIcon, SearchIcon } from "@/components/icons";
+import { BellIcon } from "@/components/icons";
 
 const navLinks = ["Browse", "Categories", "Live", "Rewards"];
 
 export default function TopNav() {
   return (
     <header className="flex h-12 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-surface px-3 sm:h-14 sm:gap-4 sm:px-4 lg:gap-6 lg:px-5">
-      <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[40%] lg:max-w-xl">
-        <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input
-          type="search"
-          placeholder="Search items, users, categories..."
-          className="w-full rounded-full border border-border bg-background py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-        />
+      <div className="min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[40%] lg:max-w-xl">
+        <GlobalSearchBar />
       </div>
 
       <nav className="hidden items-center gap-4 lg:flex lg:gap-6">

@@ -247,6 +247,7 @@ export interface VendorDirectoryEntry {
   averageRating: number;
   totalSales: number;
   categories: string[];
+  auctionTitles: string[];
   isLive: boolean;
   shopSlug: string;
 }
@@ -276,7 +277,7 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
         .in("vendor_wallet", wallets),
       supabase
         .from("auctions")
-        .select("seller_wallet, category, status, end_time")
+        .select("seller_wallet, category, status, end_time, title")
         .in("seller_wallet", wallets),
     ]);
 
@@ -293,11 +294,13 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
 
   const salesByVendor = new Map<string, number>();
   const categoriesByVendor = new Map<string, Set<string>>();
+  const titlesByVendor = new Map<string, Set<string>>();
   const liveVendors = new Set<string>();
 
   for (const auction of auctions ?? []) {
     const wallet = auction.seller_wallet as string;
     const category = auction.category as string | null;
+    const title = auction.title as string | null;
     const status = auction.status as string;
     const endTime = auction.end_time as string;
 
@@ -313,6 +316,12 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
       const set = categoriesByVendor.get(wallet) ?? new Set<string>();
       set.add(category);
       categoriesByVendor.set(wallet, set);
+    }
+
+    if (title) {
+      const set = titlesByVendor.get(wallet) ?? new Set<string>();
+      set.add(title);
+      titlesByVendor.set(wallet, set);
     }
   }
 
@@ -332,6 +341,7 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
       averageRating,
       totalSales: salesByVendor.get(wallet) ?? 0,
       categories: [...(categoriesByVendor.get(wallet) ?? [])],
+      auctionTitles: [...(titlesByVendor.get(wallet) ?? [])],
       isLive: liveVendors.has(wallet),
       shopSlug: getShopSlug(vendor),
     };
