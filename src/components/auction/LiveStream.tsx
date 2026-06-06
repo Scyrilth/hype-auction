@@ -1,10 +1,26 @@
 import { EyeIcon } from "@/components/icons";
-import { resolveAuctionImageUrl } from "@/lib/auction-images";
+import {
+  POKEMON_PLACEHOLDER,
+  resolveAuctionImageUrl,
+} from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import Image from "next/image";
 
+const FEATURED_POKEMON_IMAGE =
+  "https://upload.wikimedia.org/wikipedia/en/a/a6/Pok%C3%A9mon_Pikachu_art.png";
+
+function getFeaturedStreamImage(auction: Auction): string {
+  const resolved = resolveAuctionImageUrl(auction.image_url, auction);
+
+  if (resolved === POKEMON_PLACEHOLDER || resolved.includes("psacard.com")) {
+    return FEATURED_POKEMON_IMAGE;
+  }
+
+  return resolved;
+}
+
 export default function LiveStream({ auction }: { auction: Auction }) {
-  const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
+  const imageSrc = getFeaturedStreamImage(auction);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-2xl border border-border bg-surface-elevated">
