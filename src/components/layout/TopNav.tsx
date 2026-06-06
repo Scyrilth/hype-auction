@@ -1,5 +1,5 @@
-import WalletButton from "@/components/WalletButton";
-import { BellIcon, ChevronDownIcon, SearchIcon } from "@/components/icons";
+import WalletNav from "@/components/WalletNav";
+import { BellIcon, SearchIcon } from "@/components/icons";
 
 const navLinks = ["Browse", "Categories", "Live", "Rewards"];
 
@@ -30,15 +30,7 @@ export default function TopNav() {
       </nav>
 
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          className="hidden items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-sm text-zinc-300 sm:flex"
-        >
-          <span className="font-medium text-white">2.45 SOL</span>
-          <ChevronDownIcon className="h-3.5 w-3.5 text-muted" />
-        </button>
-
-        <WalletButton />
+        <WalletNav />
 
         <button
           type="button"
