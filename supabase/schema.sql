@@ -130,3 +130,15 @@ create policy "users can update on connect"
   to anon, authenticated
   using (true)
   with check (true);
+
+-- Allow placing bids and updating auction current_bid
+create policy "bids can be inserted by anyone"
+  on public.bids for insert
+  to anon, authenticated
+  with check (true);
+
+create policy "auctions current_bid can be updated"
+  on public.auctions for update
+  to anon, authenticated
+  using (true)
+  with check (true);

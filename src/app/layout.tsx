@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { ToastProvider } from "@/components/ui/Toast";
 import UserSync from "@/components/UserSync";
 import WalletContextProvider from "@/components/WalletContextProvider";
 
@@ -32,8 +33,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <WalletContextProvider>
-          <UserSync />
-          {children}
+          <ToastProvider>
+            <UserSync />
+            {children}
+          </ToastProvider>
         </WalletContextProvider>
       </body>
     </html>

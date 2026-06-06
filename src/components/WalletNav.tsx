@@ -5,12 +5,13 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { ChevronDownIcon } from "@/components/icons";
+import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { shortenAddress } from "@/lib/format";
 
 export default function WalletNav() {
   const { connection } = useConnection();
-  const { publicKey, connected, connecting, connect, disconnect, select, wallets } =
-    useWallet();
+  const { publicKey, connected, connecting, disconnect } = useWallet();
+  const connectPhantom = usePhantomConnect();
 
   const [balance, setBalance] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -59,15 +60,11 @@ export default function WalletNav() {
 
   const handleConnect = useCallback(async () => {
     try {
-      const phantom = wallets.find((w) => w.adapter.name === "Phantom");
-      if (phantom) {
-        select(phantom.adapter.name);
-      }
-      await connect();
+      await connectPhantom();
     } catch (error) {
       console.error("Wallet connection failed:", error);
     }
-  }, [wallets, select, connect]);
+  }, [connectPhantom]);
 
   const handleCopyAddress = useCallback(async () => {
     if (!publicKey) return;
