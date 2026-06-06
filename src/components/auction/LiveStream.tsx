@@ -9,7 +9,7 @@ export default function LiveStream({ auction }: { auction: Auction }) {
   const imageSrc = auction.image_url ?? PLACEHOLDER_IMAGE;
 
   return (
-    <div className="relative flex-1 overflow-hidden rounded-2xl border border-border bg-surface-elevated">
+    <div className="relative h-full w-full overflow-hidden rounded-2xl border border-border bg-surface-elevated">
       <div className="relative aspect-video w-full">
         <Image
           src={imageSrc}
@@ -32,10 +32,10 @@ export default function LiveStream({ auction }: { auction: Auction }) {
           </span>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-5">
-          <h2 className="text-lg font-bold text-white">{auction.title}</h2>
+        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 lg:p-5">
+          <h2 className="text-base font-bold text-white sm:text-lg">{auction.title}</h2>
           {auction.description && (
-            <p className="mt-0.5 text-sm text-zinc-300">{auction.description}</p>
+            <p className="mt-0.5 text-xs text-zinc-300 sm:text-sm">{auction.description}</p>
           )}
           {auction.category && (
             <span className="mt-2 inline-block rounded-full bg-accent/20 px-3 py-0.5 text-xs font-medium text-purple-300">

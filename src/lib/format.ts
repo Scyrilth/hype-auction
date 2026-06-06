@@ -14,6 +14,19 @@ export function getSecondsUntil(isoDate: string) {
   return Math.max(0, Math.floor((new Date(isoDate).getTime() - Date.now()) / 1000));
 }
 
+export function formatTimeLeft(isoDate: string) {
+  const seconds = getSecondsUntil(isoDate);
+  if (seconds <= 0) return "Ended";
+
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 export function formatRelativeFuture(isoDate: string) {
   const seconds = getSecondsUntil(isoDate);
   if (seconds <= 0) return "Soon";

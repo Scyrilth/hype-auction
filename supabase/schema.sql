@@ -142,3 +142,8 @@ create policy "auctions current_bid can be updated"
   to anon, authenticated
   using (true)
   with check (true);
+
+create policy "auctions can be inserted by anyone"
+  on public.auctions for insert
+  to anon, authenticated
+  with check (true);

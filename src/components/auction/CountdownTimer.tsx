@@ -11,7 +11,13 @@ function formatTime(totalSeconds: number) {
   return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
 }
 
-export default function CountdownTimer({ endTime }: { endTime: string }) {
+export default function CountdownTimer({
+  endTime,
+  compact = false,
+}: {
+  endTime: string;
+  compact?: boolean;
+}) {
   const [seconds, setSeconds] = useState(() => getSecondsUntil(endTime));
 
   useEffect(() => {
@@ -22,7 +28,14 @@ export default function CountdownTimer({ endTime }: { endTime: string }) {
   }, [endTime]);
 
   return (
-    <span className="font-mono text-2xl font-bold tracking-wider text-live-red">
+    <span
+      className="font-mono font-bold tracking-wider text-live-red"
+      style={{
+        fontSize: compact
+          ? "clamp(0.75rem, 1.2vw, 0.875rem)"
+          : "clamp(1.125rem, 2.5vw, 1.5rem)",
+      }}
+    >
       {seconds <= 0 ? "00:00:00" : formatTime(seconds)}
     </span>
   );

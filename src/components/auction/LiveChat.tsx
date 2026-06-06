@@ -37,12 +37,12 @@ const messages = [
 
 export default function LiveChat() {
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-2xl border border-border bg-surface">
-      <div className="border-b border-border px-4 py-3">
+    <div className="flex h-full min-h-[16rem] w-full min-w-0 flex-col rounded-2xl border border-border bg-surface lg:min-h-0">
+      <div className="shrink-0 border-b border-border px-3 py-2.5 sm:px-4 sm:py-3">
         <h3 className="text-sm font-semibold text-white">Live Chat</h3>
       </div>
 
-      <div className="chat-scroll flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-3" style={{ maxHeight: "340px" }}>
+      <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
         {messages.map((msg) => (
           <div key={msg.user} className="flex gap-2.5">
             <div
@@ -56,7 +56,7 @@ export default function LiveChat() {
         ))}
       </div>
 
-      <div className="border-t border-border p-3">
+      <div className="shrink-0 border-t border-border p-2.5 sm:p-3">
         <div className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2">
           <input
             type="text"

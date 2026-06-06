@@ -82,15 +82,15 @@ export default function BidPanel({
   };
 
   return (
-    <div className="flex w-64 shrink-0 flex-col gap-5 rounded-2xl border border-border bg-surface p-5">
+    <div className="flex h-full w-full min-w-0 flex-col gap-4 rounded-2xl border border-border bg-surface p-4 sm:gap-5 sm:p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-muted">
           Current Bid
         </p>
-        <p className="mt-1 text-3xl font-bold text-white">
+        <p className="mt-1 text-[clamp(1.25rem,2.5vw,1.875rem)] font-bold leading-tight text-white">
           {formatSol(currentBid)}
         </p>
-        <p className="text-sm text-muted">{formatUsdSol(currentBid)}</p>
+        <p className="text-xs text-muted sm:text-sm">{formatUsdSol(currentBid)}</p>
       </div>
 
       <div>
@@ -124,7 +124,7 @@ export default function BidPanel({
           type="button"
           disabled={isPlacingBid}
           onClick={() => handlePlaceBid(nextBid)}
-          className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-full bg-accent py-2.5 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:py-3 sm:text-sm"
         >
           {isPlacingBid ? "Placing bid..." : `Place Bid ${formatSol(nextBid)}`}
         </button>
@@ -132,7 +132,7 @@ export default function BidPanel({
           type="button"
           disabled={isPlacingBid}
           onClick={() => handlePlaceBid(nextBid)}
-          className="w-full rounded-full border border-border py-3 text-sm font-medium text-zinc-300 transition-colors hover:border-accent hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-full border border-border py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:border-accent hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:py-3 sm:text-sm"
         >
           Quick Bid +0.10 SOL
         </button>

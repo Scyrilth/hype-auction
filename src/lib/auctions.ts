@@ -27,32 +27,30 @@ function parseAuction(row: {
   };
 }
 
-export async function getLiveAuction(): Promise<LiveAuctionView | null> {
-  const { data: auctionRow, error } = await supabase
+export async function getAllLiveAuctions(): Promise<Auction[]> {
+  const { data, error } = await supabase
     .from("auctions")
     .select("*")
     .eq("status", "live")
     .gt("end_time", new Date().toISOString())
-    .order("end_time", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .order("end_time", { ascending: true });
 
   if (error) throw error;
-  if (!auctionRow) return null;
+  return (data ?? []).map(parseAuction);
+}
 
-  const auction = parseAuction(auctionRow);
-
+async function getAuctionBidStats(auctionId: string) {
   const { count, error: countError } = await supabase
     .from("bids")
     .select("*", { count: "exact", head: true })
-    .eq("auction_id", auction.id);
+    .eq("auction_id", auctionId);
 
   if (countError) throw countError;
 
   const { data: topBids, error: topBidError } = await supabase
     .from("bids")
     .select("*")
-    .eq("auction_id", auction.id)
+    .eq("auction_id", auctionId)
     .order("amount", { ascending: false })
     .limit(1);
 
@@ -61,11 +59,14 @@ export async function getLiveAuction(): Promise<LiveAuctionView | null> {
   const topBidder = (topBids?.[0] as { bidder_wallet: string } | undefined)
     ?.bidder_wallet ?? null;
 
-  return {
-    auction,
-    bidCount: count ?? 0,
-    topBidder,
-  };
+  return { bidCount: count ?? 0, topBidder };
+}
+
+export async function enrichLiveAuction(
+  auction: Auction
+): Promise<LiveAuctionView> {
+  const stats = await getAuctionBidStats(auction.id);
+  return { auction, ...stats };
 }
 
 export async function getUpcomingAuctions(): Promise<Auction[]> {
@@ -81,10 +82,17 @@ export async function getUpcomingAuctions(): Promise<Auction[]> {
 }
 
 export async function getAuctionsPageData() {
-  const [liveAuction, upcomingAuctions] = await Promise.all([
-    getLiveAuction(),
+  const [liveAuctions, upcomingAuctions] = await Promise.all([
+    getAllLiveAuctions(),
     getUpcomingAuctions(),
   ]);
 
-  return { liveAuction, upcomingAuctions };
+  const enrichedLive = await Promise.all(
+    liveAuctions.map((auction) => enrichLiveAuction(auction))
+  );
+
+  const featured = enrichedLive[0] ?? null;
+  const otherLive = enrichedLive.slice(1).map((item) => item.auction);
+
+  return { featured, otherLive, upcomingAuctions };
 }

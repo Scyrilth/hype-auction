@@ -5,8 +5,8 @@ const navLinks = ["Browse", "Categories", "Live", "Rewards"];
 
 export default function TopNav() {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-6 border-b border-border bg-surface px-5">
-      <div className="relative flex-1 max-w-xl">
+    <header className="flex h-12 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-surface px-3 sm:h-14 sm:gap-4 sm:px-4 lg:gap-6 lg:px-5">
+      <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[40%] lg:max-w-xl">
         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
           type="search"
@@ -15,7 +15,7 @@ export default function TopNav() {
         />
       </div>
 
-      <nav className="hidden items-center gap-6 md:flex">
+      <nav className="hidden items-center gap-4 lg:flex lg:gap-6">
         {navLinks.map((link) => (
           <a
             key={link}
@@ -29,7 +29,7 @@ export default function TopNav() {
         ))}
       </nav>
 
-      <div className="flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <WalletNav />
 
         <button

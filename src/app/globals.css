@@ -70,16 +70,61 @@ body {
   border-radius: 16px !important;
 }
 
-/* Custom scrollbar for chat */
+/* Custom scrollbar for chat and auction grids */
+.auction-scroll::-webkit-scrollbar,
 .chat-scroll::-webkit-scrollbar {
   width: 4px;
 }
 
+.auction-scroll::-webkit-scrollbar-track,
 .chat-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
+.auction-scroll::-webkit-scrollbar-thumb,
 .chat-scroll::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 4px;
+}
+
+/* Featured auction — proportional columns that scale with viewport/zoom */
+.featured-auction-grid {
+  display: grid;
+  width: 100%;
+  align-items: stretch;
+  gap: clamp(0.625rem, 1.2vw, 1rem);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "video"
+    "bid"
+    "chat";
+}
+
+.featured-auction-video {
+  grid-area: video;
+}
+
+.featured-auction-bid {
+  grid-area: bid;
+}
+
+.featured-auction-chat {
+  grid-area: chat;
+}
+
+@media (min-width: 768px) {
+  .featured-auction-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "video video"
+      "bid chat";
+  }
+}
+
+@media (min-width: 1024px) {
+  .featured-auction-grid {
+    /* ~58% / 18% / 24% — scales with container width */
+    grid-template-columns: minmax(0, 3.2fr) minmax(0, 1fr) minmax(0, 1.3fr);
+    grid-template-areas: "video bid chat";
+  }
 }
