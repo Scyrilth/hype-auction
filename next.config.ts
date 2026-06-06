@@ -9,6 +9,18 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "psacard.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.stockx.com",
+      },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
+      {
+        protocol: "https",
         hostname: "*.supabase.co",
       },
     ],

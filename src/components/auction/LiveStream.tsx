@@ -1,12 +1,10 @@
 import { EyeIcon } from "@/components/icons";
+import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import Image from "next/image";
 
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1606503908835-3f39244f23b8?w=800&q=80";
-
 export default function LiveStream({ auction }: { auction: Auction }) {
-  const imageSrc = auction.image_url ?? PLACEHOLDER_IMAGE;
+  const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
   return (
     <div className="relative h-full w-full overflow-hidden rounded-2xl border border-border bg-surface-elevated">
@@ -17,7 +15,7 @@ export default function LiveStream({ auction }: { auction: Auction }) {
           fill
           className="object-cover"
           priority
-          unoptimized={imageSrc.startsWith("http") && !imageSrc.includes("unsplash")}
+          unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
 

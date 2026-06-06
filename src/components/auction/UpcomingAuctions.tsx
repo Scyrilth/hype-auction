@@ -1,9 +1,7 @@
+import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import { formatRelativeFuture, formatSol } from "@/lib/format";
 import Image from "next/image";
-
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80";
 
 export default function UpcomingAuctions({
   auctions,
@@ -19,7 +17,7 @@ export default function UpcomingAuctions({
       </h2>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {auctions.map((auction) => {
-          const imageSrc = auction.image_url ?? PLACEHOLDER_IMAGE;
+          const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
           return (
             <article
@@ -32,9 +30,7 @@ export default function UpcomingAuctions({
                   alt={auction.title}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
-                  unoptimized={
-                    imageSrc.startsWith("http") && !imageSrc.includes("unsplash")
-                  }
+                  unoptimized
                 />
               </div>
               <div className="p-3.5">

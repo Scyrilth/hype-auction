@@ -11,10 +11,8 @@ import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { placeBid } from "@/lib/bids";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
-
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80";
 
 function LiveAuctionCard({ auction }: { auction: Auction }) {
   const router = useRouter();
@@ -26,7 +24,7 @@ function LiveAuctionCard({ auction }: { auction: Auction }) {
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
   const nextBid = Math.round((displayBid + 0.1) * 100) / 100;
-  const imageSrc = auction.image_url ?? PLACEHOLDER_IMAGE;
+  const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
   const handleBidNow = async () => {
     if (!connected || !publicKey) {
@@ -66,9 +64,7 @@ function LiveAuctionCard({ auction }: { auction: Auction }) {
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
           className="object-cover"
-          unoptimized={
-            imageSrc.startsWith("http") && !imageSrc.includes("unsplash")
-          }
+          unoptimized
         />
         <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
