@@ -13,6 +13,7 @@ import {
 
 const navLinks = [
   { href: "/", label: "Home", icon: VideoIcon },
+  { href: "/vendors", label: "Vendors", icon: GavelIcon },
   { href: "/dashboard", label: "Dashboard", icon: GridIcon },
   { href: "/dashboard/settings", label: "Shop Settings", icon: StarIcon },
 ];

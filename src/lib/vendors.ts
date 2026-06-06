@@ -241,3 +241,99 @@ export async function getVendorSettings(
   if (error) throw error;
   return data ? parseUser(data) : null;
 }
+
+export interface VendorDirectoryEntry {
+  vendor: User;
+  averageRating: number;
+  totalSales: number;
+  categories: string[];
+  isLive: boolean;
+  shopSlug: string;
+}
+
+function getShopSlug(vendor: User): string {
+  return vendor.username ?? vendor.wallet_address;
+}
+
+export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
+  const { data: vendors, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("is_vendor", true)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  if (!vendors?.length) return [];
+
+  const wallets = vendors.map((v) => v.wallet_address as string);
+  const now = new Date().toISOString();
+
+  const [{ data: reviews, error: reviewsError }, { data: auctions, error: auctionsError }] =
+    await Promise.all([
+      supabase
+        .from("reviews")
+        .select("vendor_wallet, rating")
+        .in("vendor_wallet", wallets),
+      supabase
+        .from("auctions")
+        .select("seller_wallet, category, status, end_time")
+        .in("seller_wallet", wallets),
+    ]);
+
+  if (reviewsError) throw reviewsError;
+  if (auctionsError) throw auctionsError;
+
+  const ratingsByVendor = new Map<string, number[]>();
+  for (const review of reviews ?? []) {
+    const wallet = review.vendor_wallet as string;
+    const list = ratingsByVendor.get(wallet) ?? [];
+    list.push(Number(review.rating));
+    ratingsByVendor.set(wallet, list);
+  }
+
+  const salesByVendor = new Map<string, number>();
+  const categoriesByVendor = new Map<string, Set<string>>();
+  const liveVendors = new Set<string>();
+
+  for (const auction of auctions ?? []) {
+    const wallet = auction.seller_wallet as string;
+    const category = auction.category as string | null;
+    const status = auction.status as string;
+    const endTime = auction.end_time as string;
+
+    if (status === "ended") {
+      salesByVendor.set(wallet, (salesByVendor.get(wallet) ?? 0) + 1);
+    }
+
+    if (status === "live" && endTime > now) {
+      liveVendors.add(wallet);
+    }
+
+    if (category) {
+      const set = categoriesByVendor.get(wallet) ?? new Set<string>();
+      set.add(category);
+      categoriesByVendor.set(wallet, set);
+    }
+  }
+
+  return vendors.map((row) => {
+    const vendor = parseUser(row);
+    const wallet = vendor.wallet_address;
+    const ratings = ratingsByVendor.get(wallet) ?? [];
+    const averageRating =
+      ratings.length > 0
+        ? Math.round(
+            (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) * 10
+          ) / 10
+        : 0;
+
+    return {
+      vendor,
+      averageRating,
+      totalSales: salesByVendor.get(wallet) ?? 0,
+      categories: [...(categoriesByVendor.get(wallet) ?? [])],
+      isLive: liveVendors.has(wallet),
+      shopSlug: getShopSlug(vendor),
+    };
+  });
+}
