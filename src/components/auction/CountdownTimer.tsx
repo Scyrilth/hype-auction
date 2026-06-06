@@ -18,14 +18,31 @@ export default function CountdownTimer({
   endTime: string;
   compact?: boolean;
 }) {
-  const [seconds, setSeconds] = useState(() => getSecondsUntil(endTime));
+  const [seconds, setSeconds] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setSeconds(getSecondsUntil(endTime));
     const tick = () => setSeconds(getSecondsUntil(endTime));
-    tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [endTime]);
+
+  if (!mounted) {
+    return (
+      <span
+        className="font-mono font-bold tracking-wider text-live-red"
+        style={{
+          fontSize: compact
+            ? "clamp(0.75rem, 1.2vw, 0.875rem)"
+            : "clamp(1.125rem, 2.5vw, 1.5rem)",
+        }}
+      >
+        --:--:--
+      </span>
+    );
+  }
 
   return (
     <span
