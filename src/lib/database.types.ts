@@ -30,6 +30,15 @@ export interface Bid {
   created_at: string;
 }
 
+export interface Message {
+  id: string;
+  auction_id: string;
+  wallet_address: string;
+  username: string;
+  content: string;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -78,6 +87,30 @@ export interface Database {
           {
             foreignKeyName: "bids_bidder_wallet_fkey";
             columns: ["bidder_wallet"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["wallet_address"];
+          },
+        ];
+      };
+      messages: {
+        Row: Message;
+        Insert: Omit<Message, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<Message, "id" | "created_at">>;
+        Relationships: [
+          {
+            foreignKeyName: "messages_auction_id_fkey";
+            columns: ["auction_id"];
+            isOneToOne: false;
+            referencedRelation: "auctions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "messages_wallet_address_fkey";
+            columns: ["wallet_address"];
             isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["wallet_address"];

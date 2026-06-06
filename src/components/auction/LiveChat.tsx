@@ -1,78 +1,189 @@
 "use client";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+
 import { SendIcon, SmileIcon } from "@/components/icons";
+import { avatarGradientForWallet } from "@/lib/chat-avatars";
+import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import {
+  type ChatMessage,
+  fetchAuctionMessages,
+  sendAuctionMessage,
+} from "@/lib/messages";
+import { supabase } from "@/lib/supabase";
 
-const messages = [
-  {
-    user: "Whal3dad",
-    avatar: "from-orange-400 to-red-500",
-    text: "Let's gooo! 🔥",
-  },
-  {
-    user: "CardKing",
-    avatar: "from-yellow-400 to-amber-500",
-    text: "Grail card right here",
-  },
-  {
-    user: "NFTsniper",
-    avatar: "from-green-400 to-emerald-500",
-    text: "Need this for the collection",
-  },
-  {
-    user: "SolStacker",
-    avatar: "from-blue-400 to-indigo-500",
-    text: "bid bid bid",
-  },
-  {
-    user: "HypeBeast",
-    avatar: "from-pink-400 to-rose-500",
-    text: "PSA 10 is insane value",
-  },
-  {
-    user: "DegenDave",
-    avatar: "from-purple-400 to-violet-500",
-    text: "LFG 🚀",
-  },
-];
+export default function LiveChat({ auctionId }: { auctionId?: string }) {
+  const { publicKey, connected } = useWallet();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(!!auctionId);
+  const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-export default function LiveChat() {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    bottomRef.current?.scrollIntoView({ behavior });
+  }, []);
+
+  const addMessage = useCallback((message: ChatMessage) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === message.id)) return prev;
+      return [...prev, message];
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!auctionId) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchAuctionMessages(auctionId);
+        if (!cancelled) {
+          setMessages(data);
+          requestAnimationFrame(() => scrollToBottom("instant"));
+        }
+      } catch (error) {
+        logSupabaseError("LiveChat: fetch messages", error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+
+    const channel = supabase
+      .channel(`messages:${auctionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `auction_id=eq.${auctionId}`,
+        },
+        (payload) => {
+          addMessage(payload.new as ChatMessage);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [auctionId, addMessage, scrollToBottom]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom]);
+
+  const handleSend = async () => {
+    if (!auctionId || !connected || !publicKey || !input.trim() || sending) {
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      const message = await sendAuctionMessage({
+        auctionId,
+        walletAddress: publicKey.toBase58(),
+        content: input,
+      });
+      addMessage(message);
+      setInput("");
+    } catch (error) {
+      logSupabaseError("LiveChat: send message", error);
+      console.error(getErrorMessage(error));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const canChat = connected && publicKey && auctionId;
+  const inputPlaceholder = !auctionId
+    ? "No active auction"
+    : !connected
+      ? "Connect wallet to chat"
+      : "Say something...";
+
   return (
     <div className="flex h-full min-h-[16rem] w-full min-w-0 flex-col rounded-2xl border border-border bg-surface lg:min-h-0">
       <div className="shrink-0 border-b border-border px-3 py-2.5 sm:px-4 sm:py-3">
         <h3 className="text-sm font-semibold text-white">Live Chat</h3>
       </div>
 
-      <div className="chat-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4">
-        {messages.map((msg) => (
-          <div key={msg.user} className="flex gap-2.5">
-            <div
-              className={`mt-0.5 h-7 w-7 shrink-0 rounded-full bg-gradient-to-br ${msg.avatar}`}
-            />
-            <div>
-              <p className="text-xs font-semibold text-accent">{msg.user}</p>
-              <p className="text-sm text-zinc-300">{msg.text}</p>
+      <div
+        ref={scrollContainerRef}
+        className="chat-scroll flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-3 sm:px-4"
+      >
+        {!auctionId ? (
+          <p className="text-center text-sm text-muted">
+            Join a live auction to chat.
+          </p>
+        ) : loading ? (
+          <p className="text-center text-sm text-muted">Loading messages...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-center text-sm text-muted">
+            No messages yet. Start the conversation!
+          </p>
+        ) : (
+          messages.map((msg) => (
+            <div key={msg.id} className="flex gap-2.5">
+              <div
+                className={`mt-0.5 h-7 w-7 shrink-0 rounded-full bg-gradient-to-br ${avatarGradientForWallet(msg.wallet_address)}`}
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-accent">{msg.username}</p>
+                <p className="break-words text-sm text-zinc-300">{msg.content}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
+        <div ref={bottomRef} />
       </div>
 
       <div className="shrink-0 border-t border-border p-2.5 sm:p-3">
         <div className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-2">
           <input
             type="text"
-            placeholder="Say something..."
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted outline-none"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={inputPlaceholder}
+            disabled={!canChat || sending}
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted outline-none disabled:cursor-not-allowed disabled:opacity-60"
           />
           <button
             type="button"
-            className="text-muted transition-colors hover:text-zinc-300"
+            className="text-muted transition-colors hover:text-zinc-300 disabled:opacity-40"
             aria-label="Emoji"
+            disabled={!canChat}
           >
             <SmileIcon />
           </button>
           <button
             type="button"
-            className="text-accent transition-colors hover:text-purple-400"
+            onClick={handleSend}
+            disabled={!canChat || sending || !input.trim()}
+            className="text-accent transition-colors hover:text-purple-400 disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Send"
           >
             <SendIcon />

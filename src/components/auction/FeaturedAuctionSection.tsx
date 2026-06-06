@@ -22,7 +22,7 @@ export default function FeaturedAuctionSection({
         />
       </div>
       <div className="featured-auction-chat min-h-0 min-w-0">
-        <LiveChat />
+        <LiveChat auctionId={featured.auction.id} />
       </div>
     </div>
   );
