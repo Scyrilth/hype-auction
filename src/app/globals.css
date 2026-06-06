@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0b15;
+  --foreground: #f4f4f5;
+  --surface: #13131f;
+  --surface-elevated: #1a1a2e;
+  --border: #2a2a3e;
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-glow: rgba(124, 58, 237, 0.35);
+  --muted: #71717a;
+  --live-red: #ef4444;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-muted: var(--muted);
+  --color-live-red: var(--live-red);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Wallet adapter button overrides */
+.wallet-adapter-button {
+  background: var(--surface-elevated) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 9999px !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  padding: 0 14px !important;
+}
+
+.wallet-adapter-button:not([disabled]):hover {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.wallet-adapter-dropdown {
+  background: var(--surface-elevated) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+}
+
+.wallet-adapter-dropdown-list-item {
+  font-family: inherit !important;
+}
+
+.wallet-adapter-modal-wrapper {
+  background: rgba(0, 0, 0, 0.75) !important;
+}
+
+.wallet-adapter-modal-container {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 16px !important;
+}
+
+/* Custom scrollbar for chat */
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
