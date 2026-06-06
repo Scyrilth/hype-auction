@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import CreateAuctionForm from "@/components/dashboard/CreateAuctionForm";
@@ -13,12 +14,18 @@ export default function DashboardView() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Seller Dashboard</h1>
-        <p className="mt-1 text-sm text-muted">
-          Create listings and manage your live auctions.
-        </p>
-      </div>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Seller Dashboard</h1>
+          <p className="mt-1 text-sm text-muted">
+            Create listings and manage your live auctions.
+          </p>
+          <Link
+            href="/dashboard/settings"
+            className="mt-2 inline-block text-sm text-accent hover:underline"
+          >
+            Customize your shop →
+          </Link>
+        </div>
 
       <CreateAuctionForm onCreated={handleCreated} />
       <SellerAuctionsList refreshKey={refreshKey} />

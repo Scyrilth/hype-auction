@@ -6,6 +6,18 @@ export interface User {
   avatar_url: string | null;
   reputation: number;
   created_at: string;
+  shop_name: string | null;
+  banner_url: string | null;
+  bio: string | null;
+  shop_description: string | null;
+  twitter_url: string | null;
+  instagram_url: string | null;
+  is_vendor: boolean;
+  is_verified: boolean;
+  followers_count: number;
+  total_sales: number;
+  total_volume: number;
+  average_rating: number;
 }
 
 export interface Auction {
@@ -39,15 +51,42 @@ export interface Message {
   created_at: string;
 }
 
+export interface Follow {
+  follower_wallet: string;
+  following_wallet: string;
+  created_at: string;
+}
+
+export interface Review {
+  id: string;
+  vendor_wallet: string;
+  reviewer_wallet: string;
+  auction_id: string | null;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+export type VendorProfile = User;
+
+export interface VendorShopStats {
+  total_sales: number;
+  total_volume: number;
+  followers_count: number;
+  average_rating: number;
+}
+
+export interface ReviewWithReviewer extends Review {
+  reviewer_username: string | null;
+  reviewer_avatar: string | null;
+}
+
 export interface Database {
   public: {
     Tables: {
       users: {
         Row: User;
-        Insert: Omit<User, "reputation" | "created_at"> & {
-          reputation?: number;
-          created_at?: string;
-        };
+        Insert: Partial<User> & { wallet_address: string };
         Update: Partial<Omit<User, "wallet_address">>;
         Relationships: [];
       };
@@ -59,15 +98,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<Auction, "id" | "created_at">>;
-        Relationships: [
-          {
-            foreignKeyName: "auctions_seller_wallet_fkey";
-            columns: ["seller_wallet"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["wallet_address"];
-          },
-        ];
+        Relationships: [];
       };
       bids: {
         Row: Bid;
@@ -76,22 +107,7 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<Bid, "id" | "created_at">>;
-        Relationships: [
-          {
-            foreignKeyName: "bids_auction_id_fkey";
-            columns: ["auction_id"];
-            isOneToOne: false;
-            referencedRelation: "auctions";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "bids_bidder_wallet_fkey";
-            columns: ["bidder_wallet"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["wallet_address"];
-          },
-        ];
+        Relationships: [];
       };
       messages: {
         Row: Message;
@@ -100,26 +116,35 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<Message, "id" | "created_at">>;
-        Relationships: [
-          {
-            foreignKeyName: "messages_auction_id_fkey";
-            columns: ["auction_id"];
-            isOneToOne: false;
-            referencedRelation: "auctions";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "messages_wallet_address_fkey";
-            columns: ["wallet_address"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["wallet_address"];
-          },
-        ];
+        Relationships: [];
+      };
+      follows: {
+        Row: Follow;
+        Insert: Omit<Follow, "created_at"> & { created_at?: string };
+        Update: Partial<Omit<Follow, "follower_wallet" | "following_wallet">>;
+        Relationships: [];
+      };
+      reviews: {
+        Row: Review;
+        Insert: Omit<Review, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<Review, "id" | "created_at">>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      toggle_follow: {
+        Args: { p_follower: string; p_following: string };
+        Returns: boolean;
+      };
+      refresh_vendor_stats: {
+        Args: { p_wallet: string };
+        Returns: void;
+      };
+    };
     Enums: {
       auction_status: AuctionStatus;
     };
