@@ -2,7 +2,7 @@ export const POKEMON_PLACEHOLDER =
   "https://psacard.com/assets/img/pop-report/pokemon.png";
 
 export const SNEAKER_PLACEHOLDER =
-  "https://images.stockx.com/images/Air-Jordan-1-Retro-High-OG-Bred-2019.jpg";
+  "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto/b7d9211c-26e7-431a-ac24-b0540fb3c00f/air-jordan-1-retro-high-og-shoes-kQRqvz.png";
 
 export const DEFAULT_PLACEHOLDER =
   "https://placehold.co/800x600/1a1a2e/white?text=Live+Auction";
@@ -64,6 +64,14 @@ export function resolveAuctionImageUrl(
     if (legacyReplacement) {
       return legacyReplacement;
     }
+
+    if (
+      isSneakerAuction(auction) &&
+      (imageUrl.includes("images.stockx.com") ||
+        imageUrl.includes("sneakernews.com"))
+    ) {
+      return SNEAKER_PLACEHOLDER;
+    }
   }
 
   const fallback = pickAuctionImageFallback(auction);
@@ -78,6 +86,7 @@ export function resolveAuctionImageUrl(
 export function isOptimizableImageUrl(src: string): boolean {
   return (
     src.includes("psacard.com") ||
+    src.includes("static.nike.com") ||
     src.includes("images.stockx.com") ||
     src.includes("placehold.co") ||
     src.includes("images.unsplash.com") ||

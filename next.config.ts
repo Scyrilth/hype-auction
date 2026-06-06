@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "static.nike.com",
+      },
+      {
+        protocol: "https",
         hostname: "images.stockx.com",
       },
       {
