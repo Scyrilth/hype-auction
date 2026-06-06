@@ -1,3 +1,13 @@
+export function normalizeSocialHandle(value: string): string | null {
+  const handle = value.trim().replace(/^@+/, "");
+  return handle || null;
+}
+
+export function displaySocialHandle(handle: string | null): string {
+  if (!handle) return "";
+  return `@${handle.replace(/^@+/, "")}`;
+}
+
 export function shortenAddress(address: string, chars = 4) {
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
 }

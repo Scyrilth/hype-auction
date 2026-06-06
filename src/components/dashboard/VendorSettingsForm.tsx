@@ -6,7 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
-import { shortenAddress } from "@/lib/format";
+import { displaySocialHandle, shortenAddress } from "@/lib/format";
 import {
   getVendorSettings,
   updateVendorSettings,
@@ -33,8 +33,8 @@ export default function VendorSettingsForm() {
   const [bannerUrl, setBannerUrl] = useState("");
   const [bio, setBio] = useState("");
   const [shopDescription, setShopDescription] = useState("");
-  const [twitterUrl, setTwitterUrl] = useState("");
-  const [instagramUrl, setInstagramUrl] = useState("");
+  const [twitterHandle, setTwitterHandle] = useState("");
+  const [instagramHandle, setInstagramHandle] = useState("");
   const [isVendor, setIsVendor] = useState(false);
 
   useEffect(() => {
@@ -53,11 +53,11 @@ export default function VendorSettingsForm() {
         setUsername(data.username ?? "");
         setShopName(data.shop_name ?? "");
         setAvatarUrl(data.avatar_url ?? "");
-        setBannerUrl(data.banner_url ?? "");
+        setBannerUrl(data.banner_image ?? "");
         setBio(data.bio ?? "");
         setShopDescription(data.shop_description ?? "");
-        setTwitterUrl(data.twitter_url ?? "");
-        setInstagramUrl(data.instagram_url ?? "");
+        setTwitterHandle(displaySocialHandle(data.social_twitter));
+        setInstagramHandle(displaySocialHandle(data.social_instagram));
         setIsVendor(data.is_vendor);
       } catch (error) {
         logSupabaseError("VendorSettingsForm.load", error);
@@ -80,15 +80,19 @@ export default function VendorSettingsForm() {
     setIsSaving(true);
 
     try {
-      const updated = await updateVendorSettings(publicKey.toBase58(), {
+      const walletAddress = publicKey.toBase58();
+
+      await upsertUser(walletAddress);
+
+      const updated = await updateVendorSettings(walletAddress, {
         username,
         shopName,
         avatarUrl,
         bannerUrl,
         bio,
         shopDescription,
-        twitterUrl,
-        instagramUrl,
+        twitterHandle,
+        instagramHandle,
         isVendor,
       });
 
@@ -224,33 +228,35 @@ export default function VendorSettingsForm() {
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
-          <label htmlFor="twitterUrl" className={labelClass}>
-            Twitter URL
+          <label htmlFor="twitterHandle" className={labelClass}>
+            X (Twitter)
           </label>
           <input
-            id="twitterUrl"
-            type="url"
-            value={twitterUrl}
-            onChange={(e) => setTwitterUrl(e.target.value)}
-            placeholder="https://twitter.com/..."
+            id="twitterHandle"
+            type="text"
+            value={twitterHandle}
+            onChange={(e) => setTwitterHandle(e.target.value)}
+            placeholder="@yourhandle"
             className={inputClass}
           />
         </div>
 
         <div>
-          <label htmlFor="instagramUrl" className={labelClass}>
-            Instagram URL
+          <label htmlFor="instagramHandle" className={labelClass}>
+            Instagram
           </label>
           <input
-            id="instagramUrl"
-            type="url"
-            value={instagramUrl}
-            onChange={(e) => setInstagramUrl(e.target.value)}
-            placeholder="https://instagram.com/..."
+            id="instagramHandle"
+            type="text"
+            value={instagramHandle}
+            onChange={(e) => setInstagramHandle(e.target.value)}
+            placeholder="@yourhandle"
             className={inputClass}
           />
         </div>
       </div>
+
+      <p className="text-xs text-muted">OAuth verification coming soon</p>
 
       <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
         <input

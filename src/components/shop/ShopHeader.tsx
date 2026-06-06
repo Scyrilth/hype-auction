@@ -8,7 +8,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import FollowButton from "@/components/shop/FollowButton";
 import StarRating from "@/components/shop/StarRating";
 import type { User, VendorShopStats } from "@/lib/database.types";
-import { formatSol, shortenAddress } from "@/lib/format";
+import { formatSol, displaySocialHandle, shortenAddress } from "@/lib/format";
 
 const DEFAULT_BANNER =
   "https://placehold.co/1200x320/1a1a2e/7c3aed?text=Vendor+Shop";
@@ -46,7 +46,7 @@ export default function ShopHeader({
   const displayName =
     vendor.shop_name ?? vendor.username ?? shortenAddress(vendor.wallet_address);
 
-  const bannerSrc = vendor.banner_url || DEFAULT_BANNER;
+  const bannerSrc = vendor.banner_image || DEFAULT_BANNER;
   const avatarSrc = vendor.avatar_url;
 
   return (
@@ -144,13 +144,21 @@ export default function ShopHeader({
           </div>
         </div>
 
-        {(vendor.twitter_url || vendor.instagram_url) && (
+        {(vendor.social_twitter || vendor.social_instagram) && (
           <div className="mt-5 flex flex-wrap gap-3">
-            {vendor.twitter_url && (
-              <SocialLink href={vendor.twitter_url} label="Twitter" />
+            {vendor.social_twitter && (
+              <SocialHandleLink
+                href={`https://x.com/${vendor.social_twitter.replace(/^@+/, "")}`}
+                handle={displaySocialHandle(vendor.social_twitter)}
+                platform="x"
+              />
             )}
-            {vendor.instagram_url && (
-              <SocialLink href={vendor.instagram_url} label="Instagram" />
+            {vendor.social_instagram && (
+              <SocialHandleLink
+                href={`https://instagram.com/${vendor.social_instagram.replace(/^@+/, "")}`}
+                handle={displaySocialHandle(vendor.social_instagram)}
+                platform="instagram"
+              />
             )}
           </div>
         )}
@@ -168,17 +176,40 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SocialLink({ href, label }: { href: string; label: string }) {
-  const url = href.startsWith("http") ? href : `https://${href}`;
-
+function SocialHandleLink({
+  href,
+  handle,
+  platform,
+}: {
+  href: string;
+  handle: string;
+  platform: "x" | "instagram";
+}) {
   return (
     <a
-      href={url}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="rounded-full border border-border bg-background px-4 py-2 text-sm text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+      className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
     >
-      {label}
+      {platform === "x" ? <XIcon /> : <InstagramIcon />}
+      <span>{handle}</span>
     </a>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
+    </svg>
   );
 }

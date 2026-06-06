@@ -7,11 +7,11 @@ export interface User {
   reputation: number;
   created_at: string;
   shop_name: string | null;
-  banner_url: string | null;
+  banner_image: string | null;
   bio: string | null;
   shop_description: string | null;
-  twitter_url: string | null;
-  instagram_url: string | null;
+  social_twitter: string | null;
+  social_instagram: string | null;
   is_vendor: boolean;
   is_verified: boolean;
   followers_count: number;

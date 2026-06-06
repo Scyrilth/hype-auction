@@ -4,6 +4,7 @@ import type {
   User,
   VendorShopStats,
 } from "@/lib/database.types";
+import { normalizeSocialHandle } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 
 function parseUser(row: Record<string, unknown>): User {
@@ -14,11 +15,11 @@ function parseUser(row: Record<string, unknown>): User {
     reputation: Number(row.reputation ?? 0),
     created_at: row.created_at as string,
     shop_name: (row.shop_name as string | null) ?? null,
-    banner_url: (row.banner_url as string | null) ?? null,
+    banner_image: (row.banner_image as string | null) ?? null,
     bio: (row.bio as string | null) ?? null,
     shop_description: (row.shop_description as string | null) ?? null,
-    twitter_url: (row.twitter_url as string | null) ?? null,
-    instagram_url: (row.instagram_url as string | null) ?? null,
+    social_twitter: (row.social_twitter as string | null) ?? null,
+    social_instagram: (row.social_instagram as string | null) ?? null,
     is_vendor: Boolean(row.is_vendor),
     is_verified: Boolean(row.is_verified),
     followers_count: Number(row.followers_count ?? 0),
@@ -194,8 +195,8 @@ export interface VendorSettingsInput {
   avatarUrl?: string;
   bio?: string;
   shopDescription?: string;
-  twitterUrl?: string;
-  instagramUrl?: string;
+  twitterHandle?: string;
+  instagramHandle?: string;
   isVendor?: boolean;
   username?: string;
 }
@@ -206,18 +207,21 @@ export async function updateVendorSettings(
 ) {
   const { data, error } = await supabase
     .from("users")
-    .update({
-      shop_name: settings.shopName?.trim() || null,
-      banner_url: settings.bannerUrl?.trim() || null,
-      avatar_url: settings.avatarUrl?.trim() || null,
-      bio: settings.bio?.trim() || null,
-      shop_description: settings.shopDescription?.trim() || null,
-      twitter_url: settings.twitterUrl?.trim() || null,
-      instagram_url: settings.instagramUrl?.trim() || null,
-      is_vendor: settings.isVendor ?? true,
-      username: settings.username?.trim() || null,
-    })
-    .eq("wallet_address", walletAddress)
+    .upsert(
+      {
+        wallet_address: walletAddress,
+        shop_name: settings.shopName?.trim() || null,
+        banner_image: settings.bannerUrl?.trim() || null,
+        avatar_url: settings.avatarUrl?.trim() || null,
+        bio: settings.bio?.trim() || null,
+        shop_description: settings.shopDescription?.trim() || null,
+        social_twitter: normalizeSocialHandle(settings.twitterHandle ?? ""),
+        social_instagram: normalizeSocialHandle(settings.instagramHandle ?? ""),
+        is_vendor: settings.isVendor ?? true,
+        username: settings.username?.trim() || null,
+      },
+      { onConflict: "wallet_address" }
+    )
     .select()
     .single();
 

@@ -5,11 +5,11 @@
 -- ---------------------------------------------------------------------------
 alter table public.users
   add column if not exists shop_name text,
-  add column if not exists banner_url text,
+  add column if not exists banner_image text,
   add column if not exists bio text,
   add column if not exists shop_description text,
-  add column if not exists twitter_url text,
-  add column if not exists instagram_url text,
+  add column if not exists social_twitter text,
+  add column if not exists social_instagram text,
   add column if not exists is_vendor boolean not null default false,
   add column if not exists is_verified boolean not null default false,
   add column if not exists followers_count integer not null default 0,
