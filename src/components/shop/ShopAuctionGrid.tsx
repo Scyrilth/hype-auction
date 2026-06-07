@@ -79,7 +79,7 @@ export default function ShopAuctionGrid({
                     <p className="text-lg font-bold text-accent">
                       {formatSol(displayBid)}
                     </p>
-                    <FiatValue solAmount={displayBid} showTooltip={false} />
+                    <FiatValue solAmount={displayBid} />
                   </div>
                   {showCountdown && (
                     <div className="text-right">

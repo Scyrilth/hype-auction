@@ -73,7 +73,7 @@ export default function AuctionCard({
               <p className="text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
-              <FiatValue solAmount={displayBid} showTooltip={false} />
+              <FiatValue solAmount={displayBid} />
             </div>
 
             {isLive && (

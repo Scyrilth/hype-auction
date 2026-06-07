@@ -72,7 +72,7 @@ export default function BrowseAuctionCard({
               <p className="text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
-              <FiatValue solAmount={displayBid} showTooltip={true} />
+              <FiatValue solAmount={displayBid} />
             </div>
             {isLive && (
               <div className="text-right">

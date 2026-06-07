@@ -34,7 +34,19 @@ function TotalSpentStatCard({ totalSpent }: { totalSpent: number }) {
       <p className="text-xs uppercase tracking-wider text-muted">Total Spent</p>
       <p className="mt-1 text-lg font-bold text-white">{formatSol(totalSpent)}</p>
       <div className="mt-0.5">
-        <FiatValue solAmount={totalSpent} showTooltip={true} />
+        {solPrice === null ? (
+          <span className="inline-flex items-center gap-1 text-xs text-muted">
+            ~$0.00
+            <span className="inline-flex shrink-0 items-center justify-center rounded border border-purple-500/50 bg-[#1a1835] p-0.5 text-gray-400">
+              <i
+                className="ti ti-info-circle"
+                style={{ fontSize: "12px", lineHeight: 1, display: "block" }}
+              />
+            </span>
+          </span>
+        ) : (
+          <FiatValue solAmount={totalSpent} />
+        )}
       </div>
     </div>
   );

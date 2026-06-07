@@ -156,7 +156,7 @@ export default function AuctionBidSidebar({
           <p className="mt-1 text-3xl font-bold text-white">
             {formatSol(currentBid)}
           </p>
-          <FiatValue solAmount={currentBid} showTooltip={true} />
+          <FiatValue solAmount={currentBid} />
           <p className="mt-1 text-sm text-muted">
             {bidCount} {bidCount === 1 ? "bid" : "bids"}
           </p>

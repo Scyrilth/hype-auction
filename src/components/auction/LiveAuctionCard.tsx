@@ -110,7 +110,7 @@ export default function LiveAuctionCard({
                 <p className="text-lg font-bold text-accent">
                   {formatSol(displayBid)}
                 </p>
-                <FiatValue solAmount={displayBid} showTooltip={false} />
+                <FiatValue solAmount={displayBid} />
               </div>
               <div className="text-right">
                 <p className="text-xs text-muted">Time left</p>
