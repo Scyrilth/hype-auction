@@ -77,17 +77,20 @@ export default function LiveAuctionCard({
 
   return (
     <article
-      className="flex h-full w-full min-w-[11.5rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+      className="flex h-full w-full max-w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
-      <Link href={`/auction/${auction.id}`} className="flex flex-1 flex-col">
-        <div className="relative h-48 overflow-hidden bg-surface-elevated">
+      <Link
+        href={`/auction/${auction.id}`}
+        className="flex w-full min-w-0 flex-1 flex-col overflow-hidden"
+      >
+        <div className="relative h-48 w-full shrink-0 overflow-hidden bg-surface-elevated">
           <Image
             src={imageSrc}
             alt={auction.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="object-cover"
+            className="h-full w-full object-cover object-center"
             unoptimized
           />
           <WatchlistHeart auctionId={auction.id} />
