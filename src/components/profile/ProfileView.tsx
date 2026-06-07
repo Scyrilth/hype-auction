@@ -9,6 +9,7 @@ import ProfileReviewsGivenList from "@/components/profile/ProfileReviewsGivenLis
 import ProfileSettingsTab from "@/components/profile/ProfileSettingsTab";
 import ProfileShippingTab from "@/components/profile/ProfileShippingTab";
 import ProfileStatsRow from "@/components/profile/ProfileStatsRow";
+import ProfileCollectionsTab from "@/components/profile/ProfileCollectionsTab";
 import ProfileWatchlistTab from "@/components/profile/ProfileWatchlistTab";
 import type { BuyerProfileData } from "@/lib/profile";
 
@@ -17,6 +18,7 @@ type ProfileTab =
   | "won"
   | "reviews"
   | "watchlist"
+  | "collections"
   | "settings"
   | "shipping";
 
@@ -39,8 +41,13 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
     items.push({ id: "reviews", label: "Reviews Given" });
 
     if (isOwner) {
+      items.push({ id: "watchlist", label: "Watchlist" });
+    }
+
+    items.push({ id: "collections", label: "Collections" });
+
+    if (isOwner) {
       items.push(
-        { id: "watchlist", label: "Watchlist" },
         { id: "settings", label: "Privacy" },
         { id: "shipping", label: "Shipping" }
       );
@@ -101,6 +108,13 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
 
         {activeTab === "watchlist" && isOwner && (
           <ProfileWatchlistTab auctions={profile.watchlist} />
+        )}
+
+        {activeTab === "collections" && (
+          <ProfileCollectionsTab
+            profileWallet={profile.user.wallet_address}
+            isOwner={isOwner}
+          />
         )}
 
         {activeTab === "settings" && isOwner && (
