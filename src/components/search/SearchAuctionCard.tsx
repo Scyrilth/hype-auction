@@ -44,20 +44,6 @@ export default function SearchAuctionCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-        <AuctionLabelBadges
-          auction={{
-            id: auction.id,
-            current_bid: auction.currentBid,
-            start_price: auction.startPrice,
-            end_time: auction.endTime,
-            created_at: auction.createdAt,
-            category: auction.category,
-            item_details: auction.itemDetails,
-            status: auction.status,
-            is_featured: auction.isFeatured,
-          }}
-          bidCount={auction.bidCount}
-        />
         <WatchlistHeart auctionId={auction.id} />
       </div>
 
@@ -68,6 +54,21 @@ export default function SearchAuctionCard({
               {auction.title}
             </AuctionCardTitle>
             <AuctionCardCategorySlot category={auction.category} />
+            <AuctionLabelBadges
+              auction={{
+                id: auction.id,
+                current_bid: auction.currentBid,
+                start_price: auction.startPrice,
+                end_time: auction.endTime,
+                created_at: auction.createdAt,
+                category: auction.category,
+                item_details: auction.itemDetails,
+                status: auction.status,
+                is_featured: auction.isFeatured,
+              }}
+              bidCount={auction.bidCount}
+              className="mt-2"
+            />
           </>
         }
         footer={

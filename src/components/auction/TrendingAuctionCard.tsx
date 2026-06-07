@@ -42,12 +42,6 @@ export default function TrendingAuctionCard({
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
-        <AuctionLabelBadges
-          auction={auction}
-          bidCount={bidCount}
-          bidCount24h={bidCount24h}
-          isTopFeaturedByBids={isTopFeaturedByBids}
-        />
         <WatchlistHeart auctionId={auction.id} />
         {bidCount24h > 0 && (
           <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm">
@@ -58,9 +52,18 @@ export default function TrendingAuctionCard({
 
       <AuctionCardContent
         header={
-          <AuctionCardTitle className="group-hover:text-purple-100">
-            {auction.title}
-          </AuctionCardTitle>
+          <>
+            <AuctionCardTitle className="group-hover:text-purple-100">
+              {auction.title}
+            </AuctionCardTitle>
+            <AuctionLabelBadges
+              auction={auction}
+              bidCount={bidCount}
+              bidCount24h={bidCount24h}
+              isTopFeaturedByBids={isTopFeaturedByBids}
+              className="mt-2"
+            />
+          </>
         }
         footer={
           <div className="flex items-end justify-between gap-2">

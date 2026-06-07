@@ -57,18 +57,19 @@ export default function ShopAuctionGrid({
                 className="object-cover"
                 unoptimized
               />
-              <AuctionLabelBadges
-                auction={auction}
-                bidCount={bidCounts?.get(auction.id)}
-                bidCount24h={bidCounts24h?.get(auction.id)}
-                isTopFeaturedByBids={topFeaturedIds?.has(auction.id)}
-              />
             </div>
             <AuctionCardContent
               header={
                 <>
                   <AuctionCardTitle>{auction.title}</AuctionCardTitle>
                   <AuctionCardCategorySlot category={auction.category} />
+                  <AuctionLabelBadges
+                    auction={auction}
+                    bidCount={bidCounts?.get(auction.id)}
+                    bidCount24h={bidCounts24h?.get(auction.id)}
+                    isTopFeaturedByBids={topFeaturedIds?.has(auction.id)}
+                    className="mt-2"
+                  />
                 </>
               }
               footer={

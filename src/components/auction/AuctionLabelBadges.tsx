@@ -9,7 +9,8 @@ export default function AuctionLabelBadges({
   bidCount,
   bidCount24h,
   isTopFeaturedByBids,
-}: AuctionLabelInput) {
+  className = "",
+}: AuctionLabelInput & { className?: string }) {
   const labels = getAuctionLabels({
     auction,
     bidCount,
@@ -20,7 +21,9 @@ export default function AuctionLabelBadges({
   if (labels.length === 0) return null;
 
   return (
-    <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1">
+    <div
+      className={`flex flex-wrap items-center gap-1 ${className}`.trim()}
+    >
       {labels.map((labelId) => {
         const badge = AUCTION_LABEL_DISPLAY[labelId];
 

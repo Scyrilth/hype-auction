@@ -47,12 +47,6 @@ export default function AuctionCard({
           unoptimized
         />
 
-        <AuctionLabelBadges
-          auction={auction}
-          bidCount={bidCount}
-          bidCount24h={bidCount24h}
-          isTopFeaturedByBids={isTopFeaturedByBids}
-        />
         <WatchlistHeart auctionId={auction.id} />
       </div>
 
@@ -63,6 +57,13 @@ export default function AuctionCard({
               {auction.title}
             </AuctionCardTitle>
             <AuctionCardCategorySlot category={auction.category} />
+            <AuctionLabelBadges
+              auction={auction}
+              bidCount={bidCount}
+              bidCount24h={bidCount24h}
+              isTopFeaturedByBids={isTopFeaturedByBids}
+              className="mt-2"
+            />
           </>
         }
         footer={

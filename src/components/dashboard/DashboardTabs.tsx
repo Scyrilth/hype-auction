@@ -90,10 +90,18 @@ function ActiveAuctionCard({
             className="object-cover"
             unoptimized
           />
-          <AuctionLabelBadges auction={auction} bidCount={auction.bidCount} />
         </div>
         <AuctionCardContent
-          header={<AuctionCardTitle>{auction.title}</AuctionCardTitle>}
+          header={
+            <>
+              <AuctionCardTitle>{auction.title}</AuctionCardTitle>
+              <AuctionLabelBadges
+                auction={auction}
+                bidCount={auction.bidCount}
+                className="mt-2"
+              />
+            </>
+          }
           footer={
             <>
               <div className="flex items-end justify-between gap-3">
@@ -154,10 +162,18 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
           className="object-cover"
           unoptimized
         />
-        <AuctionLabelBadges auction={auction} bidCount={auction.bidCount} />
       </div>
       <AuctionCardContent
-        header={<AuctionCardTitle>{auction.title}</AuctionCardTitle>}
+        header={
+          <>
+            <AuctionCardTitle>{auction.title}</AuctionCardTitle>
+            <AuctionLabelBadges
+              auction={auction}
+              bidCount={auction.bidCount}
+              className="mt-2"
+            />
+          </>
+        }
         footer={
           <>
             <div>

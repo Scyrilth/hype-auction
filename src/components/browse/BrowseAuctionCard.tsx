@@ -46,12 +46,6 @@ export default function BrowseAuctionCard({
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
-        <AuctionLabelBadges
-          auction={auction}
-          bidCount={bidCount}
-          bidCount24h={bidCount24h}
-          isTopFeaturedByBids={isTopFeaturedByBids}
-        />
         <WatchlistHeart auctionId={auction.id} />
       </div>
 
@@ -62,6 +56,13 @@ export default function BrowseAuctionCard({
               {auction.title}
             </AuctionCardTitle>
             <AuctionCardCategorySlot category={auction.category} />
+            <AuctionLabelBadges
+              auction={auction}
+              bidCount={bidCount}
+              bidCount24h={bidCount24h}
+              isTopFeaturedByBids={isTopFeaturedByBids}
+              className="mt-2"
+            />
           </>
         }
         footer={
