@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
 import FiatValue from "@/components/ui/FiatValue";
 import { FilterIcon } from "@/components/icons";
 import { useToast } from "@/components/ui/Toast";
@@ -18,6 +19,9 @@ import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
 
 type SortOption = "ending-soon" | "newest" | "highest-bid" | "lowest-bid";
+
+const ROW_SIZE = 5;
+const MAX_ROWS = 3;
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
   { id: "ending-soon", label: "Ending Soon" },
@@ -209,6 +213,15 @@ export default function LiveAuctionsGrid({
 
   const filtersActive = categoryFilter !== "all" || sortBy !== "ending-soon";
 
+  const carouselRows = useMemo(() => {
+    const rows: Auction[][] = [];
+    for (let i = 0; i < filteredAuctions.length; i += ROW_SIZE) {
+      rows.push(filteredAuctions.slice(i, i + ROW_SIZE));
+      if (rows.length >= MAX_ROWS) break;
+    }
+    return rows;
+  }, [filteredAuctions]);
+
   useEffect(() => {
     if (!filterOpen) return;
 
@@ -299,9 +312,14 @@ export default function LiveAuctionsGrid({
       </div>
 
       {filteredAuctions.length > 0 ? (
-        <div className="live-auctions-grid grid gap-3 sm:gap-4">
-          {filteredAuctions.map((auction) => (
-            <LiveAuctionCard key={auction.id} auction={auction} />
+        <div className="space-y-4">
+          {carouselRows.map((row, rowIndex) => (
+            <InfiniteCarouselRow
+              key={`live-row-${rowIndex}-${row.map((auction) => auction.id).join("-")}`}
+              items={row}
+              getKey={(auction) => auction.id}
+              renderItem={(auction) => <LiveAuctionCard auction={auction} />}
+            />
           ))}
         </div>
       ) : (

@@ -13,7 +13,7 @@ import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 
 const navLinks = [
   { label: "Live", href: "/", live: true },
-  { label: "Browse", href: "/#live-auctions" },
+  { label: "Browse", href: "/browse" },
   { label: "Vendors", href: "/vendors" },
   { label: "Categories", href: "/categories" },
   { label: "Rewards", href: "#" },

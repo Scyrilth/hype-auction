@@ -1,16 +1,20 @@
 import AuctionEmptyState from "@/components/auction/AuctionEmptyState";
 import FeaturedAuctionSection from "@/components/auction/FeaturedAuctionSection";
 import LiveAuctionsGrid from "@/components/auction/LiveAuctionsGrid";
+import TrendingSection from "@/components/auction/TrendingSection";
 import LiveChat from "@/components/auction/LiveChat";
 import UpcomingAuctions from "@/components/auction/UpcomingAuctions";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
-import { getAuctionsPageData } from "@/lib/auctions";
+import { getAuctionsPageData, getTrendingAuctions } from "@/lib/auctions";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const { featured, otherLive, upcomingAuctions } = await getAuctionsPageData();
+  const [{ featured, otherLive, upcomingAuctions }, trending] = await Promise.all([
+    getAuctionsPageData(),
+    getTrendingAuctions(10),
+  ]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -23,6 +27,7 @@ export default async function Home() {
           {featured ? (
             <>
               <FeaturedAuctionSection featured={featured} />
+              <TrendingSection items={trending} />
               <LiveAuctionsGrid auctions={otherLive} />
             </>
           ) : (

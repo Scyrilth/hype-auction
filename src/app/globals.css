@@ -153,18 +153,18 @@ body {
   animation: vendor-suggestions-fade-in 0.15s ease-out;
 }
 
-.live-auctions-grid {
+.browse-category-grid {
   grid-template-columns: repeat(2, 1fr);
 }
 
-@media (min-width: 768px) {
-  .live-auctions-grid {
+@media (min-width: 640px) {
+  .browse-category-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (min-width: 1024px) {
-  .live-auctions-grid {
+  .browse-category-grid {
     grid-template-columns: repeat(5, 1fr);
   }
 }

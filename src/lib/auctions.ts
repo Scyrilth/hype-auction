@@ -47,6 +47,54 @@ function parseAuction(row: Record<string, unknown>): Auction {
   };
 }
 
+export async function getBidCountsInLast24Hours(
+  auctionIds: string[]
+): Promise<Map<string, number>> {
+  if (!auctionIds.length) return new Map();
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("bids")
+    .select("auction_id")
+    .in("auction_id", auctionIds)
+    .gte("created_at", since);
+
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const auctionId = row.auction_id as string;
+    counts.set(auctionId, (counts.get(auctionId) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export interface AuctionWithBidCount24h {
+  auction: Auction;
+  bidCount24h: number;
+}
+
+export async function getTrendingAuctions(
+  limit = 10
+): Promise<AuctionWithBidCount24h[]> {
+  const liveAuctions = await getAllLiveAuctions();
+  const bidCounts = await getBidCountsInLast24Hours(
+    liveAuctions.map((auction) => auction.id)
+  );
+
+  return liveAuctions
+    .map((auction) => ({
+      auction,
+      bidCount24h: bidCounts.get(auction.id) ?? 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.bidCount24h - a.bidCount24h ||
+        b.auction.current_bid - a.auction.current_bid
+    )
+    .slice(0, limit);
+}
+
 export async function getAllLiveAuctions(): Promise<Auction[]> {
   const { data, error } = await supabase
     .from("auctions")
