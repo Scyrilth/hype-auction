@@ -2,6 +2,16 @@ import type { VendorDirectoryEntry } from "@/lib/vendors";
 import { normalizeSearchQuery } from "@/lib/search";
 import { shortenAddress } from "@/lib/format";
 
+export type AuctionSuggestionSource = {
+  id: string;
+  title: string;
+  seller_wallet: string;
+  current_bid: number;
+  status: string;
+  end_time: string;
+  bid_count: number;
+};
+
 export type VendorSuggestion =
   | {
       type: "vendor";
@@ -10,6 +20,8 @@ export type VendorSuggestion =
       shopName: string;
       username: string | null;
       initials: string;
+      followersCount: number;
+      averageRating: number;
     }
   | {
       type: "category";
@@ -24,11 +36,24 @@ export type VendorSuggestion =
       title: string;
       vendorName: string;
       shopSlug: string;
+      currentBid: number;
+      bidCount: number;
+      isLive: boolean;
     };
 
 export type VendorSuggestionGroup = {
   label: string;
   items: VendorSuggestion[];
+};
+
+export type SuggestionGroupOrder = "vendor-directory" | "global";
+
+const GROUP_ORDER: Record<
+  SuggestionGroupOrder,
+  Array<"vendor" | "category" | "item">
+> = {
+  "vendor-directory": ["vendor", "category", "item"],
+  global: ["vendor", "item", "category"],
 };
 
 function vendorDisplayName(entry: VendorDirectoryEntry) {
@@ -43,11 +68,16 @@ function vendorInitials(name: string) {
   return name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase() || "??";
 }
 
+function isAuctionLive(status: string, endTime: string) {
+  return status === "live" && endTime > new Date().toISOString();
+}
+
 export function buildVendorSuggestions(
   vendors: VendorDirectoryEntry[],
   query: string,
-  auctions: { id: string; title: string; seller_wallet: string }[],
-  maxTotal = 6
+  auctions: AuctionSuggestionSource[],
+  maxTotal = 6,
+  groupOrder: SuggestionGroupOrder = "vendor-directory"
 ): VendorSuggestionGroup[] {
   const q = normalizeSearchQuery(query);
   if (q.length < 2) return [];
@@ -80,6 +110,8 @@ export function buildVendorSuggestions(
         shopName,
         username: vendor.username,
         initials: vendorInitials(shopName),
+        followersCount: vendor.followers_count,
+        averageRating: entry.averageRating,
       });
     }
   }
@@ -116,27 +148,34 @@ export function buildVendorSuggestions(
       title: auction.title,
       vendorName: vendorDisplayName(entry),
       shopSlug: entry.shopSlug,
+      currentBid: auction.current_bid,
+      bidCount: auction.bid_count,
+      isLive: isAuctionLive(auction.status, auction.end_time),
     });
   }
+
+  const hitsByType = {
+    vendor: vendorHits,
+    category: categoryHits,
+    item: itemHits,
+  };
+
+  const labelByType = {
+    vendor: "Vendors",
+    category: "Categories",
+    item: "Items",
+  };
 
   const groups: VendorSuggestionGroup[] = [];
   let remaining = maxTotal;
 
-  if (vendorHits.length && remaining > 0) {
-    const items = vendorHits.slice(0, remaining);
-    groups.push({ label: "Vendors", items });
-    remaining -= items.length;
-  }
+  for (const type of GROUP_ORDER[groupOrder]) {
+    const hits = hitsByType[type];
+    if (!hits.length || remaining <= 0) continue;
 
-  if (categoryHits.length && remaining > 0) {
-    const items = categoryHits.slice(0, remaining);
-    groups.push({ label: "Categories", items });
+    const items = hits.slice(0, remaining);
+    groups.push({ label: labelByType[type], items });
     remaining -= items.length;
-  }
-
-  if (itemHits.length && remaining > 0) {
-    const items = itemHits.slice(0, remaining);
-    groups.push({ label: "Items", items });
   }
 
   return groups;
