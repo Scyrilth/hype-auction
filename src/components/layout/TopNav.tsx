@@ -4,10 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 import WalletNav from "@/components/WalletNav";
 import SearchSuggestionsDropdown from "@/components/search/SearchSuggestionsDropdown";
 import { BellIcon, SearchIcon } from "@/components/icons";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { useSearchSuggestions } from "@/hooks/useSearchSuggestions";
 import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 
@@ -22,6 +24,8 @@ const navLinks = [
 export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const { connected } = useWallet();
+  const { count: unreadMessages } = useUnreadMessageCount();
   const [query, setQuery] = useState("");
 
   const { queryReady, suggestionGroups, flatSuggestions } = useSearchSuggestions(
@@ -118,6 +122,21 @@ export default function TopNav() {
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <WalletNav />
+
+        {connected && (
+          <Link
+            href="/messages"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
+            aria-label="Messages"
+          >
+            <i className="ti ti-mail text-[20px] leading-none" />
+            {unreadMessages > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-live-red px-1 text-[10px] font-bold text-white">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
+          </Link>
+        )}
 
         <button
           type="button"

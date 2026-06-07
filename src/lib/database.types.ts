@@ -1,4 +1,9 @@
-export type AuctionStatus = "draft" | "live" | "ended" | "cancelled";
+export type AuctionStatus =
+  | "draft"
+  | "live"
+  | "ended"
+  | "cancelled"
+  | "completed";
 
 export interface User {
   wallet_address: string;

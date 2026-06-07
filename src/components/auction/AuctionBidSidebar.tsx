@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import AuctionSellerCard from "@/components/auction/AuctionSellerCard";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import LiveChat from "@/components/auction/LiveChat";
+import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
@@ -59,6 +60,11 @@ export default function AuctionBidSidebar({
   const isLive =
     auction.status === "live" &&
     new Date(auction.end_time).getTime() > Date.now();
+  const isWinner =
+    Boolean(publicKey) &&
+    topBidder === publicKey?.toBase58() &&
+    !isLive &&
+    (auction.status === "ended" || auction.status === "completed");
 
   useEffect(() => {
     setBidCount(initialBidCount);
@@ -228,6 +234,16 @@ export default function AuctionBidSidebar({
       </div>
 
       <AuctionSellerCard seller={seller} reviewCount={sellerReviewCount} />
+
+      {isWinner && (
+        <MessageThreadButton
+          variant="seller"
+          auctionId={auction.id}
+          auctionTitle={auction.title}
+          sellerWallet={auction.seller_wallet}
+          className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+        />
+      )}
 
       <div className="min-h-[20rem]">
         <LiveChat auctionId={auction.id} />

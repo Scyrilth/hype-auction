@@ -12,6 +12,7 @@ import {
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import ReviewCard from "@/components/reviews/ReviewCard";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
@@ -189,6 +190,18 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
                 ? shortenAddress(auction.winnerWallet, 6)
                 : "No bids"}
             </p>
+            {auction.winnerWallet && (
+              <div className="mt-3">
+                <MessageThreadButton
+                  variant="buyer"
+                  auctionId={auction.id}
+                  auctionTitle={auction.title}
+                  sellerWallet={auction.seller_wallet}
+                  buyerWallet={auction.winnerWallet}
+                  className="w-full rounded-full border border-border py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
+                />
+              </div>
+            )}
           </>
         }
       />

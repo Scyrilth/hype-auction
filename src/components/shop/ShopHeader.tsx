@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import FollowButton from "@/components/shop/FollowButton";
 import StarRating from "@/components/shop/StarRating";
 import FiatValue from "@/components/ui/FiatValue";
@@ -39,7 +40,7 @@ export default function ShopHeader({
   stats: VendorShopStats;
   initialFollowing: boolean;
 }) {
-  const { publicKey } = useWallet();
+  const { publicKey, connected } = useWallet();
   const [followersCount, setFollowersCount] = useState(stats.followers_count);
 
   const isOwner =
@@ -99,6 +100,12 @@ export default function ShopHeader({
               initialFollowersCount={followersCount}
               onFollowersChange={setFollowersCount}
             />
+            {!isOwner && connected && (
+              <MessageThreadButton
+                variant="general"
+                sellerWallet={vendor.wallet_address}
+              />
+            )}
             {isOwner && (
               <Link
                 href="/dashboard"

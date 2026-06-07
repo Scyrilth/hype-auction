@@ -14,7 +14,7 @@ import {
   enrichChatMessage,
   fetchAuctionMessages,
   sendAuctionMessage,
-} from "@/lib/messages";
+} from "@/lib/auction-chat";
 import { supabase } from "@/lib/supabase";
 
 export default function LiveChat({ auctionId }: { auctionId?: string }) {
