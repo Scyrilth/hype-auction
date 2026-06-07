@@ -9,7 +9,12 @@ import { BellIcon, SearchIcon } from "@/components/icons";
 import { useSearchSuggestions } from "@/hooks/useSearchSuggestions";
 import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 
-const navLinks = ["Browse", "Categories", "Live", "Rewards"];
+const navLinks = [
+  { label: "Browse", href: "/" },
+  { label: "Categories", href: "/categories" },
+  { label: "Live", href: "/" },
+  { label: "Rewards", href: "#" },
+];
 
 export default function TopNav() {
   const router = useRouter();
@@ -78,13 +83,13 @@ export default function TopNav() {
       <nav className="hidden items-center gap-4 lg:flex lg:gap-6">
         {navLinks.map((link) => (
           <a
-            key={link}
-            href="#"
+            key={link.label}
+            href={link.href}
             className={`text-sm font-medium transition-colors hover:text-white ${
-              link === "Live" ? "text-accent" : "text-zinc-400"
+              link.label === "Live" ? "text-accent" : "text-zinc-400"
             }`}
           >
-            {link}
+            {link.label}
           </a>
         ))}
       </nav>

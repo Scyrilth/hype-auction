@@ -1,4 +1,10 @@
 import type { Auction } from "@/lib/database.types";
+import {
+  auctionCategoryMatchesQuery,
+  findMatchingCategories,
+  resolveCategoryLabels,
+  vendorCategoriesMatchQuery,
+} from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
 import {
   getVendorDirectory,
@@ -29,7 +35,7 @@ export function matchesVendorEntry(
     return true;
   }
 
-  if (categories.some((category) => category.toLowerCase().includes(q))) {
+  if (vendorCategoriesMatchQuery(categories, query)) {
     return true;
   }
 
@@ -40,25 +46,41 @@ export function matchesVendorEntry(
   return false;
 }
 
-/** Wallets of sellers with auction titles matching the query. */
+/** Wallets of sellers with auctions matching the query (title or category). */
 export async function getSellerWalletsWithMatchingAuctionTitles(
   query: string
 ): Promise<Set<string>> {
   const q = normalizeSearchQuery(query);
   if (!q) return new Set();
 
-  const { data, error } = await supabase
-    .from("auctions")
-    .select("seller_wallet, title")
-    .ilike("title", `%${q}%`);
+  const resolvedLabels = resolveCategoryLabels(query);
+  const wallets = new Set<string>();
 
-  if (error) throw error;
+  const requests = [
+    supabase.from("auctions").select("seller_wallet, title").ilike("title", `%${q}%`),
+    supabase.from("auctions").select("seller_wallet, category").ilike("category", `%${q}%`),
+  ];
 
-  return new Set(
-    (data ?? [])
-      .map((row) => row.seller_wallet as string)
-      .filter(Boolean)
-  );
+  if (resolvedLabels.length) {
+    requests.push(
+      supabase
+        .from("auctions")
+        .select("seller_wallet, category")
+        .in("category", resolvedLabels)
+    );
+  }
+
+  const results = await Promise.all(requests);
+
+  for (const { data, error } of results) {
+    if (error) throw error;
+    for (const row of data ?? []) {
+      const wallet = row.seller_wallet as string;
+      if (wallet) wallets.add(wallet);
+    }
+  }
+
+  return wallets;
 }
 
 export function filterVendorEntries(
@@ -127,7 +149,7 @@ function matchesAuction(auction: Auction, q: string) {
   return (
     auction.title.toLowerCase().includes(q) ||
     auction.description?.toLowerCase().includes(q) ||
-    auction.category?.toLowerCase().includes(q)
+    auctionCategoryMatchesQuery(auction.category, q)
   );
 }
 
@@ -208,7 +230,19 @@ export async function performGlobalSearch(
     })
   );
 
+  const matchedTaxonomyCategories = findMatchingCategories(q);
   const categoryCounts = new Map<string, number>();
+
+  for (const category of matchedTaxonomyCategories) {
+    const count = allAuctions.filter(
+      (auction) =>
+        auction.category?.toLowerCase() === category.label.toLowerCase()
+    ).length;
+    if (count > 0) {
+      categoryCounts.set(category.label, count);
+    }
+  }
+
   for (const auction of allAuctions) {
     if (auction.category?.toLowerCase().includes(q)) {
       categoryCounts.set(

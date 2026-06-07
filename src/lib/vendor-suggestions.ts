@@ -1,4 +1,10 @@
 import type { VendorDirectoryEntry } from "@/lib/vendors";
+import {
+  auctionCategoryMatchesQuery,
+  countVendorsForCategoryLabel,
+  findMatchingCategories,
+  vendorCategoriesMatchQuery,
+} from "@/lib/categories";
 import { normalizeSearchQuery } from "@/lib/search";
 import { shortenAddress } from "@/lib/format";
 
@@ -79,7 +85,7 @@ export function matchesAuctionSearchTerm(
 ): boolean {
   const q = normalizeSearchQuery(query);
   if (auction.title.toLowerCase().includes(q)) return true;
-  return (auction.category ?? "").toLowerCase().includes(q);
+  return auctionCategoryMatchesQuery(auction.category, query);
 }
 
 export function buildVendorSuggestions(
@@ -112,7 +118,7 @@ export function buildVendorSuggestions(
       .join(" ")
       .toLowerCase();
 
-    if (haystack.includes(q)) {
+    if (haystack.includes(q) || vendorCategoriesMatchQuery(entry.categories, query)) {
       vendorHits.push({
         type: "vendor",
         id: `vendor-${vendor.wallet_address}`,
@@ -126,9 +132,29 @@ export function buildVendorSuggestions(
     }
   }
 
+  const matchedTaxonomyCategories = findMatchingCategories(query);
+  const matchedTaxonomyLabels = new Set(
+    matchedTaxonomyCategories.map((category) => category.label.toLowerCase())
+  );
+
   const categoryCounts = new Map<string, number>();
+
+  for (const category of matchedTaxonomyCategories) {
+    const vendorCount = countVendorsForCategoryLabel(vendors, category.label);
+    if (vendorCount > 0) {
+      categoryCounts.set(category.label, vendorCount);
+    }
+  }
+
   for (const entry of vendors) {
     for (const category of entry.categories) {
+      if (
+        categoryCounts.has(category) ||
+        matchedTaxonomyLabels.has(category.toLowerCase())
+      ) {
+        continue;
+      }
+
       if (category.toLowerCase().includes(q)) {
         categoryCounts.set(category, (categoryCounts.get(category) ?? 0) + 1);
       }

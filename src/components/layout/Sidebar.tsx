@@ -7,6 +7,7 @@ import {
   ShieldIcon,
   SolanaLogo,
   StarIcon,
+  TagIcon,
   VideoIcon,
   WalletIcon,
 } from "@/components/icons";
@@ -14,6 +15,7 @@ import {
 const navLinks = [
   { href: "/", label: "Home", icon: VideoIcon },
   { href: "/vendors", label: "Vendors", icon: GavelIcon },
+  { href: "/categories", label: "Categories", icon: TagIcon },
   { href: "/dashboard", label: "Dashboard", icon: GridIcon },
   { href: "/dashboard/settings", label: "Shop Settings", icon: StarIcon },
 ];

@@ -1,15 +1,9 @@
+import { getCategoryLabels } from "@/lib/categories";
 import type { Auction, AuctionStatus } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
-export const AUCTION_CATEGORIES = [
-  "Trading Cards",
-  "Sneakers",
-  "Electronics",
-  "Collectibles",
-  "Art",
-  "Other",
-] as const;
+export const AUCTION_CATEGORIES = getCategoryLabels();
 
 export const AUCTION_DURATIONS = [
   { label: "1 hour", hours: 1 },

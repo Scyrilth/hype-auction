@@ -9,6 +9,7 @@ import {
   type SuggestionGroupOrder,
 } from "@/lib/vendor-suggestions";
 import { normalizeSearchQuery } from "@/lib/search";
+import { resolveCategoryLabels } from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
 import { getVendorDirectory, type VendorDirectoryEntry } from "@/lib/vendors";
 
@@ -39,32 +40,59 @@ async function fetchMatchingAuctions(
   const q = normalizeSearchQuery(query);
   if (q.length < 2) return [];
 
-  let request = supabase
-    .from("auctions")
-    .select("id, title, category, seller_wallet, current_bid, status, end_time")
-    .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
-    .limit(20);
+  const resolvedLabels = resolveCategoryLabels(query);
+  const requests = [
+    supabase
+      .from("auctions")
+      .select("id, title, category, seller_wallet, current_bid, status, end_time")
+      .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
+      .limit(20),
+  ];
 
-  if (sellerWallets?.length) {
-    request = request.in("seller_wallet", sellerWallets);
+  if (resolvedLabels.length) {
+    requests.push(
+      supabase
+        .from("auctions")
+        .select("id, title, category, seller_wallet, current_bid, status, end_time")
+        .in("category", resolvedLabels)
+        .limit(20)
+    );
   }
 
-  const { data, error } = await request;
-  if (error || !data?.length) return [];
+  const results = await Promise.all(
+    requests.map((request) =>
+      sellerWallets?.length
+        ? request.in("seller_wallet", sellerWallets)
+        : request
+    )
+  );
 
-  const auctionIds = data.map((row) => row.id as string);
+  const rowsById = new Map<string, Record<string, unknown>>();
+  for (const { data, error } of results) {
+    if (error) continue;
+    for (const row of data ?? []) {
+      rowsById.set(row.id as string, row as Record<string, unknown>);
+    }
+  }
+
+  if (!rowsById.size) return [];
+
+  const auctionIds = [...rowsById.keys()];
   const bidCounts = await fetchBidCounts(auctionIds);
 
-  return data.map((row) => ({
-    id: row.id as string,
-    title: row.title as string,
-    category: (row.category as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    status: row.status as string,
-    end_time: row.end_time as string,
-    bid_count: bidCounts.get(row.id as string) ?? 0,
-  }));
+  return auctionIds.map((id) => {
+    const row = rowsById.get(id)!;
+    return {
+      id,
+      title: row.title as string,
+      category: (row.category as string | null) ?? null,
+      seller_wallet: row.seller_wallet as string,
+      current_bid: Number(row.current_bid),
+      status: row.status as string,
+      end_time: row.end_time as string,
+      bid_count: bidCounts.get(id) ?? 0,
+    };
+  });
 }
 
 export function useSearchSuggestions({
