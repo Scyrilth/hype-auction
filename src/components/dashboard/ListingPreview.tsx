@@ -9,7 +9,22 @@ import {
   buildGradingItemDetails,
   type GradingCompany,
 } from "@/lib/grading";
+import {
+  formatItemDetailValue,
+  getItemDetailLabel,
+  type CategoryFieldType,
+} from "@/lib/category-fields";
 import { formatSol } from "@/lib/format";
+
+export type ItemDetailRow = {
+  key: string;
+  value: string;
+  label?: string;
+  fieldType?: CategoryFieldType;
+  options?: string[];
+  unit?: string;
+  isCustom?: boolean;
+};
 
 export type ListingFormState = {
   title: string;
@@ -23,7 +38,7 @@ export type ListingFormState = {
   durationHours: string;
   imageUrl: string;
   additionalImages: string[];
-  itemDetails: { key: string; value: string }[];
+  itemDetails: ItemDetailRow[];
 };
 
 export default function ListingPreview({ form }: { form: ListingFormState }) {
@@ -103,9 +118,11 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
             <dl className="mt-4 space-y-1.5 rounded-xl border border-border bg-surface/60 p-3">
               {detailEntries.map((row) => (
                 <div key={row.key} className="flex justify-between gap-3 text-xs">
-                  <dt className="text-muted">{row.key}</dt>
+                  <dt className="text-muted">
+                    {row.label ?? getItemDetailLabel(form.category, row.key)}
+                  </dt>
                   <dd className="text-right font-medium text-zinc-300">
-                    {row.value}
+                    {formatItemDetailValue(form.category, row.key, row.value)}
                   </dd>
                 </div>
               ))}

@@ -5,6 +5,10 @@ import AuctionImageGallery from "@/components/auction/AuctionImageGallery";
 import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import type { AuctionDetailData } from "@/lib/auctions";
 import {
+  formatItemDetailValue,
+  getItemDetailLabel,
+} from "@/lib/category-fields";
+import {
   filterCustomItemDetails,
   getGradingFromItemDetails,
 } from "@/lib/grading";
@@ -74,10 +78,10 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
                     className="rounded-xl border border-border bg-background/60 px-3 py-3"
                   >
                     <dt className="text-xs uppercase tracking-wider text-muted">
-                      {key}
+                      {getItemDetailLabel(auction.category, key)}
                     </dt>
                     <dd className="mt-1 text-sm font-medium text-white">
-                      {value}
+                      {formatItemDetailValue(auction.category, key, value)}
                     </dd>
                   </div>
                 ))}

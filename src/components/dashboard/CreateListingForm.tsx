@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import ItemDetailsSection from "@/components/dashboard/ItemDetailsSection";
 import ListingPreview, {
   type ListingFormState,
 } from "@/components/dashboard/ListingPreview";
@@ -44,7 +45,7 @@ const initialForm: ListingFormState = {
   durationHours: String(AUCTION_DURATIONS[4].hours),
   imageUrl: "",
   additionalImages: ["", "", "", ""],
-  itemDetails: [{ key: "", value: "" }],
+  itemDetails: [],
 };
 
 export default function CreateListingForm() {
@@ -67,32 +68,6 @@ export default function CreateListingForm() {
       next[index] = value;
       return { ...current, additionalImages: next };
     });
-  };
-
-  const updateDetailRow = (
-    index: number,
-    field: "key" | "value",
-    value: string
-  ) => {
-    setForm((current) => {
-      const next = [...current.itemDetails];
-      next[index] = { ...next[index], [field]: value };
-      return { ...current, itemDetails: next };
-    });
-  };
-
-  const addDetailRow = () => {
-    setForm((current) => ({
-      ...current,
-      itemDetails: [...current.itemDetails, { key: "", value: "" }],
-    }));
-  };
-
-  const removeDetailRow = (index: number) => {
-    setForm((current) => ({
-      ...current,
-      itemDetails: current.itemDetails.filter((_, i) => i !== index),
-    }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -372,52 +347,13 @@ export default function CreateListingForm() {
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <div className="mb-2 flex items-center justify-between">
-                <p className={labelClass}>Item details</p>
-                <button
-                  type="button"
-                  onClick={addDetailRow}
-                  className="text-xs font-medium text-accent hover:underline"
-                >
-                  + Add row
-                </button>
-              </div>
-              <div className="space-y-2">
-                {form.itemDetails.map((row, index) => (
-                  <div key={index} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={row.key}
-                      onChange={(e) =>
-                        updateDetailRow(index, "key", e.target.value)
-                      }
-                      placeholder="Label (e.g. Size)"
-                      className={inputClass}
-                    />
-                    <input
-                      type="text"
-                      value={row.value}
-                      onChange={(e) =>
-                        updateDetailRow(index, "value", e.target.value)
-                      }
-                      placeholder="Value (e.g. US 10)"
-                      className={inputClass}
-                    />
-                    {form.itemDetails.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeDetailRow(index)}
-                        className="shrink-0 rounded-xl border border-border px-3 text-sm text-muted hover:text-white"
-                        aria-label="Remove detail row"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ItemDetailsSection
+              category={form.category}
+              rows={form.itemDetails}
+              onChange={(itemDetails) =>
+                setForm((current) => ({ ...current, itemDetails }))
+              }
+            />
           </div>
 
           <button
