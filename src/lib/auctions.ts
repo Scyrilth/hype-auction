@@ -1,3 +1,4 @@
+import { getTopFeaturedAuctionIds } from "@/lib/auction-labels";
 import { supabase } from "@/lib/supabase";
 import { parseUser } from "@/lib/vendors";
 import type { Auction, Bid, User } from "@/lib/database.types";
@@ -44,6 +45,7 @@ function parseAuction(row: Record<string, unknown>): Auction {
         ? (itemDetails as Record<string, string>)
         : {},
     created_at: row.created_at as string,
+    is_featured: Boolean(row.is_featured),
   };
 }
 
@@ -128,7 +130,7 @@ function parseBid(row: Record<string, unknown>): Bid {
   };
 }
 
-async function getBidCountsForAuctions(
+export async function getBidCountsForAuctions(
   auctionIds: string[]
 ): Promise<Map<string, number>> {
   if (!auctionIds.length) return new Map();
@@ -344,12 +346,31 @@ export async function getAuctionsPageData() {
     getUpcomingAuctions(),
   ]);
 
-  const enrichedLive = await Promise.all(
-    liveAuctions.map((auction) => enrichLiveAuction(auction))
+  const [enrichedLive, bidCounts24h] = await Promise.all([
+    Promise.all(liveAuctions.map((auction) => enrichLiveAuction(auction))),
+    getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id)),
+  ]);
+
+  const topFeaturedIds = getTopFeaturedAuctionIds(
+    liveAuctions.map((auction) => ({
+      id: auction.id,
+      bidCount24h: bidCounts24h.get(auction.id) ?? 0,
+    }))
+  );
+
+  const bidCounts = new Map(
+    enrichedLive.map((item) => [item.auction.id, item.bidCount])
   );
 
   const featured = enrichedLive[0] ?? null;
   const otherLive = enrichedLive.slice(1).map((item) => item.auction);
 
-  return { featured, otherLive, upcomingAuctions };
+  return {
+    featured,
+    otherLive,
+    upcomingAuctions,
+    bidCounts24h,
+    bidCounts,
+    topFeaturedIds,
+  };
 }

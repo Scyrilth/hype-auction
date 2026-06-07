@@ -5,6 +5,7 @@ import {
   AuctionCardContent,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
+import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
@@ -15,9 +16,13 @@ import { formatSol } from "@/lib/format";
 export default function TrendingAuctionCard({
   auction,
   bidCount24h,
+  bidCount,
+  isTopFeaturedByBids,
 }: {
   auction: Auction;
   bidCount24h: number;
+  bidCount?: number;
+  isTopFeaturedByBids?: boolean;
 }) {
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
@@ -37,10 +42,12 @@ export default function TrendingAuctionCard({
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
-        <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-          Live
-        </span>
+        <AuctionLabelBadges
+          auction={auction}
+          bidCount={bidCount}
+          bidCount24h={bidCount24h}
+          isTopFeaturedByBids={isTopFeaturedByBids}
+        />
         <WatchlistHeart auctionId={auction.id} />
         {bidCount24h > 0 && (
           <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm">

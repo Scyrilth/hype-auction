@@ -7,24 +7,29 @@ import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
 import BrowseAuctionCard from "@/components/browse/BrowseAuctionCard";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
 import type { AuctionWithBidCount24h } from "@/lib/auctions";
+import {
+  getAuctionCardLabelProps,
+  type AuctionLabelMaps,
+} from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
 
-type InfiniteCarouselRowProps =
+type InfiniteCarouselRowProps = {
+  labelMaps?: AuctionLabelMaps;
+  visibleCount?: number;
+} & (
   | {
       variant: "trending";
       items: AuctionWithBidCount24h[];
-      visibleCount?: number;
     }
   | {
       variant: "browse";
       items: Auction[];
-      visibleCount?: number;
     }
   | {
       variant: "live";
       items: Auction[];
-      visibleCount?: number;
-    };
+    }
+);
 
 function getItemKey(
   variant: InfiniteCarouselRowProps["variant"],
@@ -37,24 +42,46 @@ function getItemKey(
 }
 
 function renderCarouselItem(
-  variant: InfiniteCarouselRowProps["variant"],
+  props: InfiniteCarouselRowProps,
   item: Auction | AuctionWithBidCount24h
 ) {
+  const { variant, labelMaps } = props;
+
   if (variant === "trending") {
     const trendingItem = item as AuctionWithBidCount24h;
+    const labelProps = getAuctionCardLabelProps(
+      trendingItem.auction.id,
+      labelMaps,
+      trendingItem.bidCount24h
+    );
+
     return (
       <TrendingAuctionCard
         auction={trendingItem.auction}
         bidCount24h={trendingItem.bidCount24h}
+        bidCount={labelProps.bidCount}
+        isTopFeaturedByBids={labelProps.isTopFeaturedByBids}
       />
     );
   }
 
   if (variant === "browse") {
-    return <BrowseAuctionCard auction={item as Auction} />;
+    const auction = item as Auction;
+    return (
+      <BrowseAuctionCard
+        auction={auction}
+        {...getAuctionCardLabelProps(auction.id, labelMaps)}
+      />
+    );
   }
 
-  return <LiveAuctionCard auction={item as Auction} />;
+  const auction = item as Auction;
+  return (
+    <LiveAuctionCard
+      auction={auction}
+      {...getAuctionCardLabelProps(auction.id, labelMaps)}
+    />
+  );
 }
 
 export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
@@ -102,7 +129,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
             key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
             className="flex h-full min-w-0 transition-opacity duration-300"
           >
-            {renderCarouselItem(variant, item)}
+            {renderCarouselItem(props, item)}
           </div>
         ))}
       </div>

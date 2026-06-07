@@ -147,6 +147,9 @@ export interface AuctionSearchHit {
   bidCount: number;
   status: "live" | "ended";
   shopSlug: string;
+  createdAt: string;
+  itemDetails: Record<string, string>;
+  isFeatured: boolean;
 }
 
 export interface CategorySearchHit {
@@ -184,6 +187,7 @@ function parseAuction(row: Record<string, unknown>): Auction {
         ? (itemDetails as Record<string, string>)
         : {},
     created_at: row.created_at as string,
+    is_featured: Boolean(row.is_featured),
   };
 }
 
@@ -208,6 +212,9 @@ function toAuctionHit(
     status: auction.status === "live" ? "live" : "ended",
     shopSlug:
       sellerSlugs.get(auction.seller_wallet) ?? auction.seller_wallet,
+    createdAt: auction.created_at,
+    itemDetails: auction.item_details,
+    isFeatured: auction.is_featured,
   };
 }
 

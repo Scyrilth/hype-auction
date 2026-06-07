@@ -4,6 +4,11 @@ import type {
   User,
   VendorShopStats,
 } from "@/lib/database.types";
+import {
+  getBidCountsForAuctions,
+  getBidCountsInLast24Hours,
+} from "@/lib/auctions";
+import { getTopFeaturedAuctionIds, type AuctionLabelMaps } from "@/lib/auction-labels";
 import { normalizeSocialHandle } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 
@@ -53,6 +58,7 @@ function parseAuction(row: Record<string, unknown>): Auction {
         ? (itemDetails as Record<string, string>)
         : {},
     created_at: row.created_at as string,
+    is_featured: Boolean(row.is_featured),
   };
 }
 
@@ -179,6 +185,7 @@ export interface VendorShopData {
   pastAuctions: Auction[];
   reviews: ReviewWithReviewer[];
   stats: VendorShopStats;
+  labelMaps: AuctionLabelMaps;
 }
 
 export async function getVendorShopData(slug: string): Promise<VendorShopData | null> {
@@ -191,12 +198,32 @@ export async function getVendorShopData(slug: string): Promise<VendorShopData | 
     getVendorReviews(vendor.wallet_address),
   ]);
 
+  const allAuctionIds = [...liveAuctions, ...pastAuctions].map(
+    (auction) => auction.id
+  );
+  const [bidCounts, bidCounts24h] = await Promise.all([
+    getBidCountsForAuctions(allAuctionIds),
+    getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id)),
+  ]);
+
+  const labelMaps: AuctionLabelMaps = {
+    bidCounts,
+    bidCounts24h,
+    topFeaturedIds: getTopFeaturedAuctionIds(
+      liveAuctions.map((auction) => ({
+        id: auction.id,
+        bidCount24h: bidCounts24h.get(auction.id) ?? 0,
+      }))
+    ),
+  };
+
   return {
     vendor,
     liveAuctions,
     pastAuctions,
     reviews,
     stats: buildVendorStats(vendor, pastAuctions, reviews),
+    labelMaps,
   };
 }
 

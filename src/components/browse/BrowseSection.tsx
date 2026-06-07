@@ -2,6 +2,7 @@
 
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
 import type { AuctionWithBidCount24h } from "@/lib/auctions";
+import type { AuctionLabelMaps } from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
 
 export default function BrowseSection({
@@ -10,12 +11,14 @@ export default function BrowseSection({
   auctions,
   trendingItems,
   variant = "browse",
+  labelMaps,
 }: {
   title: string;
   count: number;
   auctions?: Auction[];
   trendingItems?: AuctionWithBidCount24h[];
   variant?: "browse" | "trending";
+  labelMaps?: AuctionLabelMaps;
 }) {
   const hasItems =
     variant === "trending"
@@ -31,10 +34,18 @@ export default function BrowseSection({
 
       {hasItems ? (
         variant === "trending" && trendingItems ? (
-          <InfiniteCarouselRow variant="trending" items={trendingItems} />
+          <InfiniteCarouselRow
+            variant="trending"
+            items={trendingItems}
+            labelMaps={labelMaps}
+          />
         ) : (
           auctions && (
-            <InfiniteCarouselRow variant="browse" items={auctions} />
+            <InfiniteCarouselRow
+              variant="browse"
+              items={auctions}
+              labelMaps={labelMaps}
+            />
           )
         )
       ) : (

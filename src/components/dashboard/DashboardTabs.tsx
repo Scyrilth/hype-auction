@@ -10,6 +10,7 @@ import {
   AuctionCardContent,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
+import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import StarRating from "@/components/shop/StarRating";
 import FiatValue from "@/components/ui/FiatValue";
@@ -89,10 +90,7 @@ function ActiveAuctionCard({
             className="object-cover"
             unoptimized
           />
-          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
+          <AuctionLabelBadges auction={auction} bidCount={auction.bidCount} />
         </div>
         <AuctionCardContent
           header={<AuctionCardTitle>{auction.title}</AuctionCardTitle>}
@@ -156,9 +154,7 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
           className="object-cover"
           unoptimized
         />
-        <span className="absolute left-3 top-3 rounded-md bg-surface-elevated/90 px-2 py-0.5 text-xs font-semibold uppercase text-muted">
-          Ended
-        </span>
+        <AuctionLabelBadges auction={auction} bidCount={auction.bidCount} />
       </div>
       <AuctionCardContent
         header={<AuctionCardTitle>{auction.title}</AuctionCardTitle>}

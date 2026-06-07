@@ -61,6 +61,9 @@ export default function ShopView({
           auctions={shop.liveAuctions}
           emptyMessage="No live auctions right now."
           showCountdown
+          bidCounts={shop.labelMaps.bidCounts}
+          bidCounts24h={shop.labelMaps.bidCounts24h}
+          topFeaturedIds={shop.labelMaps.topFeaturedIds}
         />
       )}
 
@@ -68,6 +71,9 @@ export default function ShopView({
         <ShopAuctionGrid
           auctions={shop.pastAuctions}
           emptyMessage="No completed auctions yet."
+          bidCounts={shop.labelMaps.bidCounts}
+          bidCounts24h={shop.labelMaps.bidCounts24h}
+          topFeaturedIds={shop.labelMaps.topFeaturedIds}
         />
       )}
 

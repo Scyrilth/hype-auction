@@ -11,10 +11,12 @@ import { getAuctionsPageData, getTrendingAuctions } from "@/lib/auctions";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [{ featured, otherLive, upcomingAuctions }, trending] = await Promise.all([
-    getAuctionsPageData(),
-    getTrendingAuctions(10),
-  ]);
+  const [
+    { featured, otherLive, upcomingAuctions, bidCounts, bidCounts24h, topFeaturedIds },
+    trending,
+  ] = await Promise.all([getAuctionsPageData(), getTrendingAuctions(10)]);
+
+  const labelMaps = { bidCounts, bidCounts24h, topFeaturedIds };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -27,8 +29,8 @@ export default async function Home() {
           {featured ? (
             <>
               <FeaturedAuctionSection featured={featured} />
-              <TrendingSection items={trending} />
-              <LiveAuctionsGrid auctions={otherLive} />
+              <TrendingSection items={trending} labelMaps={labelMaps} />
+              <LiveAuctionsGrid auctions={otherLive} labelMaps={labelMaps} />
             </>
           ) : (
             <div className="featured-auction-grid w-full">

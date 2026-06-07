@@ -44,6 +44,7 @@ export interface Auction {
   additional_images: string[];
   item_details: Record<string, string>;
   created_at: string;
+  is_featured: boolean;
 }
 
 export interface Bid {

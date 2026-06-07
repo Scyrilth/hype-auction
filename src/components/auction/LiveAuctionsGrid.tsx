@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
 import { FilterIcon } from "@/components/icons";
+import type { AuctionLabelMaps } from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
 
 type SortOption = "ending-soon" | "newest" | "highest-bid" | "lowest-bid";
@@ -75,8 +76,10 @@ function FilterOption({
 
 export default function LiveAuctionsGrid({
   auctions,
+  labelMaps,
 }: {
   auctions: Auction[];
+  labelMaps?: AuctionLabelMaps;
 }) {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("ending-soon");
@@ -206,6 +209,7 @@ export default function LiveAuctionsGrid({
               key={`live-row-${rowIndex}-${row.map((auction) => auction.id).join("-")}`}
               variant="live"
               items={row}
+              labelMaps={labelMaps}
             />
           ))}
         </div>

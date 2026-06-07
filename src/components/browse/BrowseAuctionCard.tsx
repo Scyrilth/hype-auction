@@ -6,6 +6,7 @@ import {
   AuctionCardContent,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
+import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
@@ -13,7 +14,17 @@ import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import { formatSol } from "@/lib/format";
 
-export default function BrowseAuctionCard({ auction }: { auction: Auction }) {
+export default function BrowseAuctionCard({
+  auction,
+  bidCount,
+  bidCount24h,
+  isTopFeaturedByBids,
+}: {
+  auction: Auction;
+  bidCount?: number;
+  bidCount24h?: number;
+  isTopFeaturedByBids?: boolean;
+}) {
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
   const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
@@ -35,12 +46,12 @@ export default function BrowseAuctionCard({ auction }: { auction: Auction }) {
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
-        {isLive && (
-          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
-        )}
+        <AuctionLabelBadges
+          auction={auction}
+          bidCount={bidCount}
+          bidCount24h={bidCount24h}
+          isTopFeaturedByBids={isTopFeaturedByBids}
+        />
         <WatchlistHeart auctionId={auction.id} />
       </div>
 

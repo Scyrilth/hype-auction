@@ -6,6 +6,7 @@ import {
   AuctionCardContent,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
+import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import FiatValue from "@/components/ui/FiatValue";
 import type { Auction } from "@/lib/database.types";
@@ -16,10 +17,16 @@ export default function ShopAuctionGrid({
   auctions,
   emptyMessage,
   showCountdown = false,
+  bidCounts,
+  bidCounts24h,
+  topFeaturedIds,
 }: {
   auctions: Auction[];
   emptyMessage: string;
   showCountdown?: boolean;
+  bidCounts?: Map<string, number>;
+  bidCounts24h?: Map<string, number>;
+  topFeaturedIds?: Set<string>;
 }) {
   if (auctions.length === 0) {
     return (
@@ -50,11 +57,12 @@ export default function ShopAuctionGrid({
                 className="object-cover"
                 unoptimized
               />
-              {auction.status === "live" && (
-                <span className="absolute left-3 top-3 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-                  Live
-                </span>
-              )}
+              <AuctionLabelBadges
+                auction={auction}
+                bidCount={bidCounts?.get(auction.id)}
+                bidCount24h={bidCounts24h?.get(auction.id)}
+                isTopFeaturedByBids={topFeaturedIds?.has(auction.id)}
+              />
             </div>
             <AuctionCardContent
               header={

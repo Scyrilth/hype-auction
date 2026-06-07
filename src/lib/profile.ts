@@ -62,6 +62,7 @@ function parseAuction(row: Record<string, unknown>): Auction {
         ? (itemDetails as Record<string, string>)
         : {},
     created_at: row.created_at as string,
+    is_featured: Boolean(row.is_featured),
   };
 }
 

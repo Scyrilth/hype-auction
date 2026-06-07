@@ -11,6 +11,7 @@ import {
   AuctionCardContent,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
+import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
@@ -22,7 +23,17 @@ import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
 
-export default function LiveAuctionCard({ auction }: { auction: Auction }) {
+export default function LiveAuctionCard({
+  auction,
+  bidCount,
+  bidCount24h,
+  isTopFeaturedByBids,
+}: {
+  auction: Auction;
+  bidCount?: number;
+  bidCount24h?: number;
+  isTopFeaturedByBids?: boolean;
+}) {
   const router = useRouter();
   const { showToast } = useToast();
   const connectPhantom = usePhantomConnect();
@@ -75,10 +86,12 @@ export default function LiveAuctionCard({ auction }: { auction: Auction }) {
             className="object-cover"
             unoptimized
           />
-          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
+          <AuctionLabelBadges
+            auction={auction}
+            bidCount={bidCount}
+            bidCount24h={bidCount24h}
+            isTopFeaturedByBids={isTopFeaturedByBids}
+          />
           <WatchlistHeart auctionId={auction.id} />
         </div>
 

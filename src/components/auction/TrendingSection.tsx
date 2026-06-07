@@ -3,11 +3,14 @@
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
 import { TrendingUpIcon } from "@/components/icons";
 import type { AuctionWithBidCount24h } from "@/lib/auctions";
+import type { AuctionLabelMaps } from "@/lib/auction-labels";
 
 export default function TrendingSection({
   items,
+  labelMaps,
 }: {
   items: AuctionWithBidCount24h[];
+  labelMaps?: AuctionLabelMaps;
 }) {
   if (items.length === 0) return null;
 
@@ -19,7 +22,11 @@ export default function TrendingSection({
         <span aria-hidden>🔥</span>
       </div>
 
-      <InfiniteCarouselRow variant="trending" items={items} />
+      <InfiniteCarouselRow
+        variant="trending"
+        items={items}
+        labelMaps={labelMaps}
+      />
     </section>
   );
 }

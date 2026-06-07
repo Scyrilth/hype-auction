@@ -8,6 +8,7 @@ import {
   AuctionCardContent,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
+import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
@@ -43,18 +44,20 @@ export default function SearchAuctionCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-        {auction.status === "live" && (
-          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
-        )}
-
-        {auction.status === "ended" && (
-          <span className="absolute left-3 top-3 rounded-md bg-surface-elevated/90 px-2 py-0.5 text-xs font-semibold uppercase text-muted">
-            Ended
-          </span>
-        )}
+        <AuctionLabelBadges
+          auction={{
+            id: auction.id,
+            current_bid: auction.currentBid,
+            start_price: auction.startPrice,
+            end_time: auction.endTime,
+            created_at: auction.createdAt,
+            category: auction.category,
+            item_details: auction.itemDetails,
+            status: auction.status,
+            is_featured: auction.isFeatured,
+          }}
+          bidCount={auction.bidCount}
+        />
         <WatchlistHeart auctionId={auction.id} />
       </div>
 

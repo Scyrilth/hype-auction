@@ -13,6 +13,7 @@ import {
   sortBrowseAuctions,
   type BrowseSortOption,
 } from "@/lib/browse-filters";
+import { getTopFeaturedAuctionIds } from "@/lib/auction-labels";
 import type { BrowsePageData } from "@/lib/browse";
 import { CATEGORIES } from "@/lib/categories";
 
@@ -53,6 +54,22 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
   const filterRef = useRef<HTMLDivElement>(null);
 
   const filtersActive = isBrowseFilterActive(categoryFilter, sortBy);
+
+  const labelMaps = useMemo(() => {
+    const bidCounts24h = new Map(
+      data.auctions.map((item) => [item.auction.id, item.bidCount24h])
+    );
+
+    return {
+      bidCounts24h,
+      topFeaturedIds: getTopFeaturedAuctionIds(
+        data.auctions.map((item) => ({
+          id: item.auction.id,
+          bidCount24h: item.bidCount24h,
+        }))
+      ),
+    };
+  }, [data.auctions]);
 
   const filtered = useMemo(
     () => filterBrowseAuctions(data.auctions, categoryFilter),
@@ -191,18 +208,21 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
         count={trendingItems.length}
         variant="trending"
         trendingItems={trendingItems}
+        labelMaps={labelMaps}
       />
 
       <BrowseSection
         title="Ending Soon"
         count={endingSoon.length}
         auctions={endingSoon}
+        labelMaps={labelMaps}
       />
 
       <BrowseSection
         title="Recently Listed"
         count={recentlyListed.length}
         auctions={recentlyListed}
+        labelMaps={labelMaps}
       />
     </div>
   );
