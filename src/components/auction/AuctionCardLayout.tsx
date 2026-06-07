@@ -1,5 +1,10 @@
 import type { ReactNode } from "react";
 
+import { formatSol } from "@/lib/format";
+
+/** Minimum width for carousel/grid auction cards — keeps price + timer on one line. */
+export const AUCTION_CARD_MIN_WIDTH = "11.5rem";
+
 export function AuctionCardContent({
   header,
   footer,
@@ -32,6 +37,22 @@ export function AuctionCardTitle({
     >
       {children}
     </h3>
+  );
+}
+
+export function AuctionCardBidPrice({
+  amount,
+  className = "",
+}: {
+  amount: number;
+  className?: string;
+}) {
+  return (
+    <p
+      className={`whitespace-nowrap text-lg font-bold tabular-nums leading-tight text-accent ${className}`.trim()}
+    >
+      {formatSol(amount)}
+    </p>
   );
 }
 

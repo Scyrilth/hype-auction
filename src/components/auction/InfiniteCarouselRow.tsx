@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { AUCTION_CARD_MIN_WIDTH } from "@/components/auction/AuctionCardLayout";
 import LiveAuctionCard from "@/components/auction/LiveAuctionCard";
 import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
 import BrowseAuctionCard from "@/components/browse/BrowseAuctionCard";
@@ -121,13 +122,15 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
       )}
 
       <div
-        className="grid min-w-0 flex-1 gap-3 sm:gap-4"
-        style={{ gridTemplateColumns: `repeat(${slots}, minmax(0, 1fr))` }}
+        className="grid min-w-0 flex-1 gap-3 overflow-x-auto sm:gap-4"
+        style={{
+          gridTemplateColumns: `repeat(${slots}, minmax(${AUCTION_CARD_MIN_WIDTH}, 1fr))`,
+        }}
       >
         {visibleItems.map((item, slotIndex) => (
           <div
             key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
-            className="flex h-full min-w-0 transition-opacity duration-300"
+            className="flex h-full min-w-[11.5rem] transition-opacity duration-300"
           >
             {renderCarouselItem(props, item)}
           </div>

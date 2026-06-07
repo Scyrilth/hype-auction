@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import {
+  AUCTION_CARD_MIN_WIDTH,
+  AuctionCardBidPrice,
   AuctionCardCategorySlot,
   AuctionCardContent,
   AuctionCardTitle,
@@ -21,7 +23,6 @@ import { placeBid } from "@/lib/bids";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
-import { formatSol } from "@/lib/format";
 
 export default function LiveAuctionCard({
   auction,
@@ -75,7 +76,10 @@ export default function LiveAuctionCard({
   };
 
   return (
-    <article className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
+    <article
+      className="flex h-full w-full min-w-[11.5rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+      style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
+    >
       <Link href={`/auction/${auction.id}`} className="flex flex-1 flex-col">
         <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
           <Image
@@ -105,15 +109,13 @@ export default function LiveAuctionCard({
           }
           footer={
             <div className="flex items-end justify-between gap-2">
-              <div>
-                <p className="text-xs text-muted">Current bid</p>
-                <p className="text-lg font-bold text-accent">
-                  {formatSol(displayBid)}
-                </p>
+              <div className="shrink-0">
+                <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
+                <AuctionCardBidPrice amount={displayBid} />
                 <FiatValue solAmount={displayBid} />
               </div>
-              <div className="text-right">
-                <p className="text-xs text-muted">Time left</p>
+              <div className="shrink-0 text-right">
+                <p className="whitespace-nowrap text-xs text-muted">Time left</p>
                 <CountdownTimer endTime={auction.end_time} compact />
               </div>
             </div>

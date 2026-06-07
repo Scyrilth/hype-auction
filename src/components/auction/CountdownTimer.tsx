@@ -43,7 +43,7 @@ export default function CountdownTimer({
   if (!mounted) {
     return (
       <span
-        className={`font-mono font-bold tracking-wider ${isUrgent ? "text-live-red" : "text-live-red"}`}
+        className={`whitespace-nowrap font-mono font-bold tracking-wider ${isUrgent ? "text-live-red" : "text-live-red"}`}
         style={{ fontSize }}
       >
         --:--:--
@@ -53,7 +53,7 @@ export default function CountdownTimer({
 
   return (
     <span
-      className={`font-mono font-bold tracking-wider ${
+      className={`whitespace-nowrap font-mono font-bold tracking-wider ${
         isUrgent || large ? "text-live-red" : "text-live-red"
       } ${isUrgent && large ? "animate-pulse" : ""}`}
       style={{ fontSize }}
