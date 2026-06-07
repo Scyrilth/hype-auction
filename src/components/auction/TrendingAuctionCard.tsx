@@ -6,6 +6,7 @@ import {
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import FiatValue from "@/components/ui/FiatValue";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import { formatSol } from "@/lib/format";
@@ -59,6 +60,7 @@ export default function TrendingAuctionCard({
               <p className="text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
+              <FiatValue solAmount={displayBid} showTooltip={false} />
             </div>
             <div className="text-right">
               <p className="text-xs text-muted">Time left</p>

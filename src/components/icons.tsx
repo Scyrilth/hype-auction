@@ -216,6 +216,27 @@ export function CopyIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+export function TrophyIcon({ className = "w-16 h-16" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+      <path d="M7 4h10" />
+      <path d="M17 4v8a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V4" />
+      <path d="M5 9a2 2 0 1 0 4 0 2 2 0 1 0-4 0" />
+      <path d="M19 9a2 2 0 1 0 4 0 2 2 0 1 0-4 0" />
+    </svg>
+  );
+}
+
 export function CrownIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">

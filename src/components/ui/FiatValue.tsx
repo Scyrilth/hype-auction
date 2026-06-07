@@ -14,9 +14,10 @@ export default function FiatValue({
 }) {
   const { solPrice, loading } = useSolPrice();
 
-  if (loading || solPrice === null) return null;
+  if (loading || solPrice === null || solPrice <= 0) return null;
 
   const usdAmount = solAmount * solPrice;
+  if (!Number.isFinite(usdAmount) || usdAmount <= 0) return null;
 
   return (
     <span className="inline-flex items-center gap-1 text-xs text-muted">

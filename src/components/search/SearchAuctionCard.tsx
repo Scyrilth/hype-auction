@@ -9,6 +9,7 @@ import {
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import FiatValue from "@/components/ui/FiatValue";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { AuctionSearchHit } from "@/lib/search";
 import { formatSol } from "@/lib/format";
@@ -75,6 +76,7 @@ export default function SearchAuctionCard({
                 <p className="text-lg font-bold text-accent">
                   {formatSol(displayBid)}
                 </p>
+                <FiatValue solAmount={displayBid} showTooltip={false} />
               </div>
 
               {auction.status === "live" && (
