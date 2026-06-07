@@ -216,6 +216,38 @@ export function CopyIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+export function HeartIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" />
+    </svg>
+  );
+}
+
+export function HeartFilledIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6.979 3.074a6 6 0 0 1 4.988 1.425l.507 .428a6 6 0 0 0 4.988 1.425l.114 -.006a6 6 0 0 1 5.131 9.368l-5.498 5.09a1 1 0 0 1 -1.355 .002l-5.5 -5.092a6 6 0 0 1 1.18 -9.546z" />
+    </svg>
+  );
+}
+
 export function TrophyIcon({ className = "w-16 h-16" }: { className?: string }) {
   return (
     <svg

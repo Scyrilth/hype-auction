@@ -2,8 +2,9 @@ import type { Auction, Review, User } from "@/lib/database.types";
 import { getProfileSlug } from "@/lib/profile-links";
 import { supabase } from "@/lib/supabase";
 import { getVendorBySlug } from "@/lib/vendors";
+import { getWatchlistAuctions } from "@/lib/watchlist";
 
-export type BidActivityStatus = "LIVE" | "ENDED" | "WON";
+export type BidActivityStatus = "WINNING" | "OUTBID" | "WON" | "LOST";
 
 export interface BuyerProfileStats {
   totalBidsPlaced: number;
@@ -18,6 +19,7 @@ export interface BuyerBidActivity {
   currentBid: number;
   status: BidActivityStatus;
   isWinner: boolean;
+  outbidBy: number;
   latestBidAt: string;
 }
 
@@ -34,6 +36,7 @@ export interface BuyerProfileData {
   stats: BuyerProfileStats;
   bidActivity: BuyerBidActivity[];
   wonAuctions: BuyerBidActivity[];
+  watchlist: Auction[];
   reviewsGiven: ReviewWithVendor[];
 }
 
@@ -62,13 +65,41 @@ function parseAuction(row: Record<string, unknown>): Auction {
   };
 }
 
-function getActivityStatus(
+function getBidActivityStatus(
   auction: Auction,
-  isWinner: boolean
+  wallet: string,
+  userHighestBid: number,
+  currentBid: number,
+  topBidderWallet: string | undefined
 ): BidActivityStatus {
-  if (isWinner) return "WON";
-  if (auction.status === "live") return "LIVE";
-  return "ENDED";
+  if (auction.status === "live") {
+    if (topBidderWallet === wallet && userHighestBid >= currentBid) {
+      return "WINNING";
+    }
+    return "OUTBID";
+  }
+
+  if (
+    auction.status === "ended" &&
+    topBidderWallet === wallet &&
+    userHighestBid >= currentBid
+  ) {
+    return "WON";
+  }
+
+  return "LOST";
+}
+
+export async function updateProfilePrivacy(
+  walletAddress: string,
+  showWonAuctions: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from("users")
+    .update({ show_won_auctions: showWonAuctions })
+    .eq("wallet_address", walletAddress);
+
+  if (error) throw error;
 }
 
 async function getReviewsByReviewer(
@@ -133,6 +164,13 @@ export async function getBuyerProfileData(
       .order("created_at", { ascending: false }),
     getReviewsByReviewer(wallet),
   ]);
+
+  let watchlist: Auction[] = [];
+  try {
+    watchlist = await getWatchlistAuctions(wallet);
+  } catch {
+    watchlist = [];
+  }
 
   if (bidsError) throw bidsError;
 
@@ -214,13 +252,21 @@ export async function getBuyerProfileData(
 
       const currentBid =
         auction.current_bid > 0 ? auction.current_bid : auction.start_price;
+      const status = getBidActivityStatus(
+        auction,
+        wallet,
+        userBid.highest,
+        currentBid,
+        topBid?.wallet
+      );
 
       return {
         auction,
         userHighestBid: userBid.highest,
         currentBid,
-        status: getActivityStatus(auction, isWinner),
+        status,
         isWinner,
+        outbidBy: Math.max(0, currentBid - userBid.highest),
         latestBidAt: userBid.latestBidAt,
       };
     });
@@ -244,6 +290,7 @@ export async function getBuyerProfileData(
     },
     bidActivity,
     wonAuctions,
+    watchlist,
     reviewsGiven,
   };
 }

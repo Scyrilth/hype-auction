@@ -6,6 +6,7 @@ import {
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
@@ -40,8 +41,9 @@ export default function TrendingAuctionCard({
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
           Live
         </span>
+        <WatchlistHeart auctionId={auction.id} />
         {bidCount24h > 0 && (
-          <span className="absolute right-3 top-3 rounded-md bg-black/60 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm">
+          <span className="absolute bottom-3 right-3 rounded-md bg-black/60 px-2 py-0.5 text-xs font-semibold text-amber-300 backdrop-blur-sm">
             🔥 {bidCount24h} {bidCount24h === 1 ? "bid" : "bids"}
           </span>
         )}

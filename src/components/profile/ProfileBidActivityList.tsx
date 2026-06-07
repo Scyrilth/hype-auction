@@ -1,33 +1,41 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
-import type { BuyerBidActivity } from "@/lib/profile";
+import CountdownTimer from "@/components/auction/CountdownTimer";
+import type { BuyerBidActivity, BidActivityStatus } from "@/lib/profile";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
 
-function StatusBadge({ status }: { status: BuyerBidActivity["status"] }) {
-  if (status === "WON") {
-    return (
-      <span className="rounded-md bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
-        Won
-      </span>
-    );
+function BidStatusBadge({ status }: { status: BidActivityStatus }) {
+  switch (status) {
+    case "WINNING":
+      return (
+        <span className="rounded-md bg-emerald-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          Winning
+        </span>
+      );
+    case "OUTBID":
+      return (
+        <span className="rounded-md bg-live-red px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          Outbid
+        </span>
+      );
+    case "WON":
+      return (
+        <span className="rounded-md bg-amber-400 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-zinc-900">
+          Won 🏆
+        </span>
+      );
+    case "LOST":
+    default:
+      return (
+        <span className="rounded-md bg-surface-elevated px-2 py-0.5 text-[10px] font-semibold uppercase text-muted">
+          Lost
+        </span>
+      );
   }
-
-  if (status === "LIVE") {
-    return (
-      <span className="flex items-center gap-1 rounded-md bg-live-red px-2 py-0.5 text-[10px] font-bold uppercase text-white">
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-        Live
-      </span>
-    );
-  }
-
-  return (
-    <span className="rounded-md bg-surface-elevated px-2 py-0.5 text-[10px] font-semibold uppercase text-muted">
-      Ended
-    </span>
-  );
 }
 
 function BidActivityCard({ item }: { item: BuyerBidActivity }) {
@@ -35,6 +43,7 @@ function BidActivityCard({ item }: { item: BuyerBidActivity }) {
     item.auction.image_url,
     item.auction
   );
+  const isLive = item.auction.status === "live";
 
   return (
     <Link
@@ -53,16 +62,21 @@ function BidActivityCard({ item }: { item: BuyerBidActivity }) {
 
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <h3 className="line-clamp-2 text-sm font-semibold text-white">
+          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-white">
             {item.auction.title}
           </h3>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {item.isWinner && (
-              <span className="rounded-md bg-amber-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-300">
-                Won
-              </span>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              <BidStatusBadge status={item.status} />
+              {isLive && (
+                <CountdownTimer endTime={item.auction.end_time} compact />
+              )}
+            </div>
+            {item.status === "OUTBID" && item.outbidBy > 0 && (
+              <p className="text-[11px] font-medium text-live-red">
+                Outbid by {formatSol(item.outbidBy)}
+              </p>
             )}
-            <StatusBadge status={item.status} />
           </div>
         </div>
 

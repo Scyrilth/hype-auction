@@ -12,6 +12,7 @@ import {
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
@@ -78,6 +79,7 @@ export default function LiveAuctionCard({ auction }: { auction: Auction }) {
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
             Live
           </span>
+          <WatchlistHeart auctionId={auction.id} />
         </div>
 
         <AuctionCardContent

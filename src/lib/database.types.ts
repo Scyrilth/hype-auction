@@ -19,6 +19,14 @@ export interface User {
   total_volume: number;
   average_rating: number;
   show_copy_wallet: boolean;
+  show_won_auctions: boolean;
+}
+
+export interface WatchlistEntry {
+  id: string;
+  wallet_address: string;
+  auction_id: string;
+  created_at: string;
 }
 
 export interface Auction {

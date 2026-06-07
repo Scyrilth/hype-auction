@@ -249,6 +249,7 @@ export async function getAuctionDetailData(
         total_volume: 0,
         average_rating: 0,
         show_copy_wallet: true,
+        show_won_auctions: false,
       } satisfies User);
 
   const bidderWallets = [

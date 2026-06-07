@@ -7,6 +7,7 @@ import {
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
@@ -47,6 +48,7 @@ export default function AuctionCard({ auction }: { auction: Auction }) {
             Ended
           </span>
         )}
+        <WatchlistHeart auctionId={auction.id} />
       </div>
 
       <AuctionCardContent

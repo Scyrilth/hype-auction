@@ -27,6 +27,7 @@ export function parseUser(row: Record<string, unknown>): User {
     total_volume: Number(row.total_volume ?? 0),
     average_rating: Number(row.average_rating ?? 0),
     show_copy_wallet: row.show_copy_wallet !== false,
+    show_won_auctions: Boolean(row.show_won_auctions),
   };
 }
 

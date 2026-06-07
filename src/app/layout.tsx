@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { WatchlistProvider } from "@/components/auction/WatchlistProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import UserSync from "@/components/UserSync";
 import WalletContextProvider from "@/components/WalletContextProvider";
@@ -34,8 +35,10 @@ export default function RootLayout({
       >
         <WalletContextProvider>
           <ToastProvider>
-            <UserSync />
-            {children}
+            <WatchlistProvider>
+              <UserSync />
+              {children}
+            </WatchlistProvider>
           </ToastProvider>
         </WalletContextProvider>
       </body>
