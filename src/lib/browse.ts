@@ -1,43 +1,38 @@
 import {
   getAllLiveAuctions,
-  getTrendingAuctions,
+  getBidCountsInLast24Hours,
   type AuctionWithBidCount24h,
 } from "@/lib/auctions";
 import { CATEGORIES, getLiveAuctionCountsByCategory } from "@/lib/categories";
-import type { Auction } from "@/lib/database.types";
 
 export interface BrowsePageData {
-  liveCounts: Map<string, number>;
-  trending: AuctionWithBidCount24h[];
-  endingSoon: Auction[];
-  recentlyListed: Auction[];
+  liveCounts: Record<string, number>;
+  auctions: AuctionWithBidCount24h[];
 }
 
 export async function getBrowsePageData(): Promise<BrowsePageData> {
-  const [liveCounts, trending, liveAuctions] = await Promise.all([
+  const [liveCountsMap, liveAuctions] = await Promise.all([
     getLiveAuctionCountsByCategory(),
-    getTrendingAuctions(10),
     getAllLiveAuctions(),
   ]);
 
-  const endingSoon = [...liveAuctions]
-    .sort(
-      (a, b) => new Date(a.end_time).getTime() - new Date(b.end_time).getTime()
-    )
-    .slice(0, 8);
+  const bidCounts = await getBidCountsInLast24Hours(
+    liveAuctions.map((auction) => auction.id)
+  );
 
-  const recentlyListed = [...liveAuctions]
-    .sort(
-      (a, b) =>
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    )
-    .slice(0, 8);
+  const auctions: AuctionWithBidCount24h[] = liveAuctions.map((auction) => ({
+    auction,
+    bidCount24h: bidCounts.get(auction.id) ?? 0,
+  }));
+
+  const liveCounts: Record<string, number> = {};
+  for (const [label, count] of liveCountsMap.entries()) {
+    liveCounts[label] = count;
+  }
 
   return {
     liveCounts,
-    trending,
-    endingSoon,
-    recentlyListed,
+    auctions,
   };
 }
 

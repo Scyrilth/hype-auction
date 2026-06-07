@@ -1,21 +1,47 @@
 "use client";
 
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
+import type { AuctionWithBidCount24h } from "@/lib/auctions";
 import type { Auction } from "@/lib/database.types";
 
 export default function BrowseSection({
   title,
+  count,
   auctions,
+  trendingItems,
+  variant = "browse",
 }: {
   title: string;
-  auctions: Auction[];
+  count: number;
+  auctions?: Auction[];
+  trendingItems?: AuctionWithBidCount24h[];
+  variant?: "browse" | "trending";
 }) {
-  if (auctions.length === 0) return null;
+  const hasItems =
+    variant === "trending"
+      ? (trendingItems?.length ?? 0) > 0
+      : (auctions?.length ?? 0) > 0;
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl font-bold text-white">{title}</h2>
-      <InfiniteCarouselRow variant="browse" items={auctions} />
+      <h2 className="text-xl font-bold text-white">
+        {title}{" "}
+        <span className="text-base font-normal text-muted">({count})</span>
+      </h2>
+
+      {hasItems ? (
+        variant === "trending" && trendingItems ? (
+          <InfiniteCarouselRow variant="trending" items={trendingItems} />
+        ) : (
+          auctions && (
+            <InfiniteCarouselRow variant="browse" items={auctions} />
+          )
+        )
+      ) : (
+        <p className="rounded-xl border border-border bg-surface px-4 py-8 text-center text-sm text-muted">
+          No auctions match your filters.
+        </p>
+      )}
     </section>
   );
 }

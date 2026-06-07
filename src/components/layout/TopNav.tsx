@@ -16,7 +16,7 @@ const navLinks = [
   { label: "Browse", href: "/browse" },
   { label: "Vendors", href: "/vendors" },
   { label: "Categories", href: "/categories" },
-  { label: "Rewards", href: "#" },
+  { label: "Rewards", href: "/rewards" },
 ] as const;
 
 export default function TopNav() {
@@ -58,9 +58,7 @@ export default function TopNav() {
   );
 
   const isLinkActive = (href: string) => {
-    if (href === "#") return false;
     if (href === "/") return pathname === "/";
-    if (href.startsWith("/#")) return pathname === "/";
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
@@ -100,8 +98,10 @@ export default function TopNav() {
             <Link
               key={link.label}
               href={link.href}
-              className={`flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-white ${
-                active || isLive ? "text-accent" : "text-zinc-400"
+              className={`flex items-center gap-1.5 border-b-2 pb-0.5 text-sm font-medium transition-colors ${
+                active
+                  ? "border-purple-500 text-white"
+                  : "border-transparent text-zinc-400 hover:text-white"
               }`}
             >
               {isLive && (
