@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 import StarRating from "@/components/shop/StarRating";
 import UserAvatar from "@/components/ui/UserAvatar";
 import type { ReviewWithReviewer } from "@/lib/database.types";
 import { shortenAddress } from "@/lib/format";
+import { getProfileHref } from "@/lib/profile-links";
 
 export default function ShopReviewsList({
   reviews,
@@ -24,21 +27,36 @@ export default function ShopReviewsList({
           className="rounded-2xl border border-border bg-surface p-5"
         >
           <div className="flex items-start gap-3">
-            <UserAvatar
-              walletAddress={review.reviewer_wallet}
-              avatarUrl={review.reviewer_avatar}
-              alt={
-                review.reviewer_username ??
-                shortenAddress(review.reviewer_wallet)
-              }
-              size="sm"
-            />
+            <Link
+              href={getProfileHref(
+                review.reviewer_username,
+                review.reviewer_wallet
+              )}
+              className="shrink-0"
+            >
+              <UserAvatar
+                walletAddress={review.reviewer_wallet}
+                avatarUrl={review.reviewer_avatar}
+                alt={
+                  review.reviewer_username ??
+                  shortenAddress(review.reviewer_wallet)
+                }
+                size="sm"
+              />
+            </Link>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-white">
-                  {review.reviewer_username ??
-                    shortenAddress(review.reviewer_wallet)}
-                </p>
+                <Link
+                  href={getProfileHref(
+                    review.reviewer_username,
+                    review.reviewer_wallet
+                  )}
+                  className="text-sm font-semibold text-white transition-colors hover:text-accent"
+                >
+                  {review.reviewer_username
+                    ? `@${review.reviewer_username.replace(/^@+/, "")}`
+                    : shortenAddress(review.reviewer_wallet)}
+                </Link>
                 <StarRating rating={review.rating} />
               </div>
               {review.comment && (

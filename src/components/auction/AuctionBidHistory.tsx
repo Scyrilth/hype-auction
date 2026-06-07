@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+
 import { CrownIcon } from "@/components/icons";
 import FiatValue from "@/components/ui/FiatValue";
 import UserAvatar from "@/components/ui/UserAvatar";
 import type { BidWithBidder } from "@/lib/auctions";
 import { formatSol, formatTimeAgo, shortenAddress } from "@/lib/format";
+import { getProfileHref } from "@/lib/profile-links";
 
 export default function AuctionBidHistory({
   bids,
@@ -54,9 +57,15 @@ export default function AuctionBidHistory({
                   size="xs"
                 />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white">
+                  <Link
+                    href={getProfileHref(
+                      bid.bidder_username,
+                      bid.bidder_wallet
+                    )}
+                    className="truncate text-sm font-medium text-white transition-colors hover:text-accent"
+                  >
                     {bid.bidder_username ? `@${label}` : label}
-                  </p>
+                  </Link>
                   <p className="text-xs text-muted">
                     {formatTimeAgo(bid.created_at)}
                   </p>

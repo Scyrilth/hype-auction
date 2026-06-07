@@ -7,12 +7,35 @@ export interface ChatMessage {
   auction_id: string;
   wallet_address: string;
   username: string;
+  profile_username: string | null;
   content: string;
   created_at: string;
 }
 
 export function walletUsername(walletAddress: string) {
   return shortenAddress(walletAddress, 4);
+}
+
+export async function enrichChatMessage(
+  row: Record<string, unknown>
+): Promise<ChatMessage> {
+  const walletAddress = row.wallet_address as string;
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("username")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  return {
+    id: row.id as string,
+    auction_id: row.auction_id as string,
+    wallet_address: walletAddress,
+    username: row.username as string,
+    profile_username: (user?.username as string | null) ?? null,
+    content: row.content as string,
+    created_at: row.created_at as string,
+  };
 }
 
 export async function fetchAuctionMessages(
@@ -25,7 +48,35 @@ export async function fetchAuctionMessages(
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []) as ChatMessage[];
+  if (!data?.length) return [];
+
+  const wallets = [
+    ...new Set(data.map((row) => row.wallet_address as string)),
+  ];
+
+  const { data: users, error: usersError } = await supabase
+    .from("users")
+    .select("wallet_address, username")
+    .in("wallet_address", wallets);
+
+  if (usersError) throw usersError;
+
+  const usernameByWallet = new Map(
+    (users ?? []).map((row) => [
+      row.wallet_address as string,
+      (row.username as string | null) ?? null,
+    ])
+  );
+
+  return data.map((row) => ({
+    id: row.id as string,
+    auction_id: row.auction_id as string,
+    wallet_address: row.wallet_address as string,
+    username: row.username as string,
+    profile_username: usernameByWallet.get(row.wallet_address as string) ?? null,
+    content: row.content as string,
+    created_at: row.created_at as string,
+  }));
 }
 
 export async function sendAuctionMessage({
@@ -56,5 +107,20 @@ export async function sendAuctionMessage({
     .single();
 
   if (error) throw error;
-  return data as ChatMessage;
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("username")
+    .eq("wallet_address", walletAddress)
+    .maybeSingle();
+
+  return {
+    id: data.id as string,
+    auction_id: data.auction_id as string,
+    wallet_address: data.wallet_address as string,
+    username: data.username as string,
+    profile_username: (user?.username as string | null) ?? null,
+    content: data.content as string,
+    created_at: data.created_at as string,
+  };
 }

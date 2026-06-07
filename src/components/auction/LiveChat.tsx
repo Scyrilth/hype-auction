@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import Link from "next/link";
+
 import { SendIcon, SmileIcon } from "@/components/icons";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { getProfileHref } from "@/lib/profile-links";
 import {
   type ChatMessage,
+  enrichChatMessage,
   fetchAuctionMessages,
   sendAuctionMessage,
 } from "@/lib/messages";
@@ -70,7 +74,9 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
           filter: `auction_id=eq.${auctionId}`,
         },
         (payload) => {
-          addMessage(payload.new as ChatMessage);
+          void enrichChatMessage(payload.new as Record<string, unknown>).then(
+            addMessage
+          );
         }
       )
       .subscribe();
@@ -154,7 +160,14 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
                 className="mt-0.5"
               />
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-accent">{msg.username}</p>
+                <Link
+                  href={getProfileHref(msg.profile_username, msg.wallet_address)}
+                  className="text-xs font-semibold text-accent transition-colors hover:text-purple-300"
+                >
+                  {msg.profile_username
+                    ? `@${msg.profile_username.replace(/^@+/, "")}`
+                    : msg.username}
+                </Link>
                 <p className="break-words text-sm text-zinc-300">{msg.content}</p>
               </div>
             </div>
