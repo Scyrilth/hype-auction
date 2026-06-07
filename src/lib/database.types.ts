@@ -71,6 +71,36 @@ export interface Review {
   created_at: string;
 }
 
+export interface ShippingAddress {
+  id: string;
+  wallet_address: string;
+  nickname: string;
+  full_name: string;
+  address_line1: string;
+  address_line2: string | null;
+  city: string;
+  state: string | null;
+  postal_code: string;
+  country: string;
+  phone: string | null;
+  is_default: boolean;
+  used_for_auction_id: string | null;
+  created_at: string;
+}
+
+export interface ShippingAddressInput {
+  nickname: string;
+  full_name: string;
+  address_line1: string;
+  address_line2?: string;
+  city: string;
+  state?: string;
+  postal_code: string;
+  country: string;
+  phone?: string;
+  is_default?: boolean;
+}
+
 export type VendorProfile = User;
 
 export interface VendorShopStats {
@@ -135,6 +165,16 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<Review, "id" | "created_at">>;
+        Relationships: [];
+      };
+      shipping_addresses: {
+        Row: ShippingAddress;
+        Insert: Omit<ShippingAddress, "id" | "created_at" | "used_for_auction_id"> & {
+          id?: string;
+          created_at?: string;
+          used_for_auction_id?: string | null;
+        };
+        Update: Partial<Omit<ShippingAddress, "id" | "created_at">>;
         Relationships: [];
       };
     };

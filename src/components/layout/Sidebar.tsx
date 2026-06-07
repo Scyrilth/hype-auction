@@ -11,11 +11,15 @@ import {
   VideoIcon,
   WalletIcon,
 } from "@/components/icons";
+import SidebarMyProfileLink from "@/components/layout/SidebarMyProfileLink";
 
-const navLinks = [
+const navLinksBeforeProfile = [
   { href: "/", label: "Home", icon: VideoIcon },
   { href: "/vendors", label: "Vendors", icon: GavelIcon },
   { href: "/categories", label: "Categories", icon: TagIcon },
+];
+
+const navLinksAfterProfile = [
   { href: "/dashboard", label: "Dashboard", icon: GridIcon },
   { href: "/dashboard/settings", label: "Shop Settings", icon: StarIcon },
 ];
@@ -44,7 +48,22 @@ export default function Sidebar({ activePath = "/" }: { activePath?: string }) {
       </div>
 
       <nav className="mb-4 flex flex-col gap-1 border-b border-border pb-4">
-        {navLinks.map(({ href, label, icon: Icon }) => (
+        {navLinksBeforeProfile.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={`flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition-colors ${
+              activePath === href
+                ? "bg-accent/15 font-medium text-accent"
+                : "text-zinc-300 hover:bg-surface-elevated hover:text-white"
+            }`}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span>{label}</span>
+          </Link>
+        ))}
+        <SidebarMyProfileLink activePath={activePath} />
+        {navLinksAfterProfile.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
