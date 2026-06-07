@@ -76,7 +76,6 @@ export default function DashboardView() {
         pastAuctions={data.pastAuctions}
         bidsReceived={data.bidsReceived}
         reviews={data.reviews}
-        shopSlug={data.shopSlug}
         onRefresh={loadDashboard}
       />
 

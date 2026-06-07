@@ -8,7 +8,7 @@ export async function upsertUser(walletAddress: string) {
     .from("users")
     .upsert(
       { wallet_address: walletAddress },
-      { onConflict: "wallet_address", ignoreDuplicates: false }
+      { onConflict: "wallet_address", ignoreDuplicates: true }
     )
     .select();
 

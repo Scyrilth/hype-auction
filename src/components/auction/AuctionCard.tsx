@@ -1,24 +1,18 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
-import type { AuctionSearchHit } from "@/lib/search";
+import type { Auction } from "@/lib/database.types";
 import { formatSol } from "@/lib/format";
 
-export default function SearchAuctionCard({
-  auction,
-}: {
-  auction: AuctionSearchHit;
-}) {
+export default function AuctionCard({ auction }: { auction: Auction }) {
   const displayBid =
-    auction.currentBid > 0 ? auction.currentBid : auction.startPrice;
-  const imageSrc = resolveAuctionImageUrl(auction.imageUrl, {
-    title: auction.title,
-    category: auction.category,
-  });
+    auction.current_bid > 0 ? auction.current_bid : auction.start_price;
+  const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
+  const isLive =
+    auction.status === "live" &&
+    new Date(auction.end_time).getTime() > Date.now();
 
   return (
     <Link
@@ -30,13 +24,12 @@ export default function SearchAuctionCard({
           src={imageSrc}
           alt={auction.title}
           fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          sizes="(max-width: 640px) 50vw, 25vw"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
-        {auction.status === "live" && (
+        {isLive && (
           <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
             Live
@@ -69,17 +62,13 @@ export default function SearchAuctionCard({
             </p>
           </div>
 
-          {auction.status === "live" && (
+          {isLive && (
             <div className="text-right">
               <p className="text-xs text-muted">Time left</p>
-              <CountdownTimer endTime={auction.endTime} compact />
+              <CountdownTimer endTime={auction.end_time} compact />
             </div>
           )}
         </div>
-
-        <p className="mt-2 text-xs text-muted">
-          {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
-        </p>
       </div>
     </Link>
   );

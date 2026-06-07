@@ -20,16 +20,18 @@ export default function DashboardProfileSummary({
   walletAddress: string;
   stats: SellerDashboardStats;
 }) {
+  console.log("DashboardProfileSummary profile:", profile);
+
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
 
-  const displayName =
-    profile?.shop_name?.trim() ||
-    profile?.username?.trim() ||
-    shortenAddress(walletAddress);
+  const shopName = profile?.shop_name?.trim() || null;
+  const username = profile?.username?.replace(/^@+/, "").trim() || null;
+  const titleLine =
+    shopName || username || shortenAddress(walletAddress, 6);
 
-  const shopHref = profile?.username?.trim()
-    ? `/shop/${profile.username.trim()}`
+  const shopHref = username
+    ? `/shop/${username}`
     : `/shop/${walletAddress}`;
 
   const showCopyWallet = profile?.show_copy_wallet ?? true;
@@ -81,26 +83,26 @@ export default function DashboardProfileSummary({
               {profile?.avatar_url ? (
                 <Image
                   src={profile.avatar_url}
-                  alt={displayName}
+                  alt={titleLine}
                   fill
                   className="object-cover"
                   unoptimized
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-accent/20 text-lg font-bold text-accent">
-                  {displayName.slice(0, 2).toUpperCase()}
+                  {titleLine.slice(0, 2).toUpperCase()}
                 </div>
               )}
             </div>
             <div className="min-w-0 flex-1 pb-1">
-              <h1 className="break-words text-xl font-bold leading-tight text-white sm:text-2xl">
-                {displayName}
+              <h1 className="break-words text-2xl font-bold text-white">
+                {titleLine}
               </h1>
-              {profile?.username?.trim() && (
-                <p className="mt-0.5 break-all text-sm text-muted">
-                  @{profile.username.trim()}
+              {shopName && username ? (
+                <p className="mt-1 break-all text-sm text-muted">
+                  @{username}
                 </p>
-              )}
+              ) : null}
               <div className="mt-1 flex flex-wrap items-center gap-2">
                 <p className="break-all font-mono text-xs text-muted">
                   {shortenAddress(walletAddress, 6)}

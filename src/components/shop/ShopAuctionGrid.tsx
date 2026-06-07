@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import type { Auction } from "@/lib/database.types";
@@ -30,9 +31,10 @@ export default function ShopAuctionGrid({
           auction.current_bid > 0 ? auction.current_bid : auction.start_price;
 
         return (
-          <article
+          <Link
             key={auction.id}
-            className="overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+            href={`/auction/${auction.id}`}
+            className="block overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
           >
             <div className="relative aspect-[4/3] bg-surface-elevated">
               <Image
@@ -66,7 +68,7 @@ export default function ShopAuctionGrid({
                 </p>
               )}
             </div>
-          </article>
+          </Link>
         );
       })}
     </div>

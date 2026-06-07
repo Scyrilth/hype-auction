@@ -137,6 +137,14 @@ export function CopyIcon({ className = "w-4 h-4" }: { className?: string }) {
   );
 }
 
+export function CrownIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M2 18h20v2H2v-2zm2.5-8L6 12l2.5-4L12 12l3.5-4L18 12l1.5-2L22 12v4H2v-4l2.5-2zM12 4l1.5 3h3L14 9.5 15 13l-3-2-3 2 1-3.5-2.5-2.5h3L12 4z" />
+    </svg>
+  );
+}
+
 export function SolanaLogo({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 128 128" fill="none">

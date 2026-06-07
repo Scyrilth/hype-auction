@@ -2,6 +2,7 @@ import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import { formatRelativeFuture, formatSol } from "@/lib/format";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function UpcomingAuctions({
   auctions,
@@ -20,9 +21,10 @@ export default function UpcomingAuctions({
           const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
           return (
-            <article
+            <Link
               key={auction.id}
-              className="group overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+              href={`/auction/${auction.id}`}
+              className="group block overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
                 <Image
@@ -44,7 +46,7 @@ export default function UpcomingAuctions({
                   Starts in {formatRelativeFuture(auction.end_time)}
                 </p>
               </div>
-            </article>
+            </Link>
           );
         })}
       </div>

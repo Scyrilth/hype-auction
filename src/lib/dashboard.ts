@@ -65,6 +65,9 @@ export interface SellerDashboardData {
   activity: DashboardActivityItem[];
 }
 
+const AUCTION_BASE_COLUMNS =
+  "id, title, description, image_url, seller_wallet, current_bid, start_price, end_time, status, category, created_at";
+
 function parseAuctionRow(row: Record<string, unknown>): Auction {
   const itemDetails = row.item_details;
   return {
@@ -143,43 +146,100 @@ function enrichAuctions(
   }));
 }
 
+async function loadSellerReviews(wallet: string): Promise<ReviewWithReviewer[]> {
+  try {
+    return await getVendorReviews(wallet);
+  } catch (error) {
+    console.warn("[getSellerDashboardData] reviews query failed", error);
+    return [];
+  }
+}
+
+async function loadRecentFollows(wallet: string) {
+  const response = await supabase
+    .from("follows")
+    .select("follower_wallet, created_at")
+    .eq("following_wallet", wallet)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (response.error) {
+    console.warn("[getSellerDashboardData] follows query failed", response.error);
+    return [];
+  }
+
+  return response.data ?? [];
+}
+
 export async function getSellerDashboardData(
   sellerWallet: string
 ): Promise<SellerDashboardData> {
   const wallet = sellerWallet.trim();
 
-  await upsertUser(wallet);
-  const profile = await getVendorSettings(wallet);
+  console.log("[getSellerDashboardData] start", { wallet });
 
-  const [
-    { data: auctionRows, error: auctionsError },
-    { data: bidRows, error: bidsError },
-    { data: followRows },
-    reviews,
-  ] = await Promise.all([
-    supabase
-      .from("auctions")
+  let profile: User | null = null;
+  try {
+    const rawProfile = await supabase
+      .from("users")
       .select("*")
-      .eq("seller_wallet", wallet)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("bids")
-      .select("id, auction_id, bidder_wallet, amount, created_at")
-      .order("created_at", { ascending: false })
-      .limit(200),
-    supabase
-      .from("follows")
-      .select("follower_wallet, created_at")
-      .eq("following_wallet", wallet)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    getVendorReviews(wallet),
+      .eq("wallet_address", wallet)
+      .maybeSingle();
+
+    console.log(
+      "[getSellerDashboardData] raw profile from Supabase",
+      rawProfile.data,
+      rawProfile.error
+    );
+
+    profile = await getVendorSettings(wallet);
+    console.log("[getSellerDashboardData] profile parsed", profile);
+  } catch (error) {
+    console.error("[getSellerDashboardData] profile query failed", error);
+    throw error;
+  }
+
+  if (!profile) {
+    try {
+      await upsertUser(wallet);
+      profile = await getVendorSettings(wallet);
+      console.log("[getSellerDashboardData] profile after upsert", profile);
+    } catch (error) {
+      console.error("[getSellerDashboardData] profile upsert/fetch failed", error);
+      throw error;
+    }
+  }
+
+  const auctionsResponse = await supabase
+    .from("auctions")
+    .select(AUCTION_BASE_COLUMNS)
+    .eq("seller_wallet", wallet)
+    .order("created_at", { ascending: false });
+
+  console.log("[getSellerDashboardData] auctions response", auctionsResponse);
+
+  const bidsResponse = await supabase
+    .from("bids")
+    .select("id, auction_id, bidder_wallet, amount, created_at")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  console.log("[getSellerDashboardData] bids response", bidsResponse);
+
+  const [followRows, reviews] = await Promise.all([
+    loadRecentFollows(wallet),
+    loadSellerReviews(wallet),
   ]);
 
-  if (auctionsError) throw auctionsError;
-  if (bidsError) throw bidsError;
+  console.log("[getSellerDashboardData] follows/reviews", {
+    followCount: followRows.length,
+    reviewCount: reviews.length,
+  });
 
-  const auctions = (auctionRows ?? []).map((row) =>
+  if (auctionsResponse.error) throw auctionsResponse.error;
+  if (bidsResponse.error) throw bidsResponse.error;
+
+  const auctions = (auctionsResponse.data ?? []).map((row) =>
     parseAuctionRow(row as Record<string, unknown>)
   );
   const auctionIds = new Set(auctions.map((a) => a.id));
@@ -200,7 +260,7 @@ export async function getSellerDashboardData(
       a.status === "draft"
   );
 
-  const bidsReceived: SellerBidRow[] = (bidRows ?? [])
+  const bidsReceived: SellerBidRow[] = (bidsResponse.data ?? [])
     .filter((row) => auctionIds.has(row.auction_id as string))
     .map((row) => ({
       id: row.id as string,
@@ -235,7 +295,7 @@ export async function getSellerDashboardData(
       bidderWallet: bid.bidderWallet,
       amount: bid.amount,
     })),
-    ...(followRows ?? []).map((row) => ({
+    ...followRows.map((row) => ({
       type: "follow" as const,
       id: `follow-${row.follower_wallet}-${row.created_at}`,
       createdAt: row.created_at as string,
@@ -255,7 +315,7 @@ export async function getSellerDashboardData(
 
   const shopSlug = profile?.username?.trim() || wallet;
 
-  return {
+  const result = {
     profile,
     shopSlug,
     stats,
@@ -265,6 +325,15 @@ export async function getSellerDashboardData(
     reviews,
     activity: activity.slice(0, 20),
   };
+
+  console.log("[getSellerDashboardData] success", {
+    shopSlug,
+    totalListings: stats.totalListings,
+    activeAuctions: stats.activeAuctions,
+    shopName: profile?.shop_name ?? null,
+  });
+
+  return result;
 }
 
 export async function endSellerAuction(

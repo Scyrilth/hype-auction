@@ -7,7 +7,7 @@ import type {
 import { normalizeSocialHandle } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
 
-function parseUser(row: Record<string, unknown>): User {
+export function parseUser(row: Record<string, unknown>): User {
   return {
     wallet_address: row.wallet_address as string,
     username: (row.username as string | null) ?? null,
@@ -241,14 +241,85 @@ export async function updateVendorSettings(
   return parseUser(data);
 }
 
+const USER_BASE_COLUMNS =
+  "wallet_address, username, avatar_url, reputation, created_at";
+
+const USER_IDENTITY_COLUMNS = `${USER_BASE_COLUMNS}, shop_name`;
+
+const USER_VENDOR_COLUMNS =
+  "banner_image, bio, shop_description, social_twitter, social_instagram, is_vendor, is_verified, followers_count, total_sales, average_rating";
+
+const USER_PROFILE_COLUMNS = `${USER_IDENTITY_COLUMNS}, ${USER_VENDOR_COLUMNS}`;
+
+async function fetchUserProfile(
+  walletAddress: string
+): Promise<{ data: Record<string, unknown> | null; error: unknown }> {
+  const wallet = walletAddress.trim();
+
+  const full = await supabase
+    .from("users")
+    .select("*")
+    .eq("wallet_address", wallet)
+    .maybeSingle();
+
+  console.log("[fetchUserProfile] select(*) response", full);
+
+  if (!full.error) {
+    return { data: full.data as Record<string, unknown> | null, error: null };
+  }
+
+  console.warn(
+    "[fetchUserProfile] select(*) failed, trying named columns",
+    full.error
+  );
+
+  const extended = await supabase
+    .from("users")
+    .select(USER_PROFILE_COLUMNS)
+    .eq("wallet_address", wallet)
+    .maybeSingle();
+
+  console.log("[fetchUserProfile] extended columns response", extended);
+
+  if (!extended.error) {
+    return { data: extended.data as Record<string, unknown> | null, error: null };
+  }
+
+  console.warn(
+    "[fetchUserProfile] extended columns failed, falling back to identity columns",
+    extended.error
+  );
+
+  const identity = await supabase
+    .from("users")
+    .select(USER_IDENTITY_COLUMNS)
+    .eq("wallet_address", wallet)
+    .maybeSingle();
+
+  console.log("[fetchUserProfile] identity columns response", identity);
+
+  if (!identity.error) {
+    return { data: identity.data as Record<string, unknown> | null, error: null };
+  }
+
+  const base = await supabase
+    .from("users")
+    .select(USER_BASE_COLUMNS)
+    .eq("wallet_address", wallet)
+    .maybeSingle();
+
+  console.log("[fetchUserProfile] base columns response", base);
+
+  return {
+    data: base.data as Record<string, unknown> | null,
+    error: base.error,
+  };
+}
+
 export async function getVendorSettings(
   walletAddress: string
 ): Promise<User | null> {
-  const { data, error } = await supabase
-    .from("users")
-    .select("*")
-    .eq("wallet_address", walletAddress)
-    .maybeSingle();
+  const { data, error } = await fetchUserProfile(walletAddress);
 
   if (error) throw error;
   return data ? parseUser(data) : null;

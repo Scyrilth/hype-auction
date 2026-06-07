@@ -30,11 +30,9 @@ const tabs: { id: TabId; label: string }[] = [
 
 function ActiveAuctionCard({
   auction,
-  shopSlug,
   onEnded,
 }: {
   auction: SellerAuctionWithStats;
-  shopSlug: string;
   onEnded: () => void;
 }) {
   const { publicKey } = useWallet();
@@ -96,7 +94,7 @@ function ActiveAuctionCard({
         </p>
         <div className="mt-4 flex gap-2">
           <Link
-            href={`/shop/${shopSlug}`}
+            href={`/auction/${auction.id}`}
             className="flex-1 rounded-full border border-border py-2 text-center text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
           >
             View Item
@@ -168,14 +166,12 @@ export default function DashboardTabs({
   pastAuctions,
   bidsReceived,
   reviews,
-  shopSlug,
   onRefresh,
 }: {
   activeAuctions: SellerAuctionWithStats[];
   pastAuctions: SellerAuctionWithStats[];
   bidsReceived: SellerBidRow[];
   reviews: ReviewWithReviewer[];
-  shopSlug: string;
   onRefresh: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("active");
@@ -209,7 +205,6 @@ export default function DashboardTabs({
                 <ActiveAuctionCard
                   key={auction.id}
                   auction={auction}
-                  shopSlug={shopSlug}
                   onEnded={onRefresh}
                 />
               ))}
