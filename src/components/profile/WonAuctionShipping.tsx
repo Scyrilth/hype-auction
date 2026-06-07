@@ -19,7 +19,10 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
   const [localStatus, setLocalStatus] = useState(auction.shipping_status);
 
   const wallet = publicKey?.toBase58();
-  const status = localStatus ?? "pending";
+  const status =
+    localStatus === "shipped" || localStatus === "delivered"
+      ? localStatus
+      : "pending";
 
   const handleConfirmReceipt = async () => {
     if (!wallet || confirming) return;
@@ -80,7 +83,7 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
       )}
 
       {status === "delivered" && (
-        <span className="inline-flex rounded-md bg-blue-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-300">
+        <span className="inline-flex rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
           Delivered ✓
         </span>
       )}

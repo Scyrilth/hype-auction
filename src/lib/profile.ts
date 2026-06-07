@@ -183,7 +183,12 @@ export async function getBuyerProfileData(
   if (auctionIds.length > 0) {
     const [{ data: auctions, error: auctionsError }, { data: allBids, error: allBidsError }] =
       await Promise.all([
-        supabase.from("auctions").select("*").in("id", auctionIds),
+        supabase
+          .from("auctions")
+          .select(
+            "id, title, description, image_url, seller_wallet, current_bid, start_price, end_time, status, category, condition, additional_images, item_details, created_at, is_featured, reference_number, tracking_courier, tracking_number, tracking_uploaded_at, shipping_status"
+          )
+          .in("id", auctionIds),
         supabase
           .from("bids")
           .select("auction_id, bidder_wallet, amount")

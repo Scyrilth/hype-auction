@@ -107,86 +107,93 @@ function BidActivityCard({
   const reviewed = reviewedAuctionIds.has(item.auction.id);
   const showReview =
     showReviewActions && item.status === "WON" && Boolean(publicKey);
+  const isWonAuction =
+    item.isWinner &&
+    (item.auction.status === "ended" || item.auction.status === "completed");
+  const finalBidLabel = isWonAuction ? "Winning bid" : "Current bid";
 
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
         <div className="flex gap-4 p-4">
-        <Link
-          href={`/auction/${item.auction.id}`}
-          className="flex min-w-0 flex-1 gap-4 transition-colors hover:opacity-95"
-        >
-          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-elevated sm:h-24 sm:w-24">
-            <Image
-              src={imageSrc}
-              alt={item.auction.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </div>
+          <div className="flex min-w-0 flex-1 gap-4">
+            <Link
+              href={`/auction/${item.auction.id}`}
+              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-elevated transition-opacity hover:opacity-95 sm:h-24 sm:w-24"
+            >
+              <Image
+                src={imageSrc}
+                alt={item.auction.title}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </Link>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-white">
-                {item.auction.title}
-              </h3>
-              <div className="flex shrink-0 flex-col items-end gap-1">
-                <div className="flex flex-wrap items-center justify-end gap-1.5">
-                  <BidStatusBadge status={item.status} />
-                  {isLive && (
-                    <CountdownTimer endTime={item.auction.end_time} compact />
-                  )}
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/auction/${item.auction.id}`}
+                className="block transition-colors hover:opacity-95"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-white">
+                    {item.auction.title}
+                  </h3>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      <BidStatusBadge status={item.status} />
+                      {isLive && (
+                        <CountdownTimer endTime={item.auction.end_time} compact />
+                      )}
+                    </div>
+                    {item.status === "OUTBID" && item.outbidBy > 0 && (
+                      <p className="text-[11px] font-medium text-live-red">
+                        Outbid by {formatSol(item.outbidBy)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                {item.status === "OUTBID" && item.outbidBy > 0 && (
-                  <p className="text-[11px] font-medium text-live-red">
-                    Outbid by {formatSol(item.outbidBy)}
-                  </p>
+
+                {item.auction.category && (
+                  <span className="mt-2 inline-block rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">
+                    {item.auction.category}
+                  </span>
                 )}
-              </div>
-            </div>
+              </Link>
 
-            {item.auction.category && (
-              <span className="mt-2 inline-block rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">
-                {item.auction.category}
-              </span>
-            )}
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-xs text-muted">Your highest bid</p>
+                  <p className="font-semibold text-accent">
+                    {formatSol(item.userHighestBid)}
+                  </p>
+                  <FiatValue solAmount={item.userHighestBid} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted">{finalBidLabel}</p>
+                  <p className="font-semibold text-white">
+                    {formatSol(item.currentBid)}
+                  </p>
+                  <FiatValue solAmount={item.currentBid} />
+                </div>
+              </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-xs text-muted">Your highest bid</p>
-                <p className="font-semibold text-accent">
-                  {formatSol(item.userHighestBid)}
-                </p>
-                <FiatValue solAmount={item.userHighestBid} />
-              </div>
-              <div>
-                <p className="text-xs text-muted">Current bid</p>
-                <p className="font-semibold text-white">
-                  {formatSol(item.currentBid)}
-                </p>
-                <FiatValue solAmount={item.currentBid} />
-              </div>
+              {showWonShipping && isWonAuction && (
+                <WonAuctionShipping auction={item.auction} />
+              )}
             </div>
           </div>
-        </Link>
 
-        {showReview && (
-          <div className="flex shrink-0 flex-col justify-end">
-            <ReviewActionButton
-              item={item}
-              reviewed={reviewed}
-              onLeaveReview={() => setModalOpen(true)}
-            />
-          </div>
-        )}
+          {showReview && (
+            <div className="flex shrink-0 flex-col justify-end">
+              <ReviewActionButton
+                item={item}
+                reviewed={reviewed}
+                onLeaveReview={() => setModalOpen(true)}
+              />
+            </div>
+          )}
         </div>
-
-        {showWonShipping && item.status === "WON" && (
-          <div className="border-t border-border px-4 pb-4 pt-0">
-            <WonAuctionShipping auction={item.auction} />
-          </div>
-        )}
       </div>
 
       {showReview && publicKey && (
