@@ -15,6 +15,10 @@ export type ImageUploadVariant = "avatar" | "banner" | "auction";
 const labelClass =
   "mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted";
 
+function fileInfoText(maxSizeMb: number) {
+  return `JPG, PNG, WEBP or GIF · Max ${maxSizeMb}MB`;
+}
+
 export default function ImageUpload({
   label,
   bucket,
@@ -114,74 +118,88 @@ export default function ImageUpload({
       />
 
       {variant === "avatar" && (
-        <button
-          type="button"
-          onClick={openPicker}
-          disabled={disabled || isUploading}
-          className="group relative h-24 w-24 overflow-hidden rounded-2xl border border-border bg-surface-elevated transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          <Image
-            src={displayUrl || avatarFallback!}
-            alt={label}
-            fill
-            className="object-cover"
-            unoptimized
-          />
-          <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-xs font-medium text-white opacity-0 transition-all group-hover:bg-black/50 group-hover:opacity-100">
-            {isUploading ? `${progress ?? 0}%` : "Upload"}
-          </span>
-        </button>
+        <div className="flex flex-col items-center">
+          <button
+            type="button"
+            onClick={openPicker}
+            disabled={disabled || isUploading}
+            className="group relative h-24 w-24 overflow-hidden rounded-2xl border border-border bg-surface-elevated transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Image
+              src={displayUrl || avatarFallback!}
+              alt={label}
+              fill
+              className="object-cover"
+              unoptimized
+            />
+            <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-xs font-medium text-white opacity-0 transition-all group-hover:bg-black/50 group-hover:opacity-100">
+              {isUploading ? `${progress ?? 0}%` : "Upload"}
+            </span>
+          </button>
+          <p className="mt-2 text-center text-xs text-muted">
+            {fileInfoText(maxSizeMb)}
+          </p>
+        </div>
       )}
 
       {variant === "banner" && (
-        <button
-          type="button"
-          onClick={openPicker}
-          disabled={disabled || isUploading}
-          className="group relative h-32 w-full overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/50 via-purple-900/80 to-background transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {displayUrl ? (
-            <Image
-              src={displayUrl}
-              alt={label}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          ) : null}
-          <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
-            {isUploading ? `Uploading ${progress ?? 0}%` : "Click to upload banner"}
-          </span>
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={openPicker}
+            disabled={disabled || isUploading}
+            className="group relative h-32 w-full overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/50 via-purple-900/80 to-background transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {displayUrl ? (
+              <Image
+                src={displayUrl}
+                alt={label}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : null}
+            <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+              {isUploading ? `Uploading ${progress ?? 0}%` : "Click to upload banner"}
+            </span>
+          </button>
+          <p className="mt-2 text-center text-xs text-muted">
+            {fileInfoText(maxSizeMb)}
+          </p>
+        </>
       )}
 
       {variant === "auction" && (
-        <button
-          type="button"
-          onClick={openPicker}
-          disabled={disabled || isUploading}
-          className="group relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-dashed border-border bg-background/60 transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {displayUrl ? (
-            <Image
-              src={displayUrl}
-              alt={label}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          ) : (
-            <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-sm text-muted">
-              <span>Click to upload</span>
-              <span className="text-xs">JPEG, PNG, WebP, GIF · max {maxSizeMb}MB</span>
-            </span>
-          )}
-          {displayUrl && (
-            <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
-              {isUploading ? `Uploading ${progress ?? 0}%` : "Replace image"}
-            </span>
-          )}
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={openPicker}
+            disabled={disabled || isUploading}
+            className="group relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-dashed border-border bg-background/60 transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {displayUrl ? (
+              <Image
+                src={displayUrl}
+                alt={label}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="absolute inset-0 flex items-center justify-center text-sm text-muted">
+                Click to upload
+              </span>
+            )}
+            {displayUrl && (
+              <span className="absolute inset-0 flex items-center justify-center bg-black/0 text-sm font-medium text-white opacity-0 transition-all group-hover:bg-black/40 group-hover:opacity-100">
+                {isUploading ? `Uploading ${progress ?? 0}%` : "Replace image"}
+              </span>
+            )}
+          </button>
+          <p className="mt-2 text-center text-xs text-muted">
+            {fileInfoText(maxSizeMb)}
+          </p>
+        </>
       )}
 
       {isUploading && progress !== null && variant !== "avatar" && (
@@ -194,11 +212,9 @@ export default function ImageUpload({
       )}
 
       {showUrl && value && (
-        <input
-          readOnly
-          value={value}
-          className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-muted outline-none"
-        />
+        <p className="mt-2 truncate text-center text-xs text-muted" title={value}>
+          {value}
+        </p>
       )}
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}

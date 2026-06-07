@@ -150,6 +150,9 @@ export default function CreateListingForm() {
     }
   };
 
+  const wallet = publicKey?.toBase58();
+  if (!wallet) return null;
+
   return (
     <div className="mx-auto max-w-6xl">
       <Link
@@ -334,44 +337,38 @@ export default function CreateListingForm() {
             </div>
 
             <div className="sm:col-span-2">
-              {publicKey && (
-                <ImageUpload
-                  label="Main image"
-                  bucket="Auction-images"
-                  variant="auction"
-                  maxSizeMb={10}
-                  showUrl
-                  value={form.imageUrl}
-                  onChange={(url) => updateForm("imageUrl", url)}
-                  buildPath={(file) => {
-                    const wallet = publicKey.toBase58();
-                    return `${wallet}/${Date.now()}-main.${getImageExtension(file)}`;
-                  }}
-                />
-              )}
+              <ImageUpload
+                label="Main image"
+                bucket="Auction-images"
+                variant="auction"
+                maxSizeMb={10}
+                showUrl
+                value={form.imageUrl}
+                onChange={(url) => updateForm("imageUrl", url)}
+                buildPath={(file) =>
+                  `${wallet}/${Date.now()}-main.${getImageExtension(file)}`
+                }
+              />
             </div>
 
             <div className="sm:col-span-2">
               <p className={labelClass}>Additional images (up to 4)</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                {form.additionalImages.map((url, index) =>
-                  publicKey ? (
-                    <ImageUpload
-                      key={index}
-                      label={`Additional image ${index + 1}`}
-                      bucket="Auction-images"
-                      variant="auction"
-                      maxSizeMb={10}
-                      showUrl
-                      value={url}
-                      onChange={(nextUrl) => updateAdditionalImage(index, nextUrl)}
-                      buildPath={(file) => {
-                        const wallet = publicKey.toBase58();
-                        return `${wallet}/${Date.now()}-${index + 1}.${getImageExtension(file)}`;
-                      }}
-                    />
-                  ) : null
-                )}
+                {form.additionalImages.map((url, index) => (
+                  <ImageUpload
+                    key={index}
+                    label={`Additional image ${index + 1}`}
+                    bucket="Auction-images"
+                    variant="auction"
+                    maxSizeMb={10}
+                    showUrl
+                    value={url}
+                    onChange={(nextUrl) => updateAdditionalImage(index, nextUrl)}
+                    buildPath={(file) =>
+                      `${wallet}/${Date.now()}-${index + 1}.${getImageExtension(file)}`
+                    }
+                  />
+                ))}
               </div>
             </div>
 
