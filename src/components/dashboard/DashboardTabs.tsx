@@ -8,6 +8,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import StarRating from "@/components/shop/StarRating";
+import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import type {
   DashboardActivityItem,
@@ -99,6 +100,7 @@ function ActiveAuctionCard({
               <p className="text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
+              <FiatValue solAmount={displayBid} />
             </div>
             <div className="text-right">
               <p className="text-xs text-muted">Time left</p>
@@ -157,6 +159,7 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
         <p className="mt-2 text-lg font-bold text-accent">
           {formatSol(displayBid)}
         </p>
+        <FiatValue solAmount={displayBid} />
         <p className="mt-2 text-xs text-muted">
           Winner:{" "}
           {auction.winnerWallet

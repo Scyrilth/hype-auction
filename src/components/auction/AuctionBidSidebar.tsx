@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import AuctionSellerCard from "@/components/auction/AuctionSellerCard";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import LiveChat from "@/components/auction/LiveChat";
+import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { placeBid } from "@/lib/bids";
@@ -155,6 +156,7 @@ export default function AuctionBidSidebar({
           <p className="mt-1 text-3xl font-bold text-white">
             {formatSol(currentBid)}
           </p>
+          <FiatValue solAmount={currentBid} />
           <p className="mt-1 text-sm text-muted">
             {bidCount} {bidCount === 1 ? "bid" : "bids"}
           </p>

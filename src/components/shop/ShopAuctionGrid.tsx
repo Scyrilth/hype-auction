@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import FiatValue from "@/components/ui/FiatValue";
 import type { Auction } from "@/lib/database.types";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
@@ -62,6 +63,7 @@ export default function ShopAuctionGrid({
               <p className="mt-3 text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
+              <FiatValue solAmount={displayBid} />
               {showCountdown && (
                 <p className="mt-1 text-xs text-muted">
                   Ends in <CountdownTimer endTime={auction.end_time} compact />

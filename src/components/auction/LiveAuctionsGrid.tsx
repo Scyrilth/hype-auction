@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import FiatValue from "@/components/ui/FiatValue";
 import { FilterIcon } from "@/components/icons";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
@@ -126,6 +127,7 @@ function LiveAuctionCard({ auction }: { auction: Auction }) {
               <p className="text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
+              <FiatValue solAmount={displayBid} />
             </div>
             <div className="text-right">
               <p className="text-xs text-muted">Time left</p>

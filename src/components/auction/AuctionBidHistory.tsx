@@ -1,6 +1,7 @@
 "use client";
 
 import { CrownIcon } from "@/components/icons";
+import FiatValue from "@/components/ui/FiatValue";
 import UserAvatar from "@/components/ui/UserAvatar";
 import type { BidWithBidder } from "@/lib/auctions";
 import { formatSol, formatTimeAgo, shortenAddress } from "@/lib/format";
@@ -61,9 +62,12 @@ export default function AuctionBidHistory({
                   </p>
                 </div>
               </div>
-              <p className="shrink-0 text-sm font-semibold text-accent">
-                {formatSol(bid.amount)}
-              </p>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-semibold text-accent">
+                  {formatSol(bid.amount)}
+                </p>
+                <FiatValue solAmount={bid.amount} />
+              </div>
             </li>
           );
         })}
