@@ -127,7 +127,7 @@ function LiveAuctionCard({ auction }: { auction: Auction }) {
               <p className="text-lg font-bold text-accent">
                 {formatSol(displayBid)}
               </p>
-              <FiatValue solAmount={displayBid} />
+              <FiatValue solAmount={displayBid} showTooltip={false} />
             </div>
             <div className="text-right">
               <p className="text-xs text-muted">Time left</p>
