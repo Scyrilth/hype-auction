@@ -28,7 +28,7 @@ export default async function SearchPage({
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-5">
-          <div className="mx-auto max-w-3xl space-y-6">
+          <div className="mx-auto max-w-6xl space-y-6">
             <header>
               <h1 className="text-2xl font-bold text-white sm:text-3xl">
                 Search

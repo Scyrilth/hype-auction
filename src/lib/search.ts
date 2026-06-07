@@ -105,6 +105,11 @@ export interface VendorSearchHit {
   isVerified: boolean;
   isLive: boolean;
   categories: string[];
+  bannerImage: string | null;
+  avatarUrl: string | null;
+  followersCount: number;
+  averageRating: number;
+  totalSales: number;
 }
 
 export interface AuctionSearchHit {
@@ -112,6 +117,10 @@ export interface AuctionSearchHit {
   title: string;
   category: string | null;
   currentBid: number;
+  startPrice: number;
+  endTime: string;
+  imageUrl: string | null;
+  bidCount: number;
   status: "live" | "ended";
   shopSlug: string;
 }
@@ -155,17 +164,42 @@ function matchesAuction(auction: Auction, q: string) {
 
 function toAuctionHit(
   auction: Auction,
-  sellerSlugs: Map<string, string>
+  sellerSlugs: Map<string, string>,
+  bidCounts: Map<string, number>
 ): AuctionSearchHit {
   return {
     id: auction.id,
     title: auction.title,
     category: auction.category,
     currentBid: auction.current_bid,
+    startPrice: auction.start_price,
+    endTime: auction.end_time,
+    imageUrl: auction.image_url,
+    bidCount: bidCounts.get(auction.id) ?? 0,
     status: auction.status === "live" ? "live" : "ended",
     shopSlug:
       sellerSlugs.get(auction.seller_wallet) ?? auction.seller_wallet,
   };
+}
+
+async function getBidCountsForAuctions(
+  auctionIds: string[]
+): Promise<Map<string, number>> {
+  if (!auctionIds.length) return new Map();
+
+  const { data, error } = await supabase
+    .from("bids")
+    .select("auction_id")
+    .in("auction_id", auctionIds);
+
+  if (error) throw error;
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const id = row.auction_id as string;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
 }
 
 const emptyResults = (query: string): GlobalSearchResults => ({
@@ -208,6 +242,7 @@ export async function performGlobalSearch(
   const liveAuctions = liveRows.map(parseAuction);
   const pastAuctions = pastRows.map(parseAuction);
   const allAuctions = [...liveAuctions, ...pastAuctions];
+  const bidCounts = await getBidCountsForAuctions(allAuctions.map((a) => a.id));
 
   const sellerSlugs = new Map(
     vendorDirectory.map((entry) => [
@@ -227,6 +262,11 @@ export async function performGlobalSearch(
       isVerified: entry.vendor.is_verified,
       isLive: entry.isLive,
       categories: entry.categories,
+      bannerImage: entry.vendor.banner_image,
+      avatarUrl: entry.vendor.avatar_url,
+      followersCount: entry.vendor.followers_count,
+      averageRating: entry.averageRating,
+      totalSales: entry.totalSales,
     })
   );
 
@@ -261,11 +301,11 @@ export async function performGlobalSearch(
     vendors,
     liveAuctions: liveAuctions
       .filter((auction) => matchesAuction(auction, q))
-      .map((auction) => toAuctionHit(auction, sellerSlugs)),
+      .map((auction) => toAuctionHit(auction, sellerSlugs, bidCounts)),
     categories,
     pastAuctions: pastAuctions
       .filter((auction) => matchesAuction(auction, q))
-      .map((auction) => toAuctionHit(auction, sellerSlugs)),
+      .map((auction) => toAuctionHit(auction, sellerSlugs, bidCounts)),
   };
 }
 

@@ -1,8 +1,10 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { SearchIcon } from "@/components/icons";
+import SearchAuctionCard from "@/components/search/SearchAuctionCard";
+import SearchCategoryCard from "@/components/search/SearchCategoryCard";
+import SearchVendorCard from "@/components/search/SearchVendorCard";
 import type { GlobalSearchResults } from "@/lib/search";
-import { formatSol } from "@/lib/format";
 
 function Section({
   title,
@@ -16,44 +18,31 @@ function Section({
   if (count === 0) return null;
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-base font-semibold text-white">
-        {title}{" "}
-        <span className="text-sm font-normal text-muted">({count})</span>
-      </h2>
-      <div className="space-y-2">{children}</div>
+    <section className="space-y-4">
+      <div className="flex items-center gap-3">
+        <h2 className="text-lg font-bold text-white">{title}</h2>
+        <span className="rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-semibold text-purple-300">
+          {count}
+        </span>
+      </div>
+      {children}
     </section>
   );
 }
 
-function ResultLink({
-  href,
-  title,
-  subtitle,
-  badge,
-}: {
-  href: string;
-  title: string;
-  subtitle?: string;
-  badge?: string;
-}) {
+function EmptyState({ query }: { query: string }) {
   return (
-    <Link
-      href={href}
-      className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/50"
-    >
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium text-white">{title}</p>
-        {subtitle && (
-          <p className="mt-0.5 truncate text-xs text-muted">{subtitle}</p>
-        )}
+    <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/15">
+        <SearchIcon className="h-6 w-6 text-accent" />
       </div>
-      {badge && (
-        <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-medium text-purple-300">
-          {badge}
-        </span>
-      )}
-    </Link>
+      <p className="mt-5 text-lg font-semibold text-white">
+        No results for &ldquo;{query}&rdquo;
+      </p>
+      <p className="mt-2 text-sm text-muted">
+        Try a different keyword like sneakers, pokemon, vinyl, or a shop name.
+      </p>
+    </div>
   );
 }
 
@@ -73,7 +62,10 @@ export default function SearchResults({
   if (!query) {
     return (
       <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
-        <p className="text-sm text-muted">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent/15">
+          <SearchIcon className="h-6 w-6 text-accent" />
+        </div>
+        <p className="mt-5 text-sm text-muted">
           Enter a search term to find vendors, live auctions, and categories.
         </p>
       </div>
@@ -81,74 +73,41 @@ export default function SearchResults({
   }
 
   if (!hasResults) {
-    return (
-      <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
-        <p className="text-lg font-semibold text-white">No results found</p>
-        <p className="mt-2 text-sm text-muted">
-          Nothing matched &ldquo;{query}&rdquo;. Try a different keyword like
-          sneakers, pokemon, or a shop name.
-        </p>
-      </div>
-    );
+    return <EmptyState query={query} />;
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <Section title="Vendors" count={vendors.length}>
-        {vendors.map((vendor) => (
-          <ResultLink
-            key={vendor.shopSlug}
-            href={`/shop/${vendor.shopSlug}`}
-            title={vendor.shopName}
-            subtitle={
-              vendor.username
-                ? `@${vendor.username}${vendor.categories.length ? ` · ${vendor.categories.join(", ")}` : ""}`
-                : vendor.categories.join(", ") || undefined
-            }
-            badge={
-              vendor.isVerified
-                ? "Verified"
-                : vendor.isLive
-                  ? "Live"
-                  : undefined
-            }
-          />
-        ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {vendors.map((vendor) => (
+            <SearchVendorCard key={vendor.shopSlug} vendor={vendor} />
+          ))}
+        </div>
       </Section>
 
       <Section title="Live Auctions" count={liveAuctions.length}>
-        {liveAuctions.map((auction) => (
-          <ResultLink
-            key={auction.id}
-            href={`/shop/${auction.shopSlug}`}
-            title={auction.title}
-            subtitle={auction.category ?? "Live auction"}
-            badge={formatSol(auction.currentBid)}
-          />
-        ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {liveAuctions.map((auction) => (
+            <SearchAuctionCard key={auction.id} auction={auction} />
+          ))}
+        </div>
       </Section>
 
       <Section title="Categories" count={categories.length}>
-        {categories.map((category) => (
-          <ResultLink
-            key={category.name}
-            href={`/search?q=${encodeURIComponent(category.name)}`}
-            title={category.name}
-            subtitle={`${category.count} auction${category.count === 1 ? "" : "s"}`}
-          />
-        ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {categories.map((category) => (
+            <SearchCategoryCard key={category.name} category={category} />
+          ))}
+        </div>
       </Section>
 
       <Section title="Past Auctions" count={pastAuctions.length}>
-        {pastAuctions.map((auction) => (
-          <ResultLink
-            key={auction.id}
-            href={`/shop/${auction.shopSlug}`}
-            title={auction.title}
-            subtitle={auction.category ?? "Ended auction"}
-            badge={formatSol(auction.currentBid)}
-          />
-        ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {pastAuctions.map((auction) => (
+            <SearchAuctionCard key={auction.id} auction={auction} />
+          ))}
+        </div>
       </Section>
     </div>
   );
