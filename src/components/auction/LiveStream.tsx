@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { EyeIcon } from "@/components/icons";
 import {
   POKEMON_PLACEHOLDER,
   resolveAuctionImageUrl,
@@ -39,17 +38,6 @@ export default function LiveStream({ auction }: { auction: Auction }) {
           unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30 transition-colors group-hover:from-black/85" />
-
-        <div className="absolute left-4 top-4 flex items-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-md bg-live-red px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
-          <span className="flex items-center gap-1 rounded-md bg-black/50 px-2 py-1 text-xs text-white backdrop-blur-sm">
-            <EyeIcon />
-            Live now
-          </span>
-        </div>
 
         <span className="absolute right-4 top-4 rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm transition-colors group-hover:bg-black/60 group-hover:text-white">
           View Details →
