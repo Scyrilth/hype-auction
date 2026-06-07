@@ -114,6 +114,28 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
           <span>Home</span>
         </Link>
 
+        <Link
+          href="/collections"
+          className={navLinkClass(
+            currentPath === "/collections" ||
+              (currentPath.startsWith("/collections/") &&
+                !currentPath.startsWith("/collections/manage"))
+          )}
+        >
+          <i className="ti ti-stack-2 h-4 w-4 shrink-0 text-base leading-none" />
+          <span>Collections</span>
+        </Link>
+
+        {connected && wallet && (
+          <Link
+            href="/collections/manage"
+            className={subLinkClass(currentPath === "/collections/manage")}
+          >
+            <i className="ti ti-folder h-3.5 w-3.5 shrink-0 text-base leading-none" />
+            <span>My Collections</span>
+          </Link>
+        )}
+
         {connected && isVendor && (
           <div>
             <button

@@ -18,6 +18,7 @@ import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 const navLinks = [
   { label: "Live", href: "/", live: true },
   { label: "Browse", href: "/browse" },
+  { label: "Collections", href: "/collections" },
   { label: "Vendors", href: "/vendors" },
   { label: "Categories", href: "/categories" },
   { label: "Rewards", href: "/rewards" },
