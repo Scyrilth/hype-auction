@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { useSolPrice } from "@/hooks/useSolPrice";
 
 const TOOLTIP =
@@ -12,30 +14,37 @@ export default function FiatValue({
   solAmount: number;
   showTooltip?: boolean;
 }) {
+  const [showTip, setShowTip] = useState(false);
   const { solPrice, loading } = useSolPrice();
 
   if (loading || solPrice === null || solPrice <= 0) return null;
 
   const usdAmount = solAmount * solPrice;
-  if (!Number.isFinite(usdAmount) || usdAmount <= 0) return null;
+  if (!Number.isFinite(usdAmount) || usdAmount < 0) return null;
 
   return (
     <span className="inline-flex items-center gap-1 text-xs text-muted">
       ~${usdAmount.toFixed(2)}
       {showTooltip && (
-        <span className="group relative inline-flex">
+        <span
+          className="relative inline-flex"
+          onMouseEnter={() => setShowTip(true)}
+          onMouseLeave={() => setShowTip(false)}
+        >
           <span
             className="cursor-help text-[10px] leading-none opacity-70"
             aria-label={TOOLTIP}
           >
             ⓘ
           </span>
-          <span
-            role="tooltip"
-            className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 hidden w-52 -translate-x-1/2 rounded-lg border border-border bg-surface-elevated px-2.5 py-2 text-[11px] leading-snug text-muted shadow-xl group-hover:block"
-          >
-            {TOOLTIP}
-          </span>
+          {showTip && (
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-1.5 w-52 -translate-x-1/2 rounded-lg border border-border bg-surface-elevated px-2.5 py-2 text-[11px] leading-snug text-muted shadow-xl"
+            >
+              {TOOLTIP}
+            </span>
+          )}
         </span>
       )}
     </span>
