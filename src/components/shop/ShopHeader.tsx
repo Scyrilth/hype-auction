@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import FollowButton from "@/components/shop/FollowButton";
 import StarRating from "@/components/shop/StarRating";
+import UserAvatar from "@/components/ui/UserAvatar";
 import type { User, VendorShopStats } from "@/lib/database.types";
 import { formatSol, displaySocialHandle, shortenAddress } from "@/lib/format";
 
@@ -47,7 +48,6 @@ export default function ShopHeader({
     vendor.shop_name ?? vendor.username ?? shortenAddress(vendor.wallet_address);
 
   const bannerSrc = vendor.banner_image || DEFAULT_BANNER;
-  const avatarSrc = vendor.avatar_url;
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface">
@@ -66,21 +66,14 @@ export default function ShopHeader({
       <div className="relative px-5 pb-5 sm:px-6">
         <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-end gap-4">
-            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-surface bg-surface-elevated sm:h-24 sm:w-24">
-              {avatarSrc ? (
-                <Image
-                  src={avatarSrc}
-                  alt={displayName}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-accent/20 text-xl font-bold text-accent">
-                  {displayName.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
+            <UserAvatar
+              walletAddress={vendor.wallet_address}
+              avatarUrl={vendor.avatar_url}
+              alt={displayName}
+              size="3xl"
+              rounded="xl"
+              className="border-4 border-surface"
+            />
 
             <div className="min-w-0 pb-1">
               <div className="flex flex-wrap items-center gap-2">

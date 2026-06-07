@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import { SendIcon, SmileIcon } from "@/components/icons";
-import { avatarGradientForWallet } from "@/lib/chat-avatars";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
   type ChatMessage,
@@ -147,8 +147,11 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className="flex gap-2.5">
-              <div
-                className={`mt-0.5 h-7 w-7 shrink-0 rounded-full bg-gradient-to-br ${avatarGradientForWallet(msg.wallet_address)}`}
+              <UserAvatar
+                walletAddress={msg.wallet_address}
+                alt={msg.username}
+                size="xs"
+                className="mt-0.5"
               />
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-accent">{msg.username}</p>

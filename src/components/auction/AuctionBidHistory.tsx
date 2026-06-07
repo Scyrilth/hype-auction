@@ -1,6 +1,7 @@
 "use client";
 
 import { CrownIcon } from "@/components/icons";
+import UserAvatar from "@/components/ui/UserAvatar";
 import type { BidWithBidder } from "@/lib/auctions";
 import { formatSol, formatTimeAgo, shortenAddress } from "@/lib/format";
 
@@ -46,6 +47,11 @@ export default function AuctionBidHistory({
                 ) : (
                   <span className="inline-block h-4 w-4 shrink-0" />
                 )}
+                <UserAvatar
+                  walletAddress={bid.bidder_wallet}
+                  alt={label}
+                  size="xs"
+                />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-white">
                     {bid.bidder_username ? `@${label}` : label}

@@ -100,6 +100,7 @@ export function filterVendorEntries(
 
 export interface VendorSearchHit {
   shopSlug: string;
+  walletAddress: string;
   shopName: string;
   username: string | null;
   isVerified: boolean;
@@ -263,6 +264,7 @@ export async function performGlobalSearch(
   const vendors = filterVendorEntries(vendorDirectory, q, titleMatchWallets).map(
     (entry) => ({
       shopSlug: entry.shopSlug,
+      walletAddress: entry.vendor.wallet_address,
       shopName:
         entry.vendor.shop_name ??
         entry.vendor.username ??

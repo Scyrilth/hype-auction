@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import StarRating from "@/components/shop/StarRating";
+import UserAvatar from "@/components/ui/UserAvatar";
 import type { User } from "@/lib/database.types";
 import { displaySocialHandle, shortenAddress } from "@/lib/format";
 
@@ -39,21 +39,13 @@ export default function AuctionSellerCard({ seller }: { seller: User }) {
       </p>
 
       <div className="mt-3 flex items-center gap-3">
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-elevated">
-          {seller.avatar_url ? (
-            <Image
-              src={seller.avatar_url}
-              alt={displayName}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-accent/20 text-sm font-bold text-accent">
-              {displayName.slice(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
+        <UserAvatar
+          walletAddress={seller.wallet_address}
+          avatarUrl={seller.avatar_url}
+          alt={displayName}
+          size="md"
+          rounded="xl"
+        />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">

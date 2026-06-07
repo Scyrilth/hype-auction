@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import StarRating from "@/components/shop/StarRating";
+import UserAvatar from "@/components/ui/UserAvatar";
 import type { VendorSearchHit } from "@/lib/search";
 
 function VerifiedBadge() {
@@ -49,21 +50,14 @@ export default function SearchVendorCard({ vendor }: { vendor: VendorSearchHit }
 
       <div className="relative flex flex-1 flex-col px-4 pb-4 pt-0">
         <div className="-mt-8 flex items-end gap-3">
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-4 border-surface bg-surface-elevated">
-            {vendor.avatarUrl ? (
-              <Image
-                src={vendor.avatarUrl}
-                alt={vendor.shopName}
-                fill
-                className="object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-accent/20 text-sm font-bold text-accent">
-                {vendor.shopName.slice(0, 2).toUpperCase()}
-              </div>
-            )}
-          </div>
+          <UserAvatar
+            walletAddress={vendor.walletAddress}
+            avatarUrl={vendor.avatarUrl}
+            alt={vendor.shopName}
+            size="lg"
+            rounded="xl"
+            className="border-4 border-surface"
+          />
           <div className="min-w-0 flex-1 pb-1">
             <div className="flex flex-wrap items-center gap-1.5">
               <h3 className="truncate text-sm font-semibold text-white">

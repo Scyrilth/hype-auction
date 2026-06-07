@@ -9,6 +9,7 @@ import ListingPreview, {
   type ListingFormState,
 } from "@/components/dashboard/ListingPreview";
 import GradeSelect from "@/components/dashboard/GradeSelect";
+import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
@@ -17,6 +18,7 @@ import {
   GRADES_BY_COMPANY,
   type GradingCompany,
 } from "@/lib/grading";
+import { getImageExtension } from "@/lib/storage";
 import {
   AUCTION_CATEGORIES,
   AUCTION_CONDITIONS,
@@ -332,32 +334,44 @@ export default function CreateListingForm() {
             </div>
 
             <div className="sm:col-span-2">
-              <label htmlFor="imageUrl" className={labelClass}>
-                Main image URL
-              </label>
-              <input
-                id="imageUrl"
-                type="url"
-                value={form.imageUrl}
-                onChange={(e) => updateForm("imageUrl", e.target.value)}
-                placeholder="https://..."
-                className={inputClass}
-              />
+              {publicKey && (
+                <ImageUpload
+                  label="Main image"
+                  bucket="Auction-images"
+                  variant="auction"
+                  maxSizeMb={10}
+                  showUrl
+                  value={form.imageUrl}
+                  onChange={(url) => updateForm("imageUrl", url)}
+                  buildPath={(file) => {
+                    const wallet = publicKey.toBase58();
+                    return `${wallet}/${Date.now()}-main.${getImageExtension(file)}`;
+                  }}
+                />
+              )}
             </div>
 
             <div className="sm:col-span-2">
               <p className={labelClass}>Additional images (up to 4)</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {form.additionalImages.map((url, index) => (
-                  <input
-                    key={index}
-                    type="url"
-                    value={url}
-                    onChange={(e) => updateAdditionalImage(index, e.target.value)}
-                    placeholder={`Additional image ${index + 1} URL`}
-                    className={inputClass}
-                  />
-                ))}
+              <div className="grid gap-4 sm:grid-cols-2">
+                {form.additionalImages.map((url, index) =>
+                  publicKey ? (
+                    <ImageUpload
+                      key={index}
+                      label={`Additional image ${index + 1}`}
+                      bucket="Auction-images"
+                      variant="auction"
+                      maxSizeMb={10}
+                      showUrl
+                      value={url}
+                      onChange={(nextUrl) => updateAdditionalImage(index, nextUrl)}
+                      buildPath={(file) => {
+                        const wallet = publicKey.toBase58();
+                        return `${wallet}/${Date.now()}-${index + 1}.${getImageExtension(file)}`;
+                      }}
+                    />
+                  ) : null
+                )}
               </div>
             </div>
 

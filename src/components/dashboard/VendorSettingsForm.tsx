@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { displaySocialHandle, shortenAddress } from "@/lib/format";
+import { getImageExtension } from "@/lib/storage";
 import {
   getVendorSettings,
   updateVendorSettings,
@@ -173,33 +175,66 @@ export default function VendorSettingsForm() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label htmlFor="avatarUrl" className={labelClass}>
-            Avatar image URL
-          </label>
-          <input
-            id="avatarUrl"
-            type="url"
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            placeholder="https://..."
-            className={inputClass}
-          />
-        </div>
+        <ImageUpload
+          label="Avatar"
+          bucket="Avatars"
+          variant="avatar"
+          maxSizeMb={5}
+          walletAddress={publicKey?.toBase58()}
+          value={avatarUrl}
+          onChange={setAvatarUrl}
+          buildPath={(file) =>
+            `${publicKey!.toBase58()}/avatar.${getImageExtension(file)}`
+          }
+          onUploaded={async (url) => {
+            if (!publicKey) return;
+            const updated = await updateVendorSettings(publicKey.toBase58(), {
+              username,
+              shopName,
+              avatarUrl: url,
+              bannerUrl,
+              bio,
+              shopDescription,
+              twitterHandle,
+              instagramHandle,
+              isVendor,
+              showCopyWallet,
+            });
+            setProfile(updated);
+            showToast("Avatar uploaded!");
+          }}
+          disabled={!publicKey}
+        />
 
-        <div>
-          <label htmlFor="bannerUrl" className={labelClass}>
-            Banner image URL
-          </label>
-          <input
-            id="bannerUrl"
-            type="url"
-            value={bannerUrl}
-            onChange={(e) => setBannerUrl(e.target.value)}
-            placeholder="https://..."
-            className={inputClass}
-          />
-        </div>
+        <ImageUpload
+          label="Banner"
+          bucket="Banners"
+          variant="banner"
+          maxSizeMb={5}
+          value={bannerUrl}
+          onChange={setBannerUrl}
+          buildPath={(file) =>
+            `${publicKey!.toBase58()}/banner.${getImageExtension(file)}`
+          }
+          onUploaded={async (url) => {
+            if (!publicKey) return;
+            const updated = await updateVendorSettings(publicKey.toBase58(), {
+              username,
+              shopName,
+              avatarUrl,
+              bannerUrl: url,
+              bio,
+              shopDescription,
+              twitterHandle,
+              instagramHandle,
+              isVendor,
+              showCopyWallet,
+            });
+            setProfile(updated);
+            showToast("Banner uploaded!");
+          }}
+          disabled={!publicKey}
+        />
       </div>
 
       <div>

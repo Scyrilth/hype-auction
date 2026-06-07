@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { CopyIcon } from "@/components/icons";
 import StarRating from "@/components/shop/StarRating";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import type { SellerDashboardStats } from "@/lib/dashboard";
 import type { User } from "@/lib/database.types";
@@ -79,21 +80,14 @@ export default function DashboardProfileSummary({
       <div className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
         <div className="-mt-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex min-w-0 items-end gap-4">
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-4 border-surface bg-surface-elevated sm:h-20 sm:w-20">
-              {profile?.avatar_url ? (
-                <Image
-                  src={profile.avatar_url}
-                  alt={titleLine}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-accent/20 text-lg font-bold text-accent">
-                  {titleLine.slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
+            <UserAvatar
+              walletAddress={walletAddress}
+              avatarUrl={profile?.avatar_url}
+              alt={titleLine}
+              size="2xl"
+              rounded="xl"
+              className="border-4 border-surface"
+            />
             <div className="min-w-0 flex-1 pb-1">
               <h1 className="break-words text-2xl font-bold text-white">
                 {titleLine}

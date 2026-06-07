@@ -1,6 +1,5 @@
-import Image from "next/image";
-
 import StarRating from "@/components/shop/StarRating";
+import UserAvatar from "@/components/ui/UserAvatar";
 import type { ReviewWithReviewer } from "@/lib/database.types";
 import { shortenAddress } from "@/lib/format";
 
@@ -25,21 +24,15 @@ export default function ShopReviewsList({
           className="rounded-2xl border border-border bg-surface p-5"
         >
           <div className="flex items-start gap-3">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-surface-elevated">
-              {review.reviewer_avatar ? (
-                <Image
-                  src={review.reviewer_avatar}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-xs font-bold text-accent">
-                  {(review.reviewer_username ?? review.reviewer_wallet).slice(0, 2).toUpperCase()}
-                </div>
-              )}
-            </div>
+            <UserAvatar
+              walletAddress={review.reviewer_wallet}
+              avatarUrl={review.reviewer_avatar}
+              alt={
+                review.reviewer_username ??
+                shortenAddress(review.reviewer_wallet)
+              }
+              size="sm"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-white">
