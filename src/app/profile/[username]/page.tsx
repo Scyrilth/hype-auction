@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
 import ProfileView from "@/components/profile/ProfileView";
+import BackButton from "@/components/ui/BackButton";
 import { getBuyerProfileData } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ export default async function ProfilePage({
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+          <BackButton className="mb-4" />
           <ProfileView profile={profile} />
         </main>
       </div>

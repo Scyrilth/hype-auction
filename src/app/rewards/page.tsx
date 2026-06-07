@@ -1,5 +1,6 @@
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import BackButton from "@/components/ui/BackButton";
 import {
   CrownIcon,
   GavelIcon,
@@ -33,8 +34,9 @@ export default function RewardsPage() {
       <div className="flex min-w-0 flex-1 flex-col">
         <TopNav />
 
-        <main className="flex flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-10 sm:px-6">
-          <div className="flex w-full max-w-4xl flex-col items-center text-center">
+        <main className="flex flex-1 flex-col overflow-y-auto px-4 py-10 sm:px-6">
+          <BackButton className="mb-4 self-start" />
+          <div className="flex w-full max-w-4xl flex-1 flex-col items-center justify-center self-center text-center">
             <span className="rounded-full bg-purple-900 px-4 py-1 text-sm text-purple-300">
               Coming Soon
             </span>

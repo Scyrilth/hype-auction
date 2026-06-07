@@ -2,6 +2,7 @@ import CreateListingForm from "@/components/dashboard/CreateListingForm";
 import WalletGate from "@/components/dashboard/WalletGate";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import BackButton from "@/components/ui/BackButton";
 
 export default function CreateListingPage() {
   return (
@@ -12,6 +13,7 @@ export default function CreateListingPage() {
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+          <BackButton label="Back to Dashboard" className="mb-4" />
           <WalletGate>
             <CreateListingForm />
           </WalletGate>

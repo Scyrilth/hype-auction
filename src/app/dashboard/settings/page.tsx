@@ -2,6 +2,7 @@ import VendorSettingsForm from "@/components/dashboard/VendorSettingsForm";
 import WalletGate from "@/components/dashboard/WalletGate";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import BackButton from "@/components/ui/BackButton";
 
 export default function VendorSettingsPage() {
   return (
@@ -12,6 +13,7 @@ export default function VendorSettingsPage() {
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-5">
+          <BackButton label="Back to Dashboard" className="mb-4" />
           <WalletGate>
             <div className="mx-auto max-w-3xl space-y-6">
               <div>

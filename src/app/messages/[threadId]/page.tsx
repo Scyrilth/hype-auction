@@ -1,6 +1,7 @@
 import ThreadView from "@/components/messages/ThreadView";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import BackButton from "@/components/ui/BackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ export default async function MessageThreadPage({
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+          <BackButton label="Back to Messages" className="mb-3" />
           <ThreadView threadId={threadId} />
         </main>
       </div>

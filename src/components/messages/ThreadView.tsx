@@ -210,12 +210,6 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   if (loading || !thread) {
     return (
       <div className="mx-auto max-w-3xl">
-        <Link
-          href="/messages"
-          className="mb-3 inline-block text-sm text-muted transition-colors hover:text-white"
-        >
-          ← Back to Messages
-        </Link>
         <p className="py-12 text-center text-sm text-muted">
           Loading conversation...
         </p>
@@ -247,13 +241,6 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
   return (
     <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col">
-      <Link
-        href="/messages"
-        className="mb-3 inline-block shrink-0 text-sm text-muted transition-colors hover:text-white"
-      >
-        ← Back to Messages
-      </Link>
-
       <div className="shrink-0 rounded-2xl border border-border bg-surface p-4">
         <div className="flex items-start gap-3">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-elevated">

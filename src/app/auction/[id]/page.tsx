@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import AuctionDetailView from "@/components/auction/AuctionDetailView";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import BackButton from "@/components/ui/BackButton";
 import { getAuctionDetailData } from "@/lib/auctions";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ export default async function AuctionDetailPage({
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+          <BackButton className="mb-4" />
           <AuctionDetailView data={data} />
         </main>
       </div>
