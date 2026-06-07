@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
@@ -10,14 +12,16 @@ import { useSearchSuggestions } from "@/hooks/useSearchSuggestions";
 import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 
 const navLinks = [
-  { label: "Browse", href: "/" },
+  { label: "Live", href: "/", live: true },
+  { label: "Browse", href: "/#live-auctions" },
+  { label: "Vendors", href: "/vendors" },
   { label: "Categories", href: "/categories" },
-  { label: "Live", href: "/" },
   { label: "Rewards", href: "#" },
-];
+] as const;
 
 export default function TopNav() {
   const router = useRouter();
+  const pathname = usePathname();
   const [query, setQuery] = useState("");
 
   const { queryReady, suggestionGroups, flatSuggestions } = useSearchSuggestions(
@@ -53,6 +57,13 @@ export default function TopNav() {
     [router]
   );
 
+  const isLinkActive = (href: string) => {
+    if (href === "#") return false;
+    if (href === "/") return pathname === "/";
+    if (href.startsWith("/#")) return pathname === "/";
+    return pathname === href || pathname.startsWith(`${href}/`);
+  };
+
   return (
     <header className="flex h-12 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-surface px-3 sm:h-14 sm:gap-4 sm:px-4 lg:gap-6 lg:px-5">
       <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[40%] lg:max-w-xl">
@@ -81,17 +92,28 @@ export default function TopNav() {
       </div>
 
       <nav className="hidden items-center gap-4 lg:flex lg:gap-6">
-        {navLinks.map((link) => (
-          <a
-            key={link.label}
-            href={link.href}
-            className={`text-sm font-medium transition-colors hover:text-white ${
-              link.label === "Live" ? "text-accent" : "text-zinc-400"
-            }`}
-          >
-            {link.label}
-          </a>
-        ))}
+        {navLinks.map((link) => {
+          const active = isLinkActive(link.href);
+          const isLive = "live" in link && link.live;
+
+          return (
+            <Link
+              key={link.label}
+              href={link.href}
+              className={`flex items-center gap-1.5 text-sm font-medium transition-colors hover:text-white ${
+                active || isLive ? "text-accent" : "text-zinc-400"
+              }`}
+            >
+              {isLive && (
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-live-red opacity-60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-live-red" />
+                </span>
+              )}
+              {link.label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">

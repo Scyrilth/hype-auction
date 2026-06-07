@@ -100,6 +100,15 @@ body {
     "chat";
 }
 
+.featured-heading-text {
+  background: linear-gradient(90deg, #ffffff 0%, #e9d5ff 45%, #c4b5fd 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(124, 58, 237, 0.35);
+  filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.25));
+}
+
 .featured-auction-video {
   grid-area: video;
 }
