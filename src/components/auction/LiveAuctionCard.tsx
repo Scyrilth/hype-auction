@@ -82,9 +82,9 @@ export default function LiveAuctionCard({
     >
       <Link
         href={`/auction/${auction.id}`}
-        className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
+        className="flex w-full min-w-0 flex-1 flex-col overflow-hidden"
       >
-        <div className="relative h-48 w-full shrink-0 overflow-hidden bg-surface-elevated">
+        <div className="relative aspect-[4/3] h-auto w-full overflow-hidden bg-surface-elevated">
           <Image
             src={imageSrc}
             alt={auction.title}
@@ -136,7 +136,7 @@ export default function LiveAuctionCard({
         />
       </Link>
 
-      <div className="shrink-0 px-4 pb-4">
+      <div className="px-4 pb-4">
         <button
           type="button"
           disabled={isPlacingBid}

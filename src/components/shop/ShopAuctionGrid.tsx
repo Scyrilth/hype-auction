@@ -49,12 +49,12 @@ export default function ShopAuctionGrid({
             href={`/auction/${auction.id}`}
             className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
           >
-            <div className="relative aspect-[4/3] bg-surface-elevated">
+            <div className="relative aspect-[4/3] h-auto w-full overflow-hidden bg-surface-elevated">
               <Image
                 src={imageSrc}
                 alt={auction.title}
                 fill
-                className="object-cover"
+                className="object-cover object-center"
                 unoptimized
               />
             </div>

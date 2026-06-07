@@ -35,13 +35,13 @@ export default function SearchAuctionCard({
       className="group flex h-full w-full min-w-[11.5rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
+      <div className="relative aspect-[4/3] h-auto w-full overflow-hidden bg-surface-elevated">
         <Image
           src={imageSrc}
           alt={auction.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />

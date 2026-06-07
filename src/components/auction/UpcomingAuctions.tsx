@@ -30,12 +30,12 @@ export default function UpcomingAuctions({
               href={`/auction/${auction.id}`}
               className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
             >
-              <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
+              <div className="relative aspect-[4/3] h-auto w-full overflow-hidden bg-surface-elevated">
                 <Image
                   src={imageSrc}
                   alt={auction.title}
                   fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
                   unoptimized
                 />
               </div>

@@ -130,11 +130,9 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
         {visibleItems.map((item, slotIndex) => (
           <div
             key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
-            className="h-[380px] min-w-0 max-w-full overflow-hidden transition-opacity duration-300"
+            className="flex h-full min-w-0 max-w-full overflow-hidden transition-opacity duration-300"
           >
-            <div className="h-full w-full min-w-0">
-              {renderCarouselItem(props, item)}
-            </div>
+            {renderCarouselItem(props, item)}
           </div>
         ))}
       </div>
