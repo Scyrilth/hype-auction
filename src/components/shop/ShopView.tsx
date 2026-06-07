@@ -78,7 +78,10 @@ export default function ShopView({
       )}
 
       {activeTab === "reviews" && (
-        <ShopReviewsList reviews={shop.reviews} />
+        <ShopReviewsList
+          reviews={shop.reviews}
+          vendorWallet={shop.vendor.wallet_address}
+        />
       )}
     </div>
   );

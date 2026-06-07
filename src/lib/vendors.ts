@@ -4,6 +4,7 @@ import type {
   User,
   VendorShopStats,
 } from "@/lib/database.types";
+import { averageRatingFromReviews, parseReviewRow } from "@/lib/reviews";
 import {
   getBidCountsForAuctions,
   getBidCountsInLast24Hours,
@@ -145,15 +146,10 @@ export async function getVendorReviews(
 
   return reviews.map((row) => {
     const reviewer = reviewerMap.get(row.reviewer_wallet as string);
+    const review = parseReviewRow(row as Record<string, unknown>);
 
     return {
-      id: row.id as string,
-      vendor_wallet: row.vendor_wallet as string,
-      reviewer_wallet: row.reviewer_wallet as string,
-      auction_id: (row.auction_id as string | null) ?? null,
-      rating: row.rating as number,
-      comment: (row.comment as string | null) ?? null,
-      created_at: row.created_at as string,
+      ...review,
       reviewer_username: (reviewer?.username as string | null) ?? null,
       reviewer_avatar: (reviewer?.avatar_url as string | null) ?? null,
     };
@@ -166,9 +162,10 @@ export function buildVendorStats(
   reviews: ReviewWithReviewer[]
 ): VendorShopStats {
   const totalVolume = pastAuctions.reduce((sum, a) => sum + a.current_bid, 0);
+  const activeReviews = reviews.filter((review) => !review.is_flagged);
   const averageRating =
-    reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    activeReviews.length > 0
+      ? averageRatingFromReviews(activeReviews)
       : vendor.average_rating;
 
   return {
@@ -176,6 +173,7 @@ export function buildVendorStats(
     total_volume: totalVolume,
     followers_count: vendor.followers_count,
     average_rating: Math.round(averageRating * 10) / 10,
+    review_count: activeReviews.length,
   };
 }
 
@@ -384,8 +382,9 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
     await Promise.all([
       supabase
         .from("reviews")
-        .select("vendor_wallet, rating")
-        .in("vendor_wallet", wallets),
+        .select("vendor_wallet, rating, is_flagged")
+        .in("vendor_wallet", wallets)
+        .eq("is_flagged", false),
       supabase
         .from("auctions")
         .select("seller_wallet, category, status, end_time, title")

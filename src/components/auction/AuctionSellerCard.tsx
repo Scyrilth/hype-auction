@@ -20,7 +20,13 @@ function VerifiedBadge() {
   );
 }
 
-export default function AuctionSellerCard({ seller }: { seller: User }) {
+export default function AuctionSellerCard({
+  seller,
+  reviewCount = 0,
+}: {
+  seller: User;
+  reviewCount?: number;
+}) {
   const displayName =
     seller.shop_name ??
     seller.username ??
@@ -75,8 +81,13 @@ export default function AuctionSellerCard({ seller }: { seller: User }) {
           <p className="text-[10px] uppercase tracking-wider text-muted">
             Rating
           </p>
-          <div className="mt-0.5 flex justify-center">
+          <div className="mt-0.5 flex flex-col items-center gap-0.5">
             <StarRating rating={seller.average_rating} size="sm" />
+            {reviewCount > 0 && (
+              <p className="text-[10px] text-muted">
+                {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+              </p>
+            )}
           </div>
         </div>
         <div className="rounded-lg bg-background/60 px-2 py-2">

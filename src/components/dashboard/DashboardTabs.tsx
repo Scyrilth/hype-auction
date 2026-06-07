@@ -12,7 +12,7 @@ import {
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
-import StarRating from "@/components/shop/StarRating";
+import ReviewCard from "@/components/reviews/ReviewCard";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import type {
@@ -212,12 +212,14 @@ export default function DashboardTabs({
   pastAuctions,
   bidsReceived,
   reviews,
+  vendorWallet,
   onRefresh,
 }: {
   activeAuctions: SellerAuctionWithStats[];
   pastAuctions: SellerAuctionWithStats[];
   bidsReceived: SellerBidRow[];
   reviews: ReviewWithReviewer[];
+  vendorWallet: string;
   onRefresh: () => void;
 }) {
   const [activeTab, setActiveTab] = useState<TabId>("active");
@@ -306,27 +308,14 @@ export default function DashboardTabs({
           reviews.length === 0 ? (
             <EmptyTab message="No reviews yet." />
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {reviews.map((review) => (
-                <div
+                <ReviewCard
                   key={review.id}
-                  className="rounded-xl border border-border bg-background/40 px-4 py-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-mono text-xs text-muted">
-                      {review.reviewer_username
-                        ? `@${review.reviewer_username}`
-                        : shortenAddress(review.reviewer_wallet, 6)}
-                    </p>
-                    <StarRating rating={review.rating} />
-                  </div>
-                  {review.comment && (
-                    <p className="mt-2 text-sm text-zinc-300">{review.comment}</p>
-                  )}
-                  <p className="mt-2 text-xs text-muted">
-                    {formatRelativeTime(review.created_at)}
-                  </p>
-                </div>
+                  review={review}
+                  vendorWallet={vendorWallet}
+                  onUpdated={onRefresh}
+                />
               ))}
             </div>
           )

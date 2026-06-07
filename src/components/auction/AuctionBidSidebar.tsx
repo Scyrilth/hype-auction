@@ -26,12 +26,14 @@ export default function AuctionBidSidebar({
   bidCount: initialBidCount,
   topBidder: initialTopBidder,
   topBidderUsername: initialTopBidderUsername,
+  sellerReviewCount = 0,
 }: {
   auction: Auction;
   seller: User;
   bidCount: number;
   topBidder: string | null;
   topBidderUsername: string | null;
+  sellerReviewCount?: number;
 }) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -225,7 +227,7 @@ export default function AuctionBidSidebar({
         )}
       </div>
 
-      <AuctionSellerCard seller={seller} />
+      <AuctionSellerCard seller={seller} reviewCount={sellerReviewCount} />
 
       <div className="min-h-[20rem]">
         <LiveChat auctionId={auction.id} />

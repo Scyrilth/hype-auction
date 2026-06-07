@@ -99,6 +99,7 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
             bidCount={data.bidCount}
             topBidder={data.topBidder}
             topBidderUsername={data.topBidderUsername}
+            sellerReviewCount={data.sellerReviewCount}
           />
         </div>
       </div>

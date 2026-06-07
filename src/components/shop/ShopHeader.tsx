@@ -135,6 +135,12 @@ export default function ShopHeader({
                   : "—"}
               </span>
             </div>
+            {stats.review_count > 0 && (
+              <p className="mt-0.5 text-xs text-muted">
+                {stats.review_count}{" "}
+                {stats.review_count === 1 ? "review" : "reviews"}
+              </p>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,5 @@
 import type { Auction, Review, User } from "@/lib/database.types";
+import { parseReviewRow } from "@/lib/reviews";
 import { getProfileSlug } from "@/lib/profile-links";
 import { supabase } from "@/lib/supabase";
 import { getVendorBySlug } from "@/lib/vendors";
@@ -38,6 +39,7 @@ export interface BuyerProfileData {
   wonAuctions: BuyerBidActivity[];
   watchlist: Auction[];
   reviewsGiven: ReviewWithVendor[];
+  reviewedAuctionIds: string[];
 }
 
 function parseAuction(row: Record<string, unknown>): Auction {
@@ -132,15 +134,10 @@ async function getReviewsByReviewer(
 
   return reviews.map((row) => {
     const vendor = vendorMap.get(row.vendor_wallet as string);
+    const review = parseReviewRow(row as Record<string, unknown>);
 
     return {
-      id: row.id as string,
-      vendor_wallet: row.vendor_wallet as string,
-      reviewer_wallet: row.reviewer_wallet as string,
-      auction_id: (row.auction_id as string | null) ?? null,
-      rating: row.rating as number,
-      comment: (row.comment as string | null) ?? null,
-      created_at: row.created_at as string,
+      ...review,
       vendor_username: (vendor?.username as string | null) ?? null,
       vendor_shop_name: (vendor?.shop_name as string | null) ?? null,
       vendor_avatar: (vendor?.avatar_url as string | null) ?? null,
@@ -279,6 +276,9 @@ export async function getBuyerProfileData(
   }
 
   const wonAuctions = bidActivity.filter((item) => item.isWinner);
+  const reviewedAuctionIds = reviewsGiven
+    .map((review) => review.auction_id)
+    .filter((id): id is string => Boolean(id));
 
   return {
     user,
@@ -293,5 +293,6 @@ export async function getBuyerProfileData(
     wonAuctions,
     watchlist,
     reviewsGiven,
+    reviewedAuctionIds,
   };
 }

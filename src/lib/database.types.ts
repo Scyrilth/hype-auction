@@ -78,6 +78,11 @@ export interface Review {
   rating: number;
   comment: string | null;
   created_at: string;
+  tags: string[] | null;
+  seller_reply: string | null;
+  seller_reply_at: string | null;
+  is_flagged: boolean;
+  is_dummy: boolean;
 }
 
 export interface ShippingAddress {
@@ -117,6 +122,7 @@ export interface VendorShopStats {
   total_volume: number;
   followers_count: number;
   average_rating: number;
+  review_count: number;
 }
 
 export interface ReviewWithReviewer extends Review {

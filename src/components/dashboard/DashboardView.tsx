@@ -76,6 +76,7 @@ export default function DashboardView() {
         pastAuctions={data.pastAuctions}
         bidsReceived={data.bidsReceived}
         reviews={data.reviews}
+        vendorWallet={publicKey.toBase58()}
         onRefresh={loadDashboard}
       />
 

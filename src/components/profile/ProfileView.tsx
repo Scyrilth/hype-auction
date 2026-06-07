@@ -89,6 +89,8 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
           <ProfileBidActivityList
             items={profile.wonAuctions}
             emptyMessage="No won auctions yet."
+            showReviewActions={isOwner}
+            reviewedAuctionIds={profile.reviewedAuctionIds}
           />
         )}
 

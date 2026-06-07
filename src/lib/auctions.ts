@@ -1,4 +1,5 @@
 import { getTopFeaturedAuctionIds } from "@/lib/auction-labels";
+import { getVendorReviewCount } from "@/lib/reviews";
 import { supabase } from "@/lib/supabase";
 import { parseUser } from "@/lib/vendors";
 import type { Auction, Bid, User } from "@/lib/database.types";
@@ -21,6 +22,7 @@ export interface AuctionDetailData {
   topBidder: string | null;
   topBidderUsername: string | null;
   similarAuctions: Auction[];
+  sellerReviewCount: number;
 }
 
 function parseAuction(row: Record<string, unknown>): Auction {
@@ -213,19 +215,21 @@ export async function getAuctionDetailData(
   const auction = await getAuctionById(id);
   if (!auction) return null;
 
-  const [sellerResponse, bidsResponse, similarAuctions] = await Promise.all([
-    supabase
-      .from("users")
-      .select("*")
-      .eq("wallet_address", auction.seller_wallet)
-      .maybeSingle(),
-    supabase
-      .from("bids")
-      .select("*")
-      .eq("auction_id", id)
-      .order("amount", { ascending: false }),
-    getSimilarAuctions(auction),
-  ]);
+  const [sellerResponse, bidsResponse, similarAuctions, sellerReviewCount] =
+    await Promise.all([
+      supabase
+        .from("users")
+        .select("*")
+        .eq("wallet_address", auction.seller_wallet)
+        .maybeSingle(),
+      supabase
+        .from("bids")
+        .select("*")
+        .eq("auction_id", id)
+        .order("amount", { ascending: false }),
+      getSimilarAuctions(auction),
+      getVendorReviewCount(auction.seller_wallet),
+    ]);
 
   if (sellerResponse.error) throw sellerResponse.error;
   if (bidsResponse.error) throw bidsResponse.error;
@@ -295,6 +299,7 @@ export async function getAuctionDetailData(
     topBidder: topBid?.bidder_wallet ?? null,
     topBidderUsername: topBid?.bidder_username ?? null,
     similarAuctions,
+    sellerReviewCount,
   };
 }
 
