@@ -17,19 +17,52 @@ export interface AuctionSummaryPayload {
   auction_id: string;
 }
 
-export function parseAuctionSummaryMessage(
-  content: string
+function coerceAuctionSummaryPayload(
+  value: Record<string, unknown>
 ): AuctionSummaryPayload | null {
-  if (!content.startsWith('{"type":"auction_summary"')) return null;
+  if (value.type !== "auction_summary") return null;
 
-  try {
-    const parsed = JSON.parse(content) as AuctionSummaryPayload;
-    if (parsed?.type === "auction_summary") return parsed;
-  } catch {
+  const auctionId = value.auction_id;
+  if (typeof auctionId !== "string" || !auctionId) return null;
+
+  return {
+    type: "auction_summary",
+    title: typeof value.title === "string" ? value.title : "Auction",
+    image_url:
+      typeof value.image_url === "string" ? value.image_url : null,
+    winning_bid: Number(value.winning_bid ?? 0),
+    reference_number:
+      typeof value.reference_number === "string"
+        ? value.reference_number
+        : null,
+    category: typeof value.category === "string" ? value.category : null,
+    condition: typeof value.condition === "string" ? value.condition : null,
+    auction_id: auctionId,
+  };
+}
+
+export function parseAuctionSummaryMessage(
+  content: unknown
+): AuctionSummaryPayload | null {
+  if (content == null) return null;
+
+  if (typeof content === "object" && !Array.isArray(content)) {
+    return coerceAuctionSummaryPayload(content as Record<string, unknown>);
+  }
+
+  if (typeof content !== "string") return null;
+
+  const trimmed = content.trim();
+  if (!trimmed.startsWith("{") || !trimmed.includes("auction_summary")) {
     return null;
   }
 
-  return null;
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    return coerceAuctionSummaryPayload(parsed);
+  } catch {
+    return null;
+  }
 }
 
 export async function createWinnerThread(

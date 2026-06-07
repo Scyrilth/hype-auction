@@ -66,12 +66,24 @@ function parseThread(row: Record<string, unknown>): MessageThread {
   };
 }
 
+function normalizeMessageContent(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value ?? "");
+}
+
 function parseDirectMessage(row: Record<string, unknown>): DirectMessage {
   return {
     id: row.id as string,
     thread_id: row.thread_id as string,
     sender_wallet: row.sender_wallet as string,
-    content: row.content as string,
+    content: normalizeMessageContent(row.content),
     is_system: Boolean(row.is_system),
     is_read: Boolean(row.is_read),
     created_at: row.created_at as string,

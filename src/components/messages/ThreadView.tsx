@@ -52,16 +52,24 @@ function MessageBubble({
   senderAvatar: string | null;
   onCopyTracking: (trackingNumber: string) => void;
 }) {
-  if (message.is_system) {
-    const auctionSummary = parseAuctionSummaryMessage(message.content);
-    if (auctionSummary) {
-      return (
-        <div className="flex justify-center py-2">
-          <AuctionSummaryTile summary={auctionSummary} />
-        </div>
-      );
-    }
+  console.log("[ThreadView] message content", {
+    messageId: message.id,
+    is_system: message.is_system,
+    rawContent: message.content,
+    contentType: typeof message.content,
+  });
 
+  const auctionSummary = parseAuctionSummaryMessage(message.content);
+  if (auctionSummary) {
+    console.log("[ThreadView] auction summary parsed", auctionSummary);
+    return (
+      <div className="flex w-full justify-center py-2">
+        <AuctionSummaryTile summary={auctionSummary} />
+      </div>
+    );
+  }
+
+  if (message.is_system) {
     return (
       <div className="flex justify-center py-2">
         <p className="max-w-md text-center text-xs italic text-muted">
