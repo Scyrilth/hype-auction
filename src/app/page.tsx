@@ -6,11 +6,14 @@ import LiveChat from "@/components/auction/LiveChat";
 import UpcomingAuctions from "@/components/auction/UpcomingAuctions";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
 import { getAuctionsPageData, getTrendingAuctions } from "@/lib/auctions";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  await checkAndEndExpiredAuctions();
+
   const [
     { featured, otherLive, upcomingAuctions, bidCounts, bidCounts24h, topFeaturedIds },
     trending,

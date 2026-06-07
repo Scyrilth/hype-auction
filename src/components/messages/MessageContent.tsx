@@ -1,5 +1,8 @@
 "use client";
 
+import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
+import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
+
 interface TrackingMatch {
   start: number;
   end: number;
@@ -67,6 +70,11 @@ export default function MessageContent({
   isMine: boolean;
   onCopyTracking: (trackingNumber: string) => void;
 }) {
+  const auctionSummary = parseAuctionSummaryMessage(content);
+  if (auctionSummary) {
+    return <AuctionSummaryTile summary={auctionSummary} />;
+  }
+
   const matches = findTrackingMatches(content);
 
   if (matches.length === 0) {

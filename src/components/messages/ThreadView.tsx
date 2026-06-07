@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
 import MessageContent from "@/components/messages/MessageContent";
+import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
@@ -51,6 +53,15 @@ function MessageBubble({
   onCopyTracking: (trackingNumber: string) => void;
 }) {
   if (message.is_system) {
+    const auctionSummary = parseAuctionSummaryMessage(message.content);
+    if (auctionSummary) {
+      return (
+        <div className="flex justify-center py-2">
+          <AuctionSummaryTile summary={auctionSummary} />
+        </div>
+      );
+    }
+
     return (
       <div className="flex justify-center py-2">
         <p className="max-w-md text-center text-xs italic text-muted">

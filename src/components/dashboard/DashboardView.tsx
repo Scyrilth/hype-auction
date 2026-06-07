@@ -7,8 +7,9 @@ import DashboardProfileSummary from "@/components/dashboard/DashboardProfileSumm
 import DashboardTabs, {
   DashboardActivityFeed,
 } from "@/components/dashboard/DashboardTabs";
-import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
 import { getSellerDashboardData, type SellerDashboardData } from "@/lib/dashboard";
+import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 
 const emptyData: SellerDashboardData = {
   profile: null,
@@ -38,6 +39,7 @@ export default function DashboardView() {
 
     setLoading(true);
     try {
+      await checkAndEndExpiredAuctions();
       const dashboard = await getSellerDashboardData(publicKey.toBase58());
       setData(dashboard);
     } catch (error) {

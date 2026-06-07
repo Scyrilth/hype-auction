@@ -68,57 +68,60 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
   };
 
   return (
-    <div className="mt-3 rounded-xl border border-border bg-background/40 p-3">
-      {auction.reference_number && (
-        <div className="mb-2">
+    <div className="mt-2 rounded-lg border border-border/80 bg-background/40 p-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        {auction.reference_number && (
           <ReferenceNumber referenceNumber={auction.reference_number} />
-        </div>
-      )}
+        )}
 
-      {status === "pending" && (
-        <p className="text-sm text-muted">Awaiting shipment...</p>
-      )}
+        {status === "pending" && (
+          <span className="text-xs text-muted">Awaiting shipment...</span>
+        )}
 
-      {status === "shipped" && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-zinc-200">
+        {status === "shipped" && (
+          <>
             {auction.tracking_courier && (
-              <span className="font-medium">{auction.tracking_courier}</span>
+              <span className="text-xs font-medium text-zinc-200">
+                {auction.tracking_courier}
+              </span>
             )}
             {auction.tracking_number && (
-              <>
-                <span className="font-mono text-xs text-purple-300">
+              <span className="inline-flex items-center gap-1">
+                <span className="font-mono text-[11px] text-purple-300">
                   {auction.tracking_number}
                 </span>
                 <TrackingCopyButton value={auction.tracking_number} />
-              </>
+              </span>
             )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              disabled={confirming || messaging}
-              onClick={handleConfirmReceipt}
-              className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
-            >
-              {confirming ? "Confirming..." : "Confirm Receipt"}
-            </button>
-            <button
-              type="button"
-              disabled={confirming || messaging}
-              onClick={handleMessageSeller}
-              className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
-            >
-              {messaging ? "Opening..." : "Message Seller"}
-            </button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
 
-      {status === "delivered" && (
-        <span className="inline-flex rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
-          Delivered ✓
-        </span>
+        {status === "delivered" && (
+          <span className="inline-flex rounded-md bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+            Delivered ✓
+          </span>
+        )}
+      </div>
+
+      {status === "shipped" && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            disabled={confirming || messaging}
+            onClick={handleConfirmReceipt}
+            className="rounded-full bg-accent px-3 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+          >
+            {confirming ? "Confirming..." : "Confirm Receipt"}
+          </button>
+          <button
+            type="button"
+            disabled={confirming || messaging}
+            onClick={handleMessageSeller}
+            className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-[11px] font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
+          >
+            {messaging ? "Opening..." : "Message Seller"}
+          </button>
+        </div>
       )}
     </div>
   );

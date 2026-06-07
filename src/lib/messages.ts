@@ -357,7 +357,7 @@ export async function getThreadDetail(
   };
 }
 
-async function insertSystemMessage(
+export async function insertThreadSystemMessage(
   threadId: string,
   content: string,
   senderWallet: string
@@ -377,7 +377,8 @@ export async function createAuctionThread(
   auctionId: string,
   buyerWallet: string,
   sellerWallet: string,
-  itemTitle: string
+  itemTitle: string,
+  options?: { skipWelcomeMessage?: boolean }
 ): Promise<MessageThread> {
   await Promise.all([
     upsertUser(buyerWallet),
@@ -408,11 +409,13 @@ export async function createAuctionThread(
   if (error) throw error;
 
   const parsed = parseThread(thread as Record<string, unknown>);
-  await insertSystemMessage(
-    parsed.id,
-    `🎉 Congratulations! You won ${itemTitle}. Use this thread to coordinate shipping and delivery with the seller.`,
-    sellerWallet
-  );
+  if (!options?.skipWelcomeMessage) {
+    await insertThreadSystemMessage(
+      parsed.id,
+      `🎉 Congratulations! You won ${itemTitle}. Use this thread to coordinate shipping and delivery with the seller.`,
+      sellerWallet
+    );
+  }
 
   return parsed;
 }
@@ -451,7 +454,7 @@ export async function createGeneralInquiryThread(
   if (error) throw error;
 
   const parsed = parseThread(thread as Record<string, unknown>);
-  await insertSystemMessage(
+  await insertThreadSystemMessage(
     parsed.id,
     "General inquiry started. Use this thread to ask questions before you bid.",
     sellerWallet
@@ -549,7 +552,7 @@ export async function confirmReceipt(
 
   if (threadError) throw threadError;
 
-  await insertSystemMessage(
+  await insertThreadSystemMessage(
     threadId,
     "Buyer confirmed receipt. This thread will be archived in 3 days.",
     buyerWallet

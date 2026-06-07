@@ -111,15 +111,20 @@ function BidActivityCard({
     item.isWinner &&
     (item.auction.status === "ended" || item.auction.status === "completed");
   const finalBidLabel = isWonAuction ? "Winning bid" : "Current bid";
+  const isCompactWon = showWonShipping && isWonAuction;
 
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
-        <div className="flex gap-4 p-4">
-          <div className="flex min-w-0 flex-1 gap-4">
+        <div className={isCompactWon ? "flex gap-3 p-3" : "flex gap-4 p-4"}>
+          <div className={`flex min-w-0 flex-1 ${isCompactWon ? "gap-3" : "gap-4"}`}>
             <Link
               href={`/auction/${item.auction.id}`}
-              className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-elevated transition-opacity hover:opacity-95 sm:h-24 sm:w-24"
+              className={`relative shrink-0 overflow-hidden rounded-xl bg-surface-elevated transition-opacity hover:opacity-95 ${
+                isCompactWon
+                  ? "h-16 w-16"
+                  : "h-20 w-20 sm:h-24 sm:w-24"
+              }`}
             >
               <Image
                 src={imageSrc}
@@ -136,7 +141,11 @@ function BidActivityCard({
                 className="block transition-colors hover:opacity-95"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
-                  <h3 className="line-clamp-2 min-h-10 text-sm font-semibold text-white">
+                  <h3
+                    className={`line-clamp-2 font-semibold text-white ${
+                      isCompactWon ? "min-h-0 text-sm" : "min-h-10 text-sm"
+                    }`}
+                  >
                     {item.auction.title}
                   </h3>
                   <div className="flex shrink-0 flex-col items-end gap-1">
@@ -154,14 +163,18 @@ function BidActivityCard({
                   </div>
                 </div>
 
-                {item.auction.category && (
+                {item.auction.category && !isCompactWon && (
                   <span className="mt-2 inline-block rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">
                     {item.auction.category}
                   </span>
                 )}
               </Link>
 
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div
+                className={`grid grid-cols-2 text-sm ${
+                  isCompactWon ? "mt-2 gap-2" : "mt-3 gap-3"
+                }`}
+              >
                 <div>
                   <p className="text-xs text-muted">Your highest bid</p>
                   <p className="font-semibold text-accent">
@@ -240,7 +253,7 @@ export default function ProfileBidActivityList({
   }
 
   return (
-    <div className="space-y-3">
+    <div className={showWonShipping ? "space-y-2" : "space-y-3"}>
       {items.map((item) => (
         <BidActivityCard
           key={item.auction.id}

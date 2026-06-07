@@ -4,6 +4,7 @@ import AuctionDetailView from "@/components/auction/AuctionDetailView";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
 import BackButton from "@/components/ui/BackButton";
+import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
 import { getAuctionDetailData } from "@/lib/auctions";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export default async function AuctionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await checkAndEndExpiredAuctions();
   const data = await getAuctionDetailData(id);
 
   if (!data) {
