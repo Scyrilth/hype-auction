@@ -1,9 +1,10 @@
 "use client";
 
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
-import BrowseCategoryPill from "@/components/browse/BrowseCategoryPill";
+import BrowseSortPill from "@/components/browse/BrowseSortPill";
 import type { BrowseAuctionItem } from "@/lib/browse";
 import type { AuctionLabelMaps } from "@/lib/auction-labels";
+import type { BrowseSectionSortOption } from "@/lib/browse-filters";
 import type { Auction } from "@/lib/database.types";
 
 export default function BrowseSection({
@@ -13,8 +14,8 @@ export default function BrowseSection({
   trendingItems,
   variant = "browse",
   labelMaps,
-  categoryFilter,
-  onCategoryChange,
+  sortBy,
+  onSortChange,
 }: {
   title: string;
   count: number;
@@ -22,8 +23,8 @@ export default function BrowseSection({
   trendingItems?: BrowseAuctionItem[];
   variant?: "browse" | "trending";
   labelMaps?: AuctionLabelMaps;
-  categoryFilter: string;
-  onCategoryChange: (category: string) => void;
+  sortBy: BrowseSectionSortOption;
+  onSortChange: (sort: BrowseSectionSortOption) => void;
 }) {
   const hasItems =
     variant === "trending"
@@ -37,7 +38,7 @@ export default function BrowseSection({
           {title}{" "}
           <span className="text-base font-normal text-muted">({count})</span>
         </h2>
-        <BrowseCategoryPill value={categoryFilter} onChange={onCategoryChange} />
+        <BrowseSortPill value={sortBy} onChange={onSortChange} />
       </div>
 
       {hasItems ? (

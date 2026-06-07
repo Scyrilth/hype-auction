@@ -2,19 +2,21 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { CATEGORIES } from "@/lib/categories";
+import {
+  BROWSE_SECTION_SORT_OPTIONS,
+  getSectionSortLabel,
+  type BrowseSectionSortOption,
+} from "@/lib/browse-filters";
 
-export default function BrowseCategoryPill({
+export default function BrowseSortPill({
   value,
   onChange,
 }: {
-  value: string;
-  onChange: (category: string) => void;
+  value: BrowseSectionSortOption;
+  onChange: (sort: BrowseSectionSortOption) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  const label = value === "all" ? "All Categories" : value;
 
   useEffect(() => {
     if (!open) return;
@@ -38,41 +40,29 @@ export default function BrowseCategoryPill({
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        {label}
+        {getSectionSortLabel(value)}
         <span className="text-[10px] text-muted" aria-hidden>
           ▼
         </span>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1.5 max-h-56 w-48 overflow-y-auto rounded-xl border border-border bg-surface-elevated py-1 shadow-xl">
-          <button
-            type="button"
-            onClick={() => {
-              onChange("all");
-              setOpen(false);
-            }}
-            className={`flex w-full px-3 py-2 text-left text-xs transition-colors hover:bg-accent/10 ${
-              value === "all" ? "font-semibold text-white" : "text-zinc-300"
-            }`}
-          >
-            All Categories
-          </button>
-          {CATEGORIES.map((category) => (
+        <div className="absolute right-0 top-full z-50 mt-1.5 w-40 overflow-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-xl">
+          {BROWSE_SECTION_SORT_OPTIONS.map((option) => (
             <button
-              key={category.id}
+              key={option.id}
               type="button"
               onClick={() => {
-                onChange(category.label);
+                onChange(option.id);
                 setOpen(false);
               }}
               className={`flex w-full px-3 py-2 text-left text-xs transition-colors hover:bg-accent/10 ${
-                value === category.label
+                value === option.id
                   ? "font-semibold text-white"
                   : "text-zinc-300"
               }`}
             >
-              {category.label}
+              {option.label}
             </button>
           ))}
         </div>
