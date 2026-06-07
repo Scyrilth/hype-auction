@@ -8,8 +8,15 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import ListingPreview, {
   type ListingFormState,
 } from "@/components/dashboard/ListingPreview";
+import GradeSelect from "@/components/dashboard/GradeSelect";
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import {
+  buildGradingItemDetails,
+  GRADING_COMPANIES,
+  GRADES_BY_COMPANY,
+  type GradingCompany,
+} from "@/lib/grading";
 import {
   AUCTION_CATEGORIES,
   AUCTION_CONDITIONS,
@@ -28,6 +35,9 @@ const initialForm: ListingFormState = {
   description: "",
   category: AUCTION_CATEGORIES[0],
   condition: AUCTION_CONDITIONS[0],
+  hasProfessionalGrade: false,
+  gradingCompany: "PSA",
+  gradingGradeId: GRADES_BY_COMPANY.PSA[0].id,
   startPrice: "",
   durationHours: String(AUCTION_DURATIONS[4].hours),
   imageUrl: "",
@@ -101,6 +111,19 @@ export default function CreateListingForm() {
           .filter((row) => row.key.trim() && row.value.trim())
           .map((row) => [row.key.trim(), row.value.trim()])
       );
+
+      if (form.hasProfessionalGrade) {
+        const grading = buildGradingItemDetails(
+          form.gradingCompany,
+          form.gradingGradeId
+        );
+        if (!grading) {
+          showToast("Select a valid grading company and grade.", "error");
+          setIsSubmitting(false);
+          return;
+        }
+        Object.assign(itemDetails, grading);
+      }
 
       await createAuction({
         sellerWallet: publicKey.toBase58(),
@@ -211,6 +234,66 @@ export default function CreateListingForm() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={form.hasProfessionalGrade}
+                  onChange={(e) =>
+                    updateForm("hasProfessionalGrade", e.target.checked)
+                  }
+                  className="h-4 w-4 rounded border-border bg-background accent-accent"
+                />
+                <span className="text-sm text-zinc-300">
+                  This item has been professionally graded
+                </span>
+              </label>
+
+              {form.hasProfessionalGrade && (
+                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="gradingCompany" className={labelClass}>
+                      Grading Company
+                    </label>
+                    <select
+                      id="gradingCompany"
+                      value={form.gradingCompany}
+                      onChange={(e) => {
+                        const company = e.target.value as GradingCompany;
+                        const firstGrade = GRADES_BY_COMPANY[company][0]?.id ?? "";
+                        setForm((current) => ({
+                          ...current,
+                          gradingCompany: company,
+                          gradingGradeId: firstGrade,
+                        }));
+                      }}
+                      className={inputClass}
+                    >
+                      {GRADING_COMPANIES.map((company) => (
+                        <option key={company.id} value={company.id}>
+                          {company.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="gradingGrade" className={labelClass}>
+                      Grade
+                    </label>
+                    <GradeSelect
+                      id="gradingGrade"
+                      options={GRADES_BY_COMPANY[form.gradingCompany]}
+                      value={form.gradingGradeId}
+                      onChange={(gradeId) =>
+                        updateForm("gradingGradeId", gradeId)
+                      }
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

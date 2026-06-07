@@ -1,21 +1,12 @@
 import { getCategoryLabels } from "@/lib/categories";
 import type { Auction, AuctionStatus } from "@/lib/database.types";
+import { AUCTION_CONDITIONS } from "@/lib/grading";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
-export const AUCTION_CATEGORIES = getCategoryLabels();
+export { AUCTION_CONDITIONS };
 
-export const AUCTION_CONDITIONS = [
-  "New",
-  "Like New",
-  "Very Good",
-  "Good",
-  "Fair",
-  "PSA 10",
-  "PSA 9",
-  "PSA 8",
-  "Raw",
-] as const;
+export const AUCTION_CATEGORIES = getCategoryLabels();
 
 export const AUCTION_DURATIONS = [
   { label: "1 hour", hours: 1 },

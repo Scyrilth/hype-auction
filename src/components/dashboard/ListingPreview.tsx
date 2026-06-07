@@ -3,7 +3,12 @@
 import Image from "next/image";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
+import {
+  buildGradingItemDetails,
+  type GradingCompany,
+} from "@/lib/grading";
 import { formatSol } from "@/lib/format";
 
 export type ListingFormState = {
@@ -11,6 +16,9 @@ export type ListingFormState = {
   description: string;
   category: string;
   condition: string;
+  hasProfessionalGrade: boolean;
+  gradingCompany: GradingCompany;
+  gradingGradeId: string;
   startPrice: string;
   durationHours: string;
   imageUrl: string;
@@ -34,6 +42,11 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
   const detailEntries = form.itemDetails.filter(
     (row) => row.key.trim() && row.value.trim()
   );
+
+  const gradingPreview =
+    form.hasProfessionalGrade && form.gradingGradeId
+      ? buildGradingItemDetails(form.gradingCompany, form.gradingGradeId)
+      : null;
 
   return (
     <div className="sticky top-5 rounded-2xl border border-border bg-surface p-5">
@@ -71,6 +84,13 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
               <span className="rounded-full bg-surface-elevated px-2.5 py-0.5 text-xs font-medium text-zinc-400">
                 {form.condition}
               </span>
+            )}
+            {gradingPreview && (
+              <GradingBadge
+                company={gradingPreview.grading_company}
+                grade={gradingPreview.grade}
+                label={gradingPreview.grade_label}
+              />
             )}
           </div>
 

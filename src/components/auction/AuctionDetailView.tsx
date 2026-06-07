@@ -2,15 +2,21 @@ import AuctionBidHistory from "@/components/auction/AuctionBidHistory";
 import AuctionBidSidebar from "@/components/auction/AuctionBidSidebar";
 import AuctionCard from "@/components/auction/AuctionCard";
 import AuctionImageGallery from "@/components/auction/AuctionImageGallery";
+import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import type { AuctionDetailData } from "@/lib/auctions";
+import {
+  filterCustomItemDetails,
+  getGradingFromItemDetails,
+} from "@/lib/grading";
 
 export default function AuctionDetailView({ data }: { data: AuctionDetailData }) {
   const { auction, seller, bids, similarAuctions } = data;
   const isLive =
     auction.status === "live" &&
     new Date(auction.end_time).getTime() > Date.now();
-  const detailEntries = Object.entries(auction.item_details).filter(
-    ([key, value]) => key.trim() && value.trim()
+  const grading = getGradingFromItemDetails(auction.item_details);
+  const detailEntries = Object.entries(
+    filterCustomItemDetails(auction.item_details)
   );
 
   return (
@@ -34,6 +40,13 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
                 <span className="rounded-full bg-surface-elevated px-3 py-1 text-xs font-medium text-zinc-400">
                   {auction.condition}
                 </span>
+              )}
+              {grading && (
+                <GradingBadge
+                  company={grading.company}
+                  grade={grading.grade}
+                  label={grading.label}
+                />
               )}
             </div>
           </div>
