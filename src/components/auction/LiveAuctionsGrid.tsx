@@ -228,23 +228,29 @@ export default function LiveAuctionsGrid({
   return (
     <section className="mt-8">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-white">
-          Live Auctions ({filteredAuctions.length})
+        <h2 className="flex items-baseline text-2xl font-bold text-white">
+          Live Auctions
+          <span className="ml-2 text-base font-normal text-muted">
+            ({filteredAuctions.length})
+          </span>
         </h2>
 
         <div ref={filterRef} className="relative">
           <button
             type="button"
             onClick={() => setFilterOpen((open) => !open)}
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-elevated text-muted transition-colors hover:border-accent/50 hover:text-white"
+            className="relative flex h-9 items-center gap-2 rounded-lg border border-border bg-surface-elevated px-3 text-muted transition-colors hover:border-accent/50 hover:text-white"
             aria-label="Filter and sort auctions"
             aria-expanded={filterOpen}
             aria-haspopup="true"
           >
-            <FilterIcon className="h-4 w-4" />
-            {filtersActive && (
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent ring-2 ring-surface-elevated" />
-            )}
+            <span className="text-sm">Filter</span>
+            <span className="relative">
+              <FilterIcon className="h-4 w-4" />
+              {filtersActive && (
+                <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-accent ring-2 ring-surface-elevated" />
+              )}
+            </span>
           </button>
 
           {filterOpen && (
