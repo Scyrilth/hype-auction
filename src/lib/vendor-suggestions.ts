@@ -5,6 +5,7 @@ import { shortenAddress } from "@/lib/format";
 export type AuctionSuggestionSource = {
   id: string;
   title: string;
+  category: string | null;
   seller_wallet: string;
   current_bid: number;
   status: string;
@@ -72,6 +73,15 @@ function isAuctionLive(status: string, endTime: string) {
   return status === "live" && endTime > new Date().toISOString();
 }
 
+export function matchesAuctionSearchTerm(
+  auction: Pick<AuctionSuggestionSource, "title" | "category">,
+  query: string
+): boolean {
+  const q = normalizeSearchQuery(query);
+  if (auction.title.toLowerCase().includes(q)) return true;
+  return (auction.category ?? "").toLowerCase().includes(q);
+}
+
 export function buildVendorSuggestions(
   vendors: VendorDirectoryEntry[],
   query: string,
@@ -136,7 +146,7 @@ export function buildVendorSuggestions(
 
   const itemHits: VendorSuggestion[] = [];
   for (const auction of auctions) {
-    if (!auction.title.toLowerCase().includes(q)) continue;
+    if (!matchesAuctionSearchTerm(auction, query)) continue;
 
     const entry = vendorByWallet.get(auction.seller_wallet);
     if (!entry) continue;

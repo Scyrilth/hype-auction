@@ -41,8 +41,8 @@ async function fetchMatchingAuctions(
 
   let request = supabase
     .from("auctions")
-    .select("id, title, seller_wallet, current_bid, status, end_time")
-    .ilike("title", `%${q}%`)
+    .select("id, title, category, seller_wallet, current_bid, status, end_time")
+    .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
     .limit(20);
 
   if (sellerWallets?.length) {
@@ -58,6 +58,7 @@ async function fetchMatchingAuctions(
   return data.map((row) => ({
     id: row.id as string,
     title: row.title as string,
+    category: (row.category as string | null) ?? null,
     seller_wallet: row.seller_wallet as string,
     current_bid: Number(row.current_bid),
     status: row.status as string,
