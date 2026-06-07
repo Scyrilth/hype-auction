@@ -50,11 +50,7 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
 
   return (
     <div className="sticky top-5 rounded-2xl border border-border bg-surface p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-        Preview
-      </p>
-
-      <article className="mt-4 overflow-hidden rounded-2xl border border-border bg-background">
+      <article className="overflow-hidden rounded-2xl border border-border bg-background">
         <div className="relative aspect-[4/3] bg-surface-elevated">
           <Image
             src={imageSrc}
@@ -66,6 +62,9 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
           <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
             Live
+          </span>
+          <span className="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-1 text-xs text-white/60">
+            Listing preview
           </span>
         </div>
 
