@@ -84,13 +84,13 @@ export default function LiveAuctionCard({
         href={`/auction/${auction.id}`}
         className="flex w-full min-w-0 flex-1 flex-col overflow-hidden"
       >
-        <div className="relative aspect-[4/3] h-auto w-full overflow-hidden bg-surface-elevated">
+        <div className="relative w-full h-48 overflow-hidden bg-surface-elevated">
           <Image
             src={imageSrc}
             alt={auction.title}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="object-cover object-center"
+            width={800}
+            height={192}
+            className="h-full w-full object-cover object-center"
             unoptimized
           />
           <WatchlistHeart auctionId={auction.id} />

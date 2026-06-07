@@ -35,13 +35,13 @@ export default function TrendingAuctionCard({
       className="group flex h-full w-full min-w-[11.5rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
-      <div className="relative aspect-[4/3] h-auto w-full overflow-hidden bg-surface-elevated">
+      <div className="relative w-full h-48 overflow-hidden bg-surface-elevated">
         <Image
           src={imageSrc}
           alt={auction.title}
-          fill
-          sizes="20vw"
-          className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
+          width={800}
+          height={192}
+          className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
         <WatchlistHeart auctionId={auction.id} />
