@@ -5,6 +5,8 @@ export type AuctionStatus =
   | "cancelled"
   | "completed";
 
+export type ShippingStatus = "pending" | "shipped" | "delivered";
+
 export interface User {
   wallet_address: string;
   username: string | null;
@@ -50,6 +52,11 @@ export interface Auction {
   item_details: Record<string, string>;
   created_at: string;
   is_featured: boolean;
+  reference_number: string | null;
+  tracking_courier: string | null;
+  tracking_number: string | null;
+  tracking_uploaded_at: string | null;
+  shipping_status: ShippingStatus;
 }
 
 export interface Bid {

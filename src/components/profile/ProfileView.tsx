@@ -90,6 +90,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
             items={profile.wonAuctions}
             emptyMessage="No won auctions yet."
             showReviewActions={isOwner}
+            showWonShipping={isOwner}
             reviewedAuctionIds={profile.reviewedAuctionIds}
           />
         )}

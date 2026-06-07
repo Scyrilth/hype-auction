@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import MessageContent from "@/components/messages/MessageContent";
+import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage } from "@/lib/errors";
@@ -262,6 +263,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             <p className="text-xs text-muted">
               {formatOrderRef(thread.auction_id)} · with {otherLabel}
             </p>
+            {thread.auction?.reference_number && (
+              <div className="mt-1.5">
+                <ReferenceNumber referenceNumber={thread.auction.reference_number} />
+              </div>
+            )}
             {thread.auction_id && (
               <Link
                 href={`/auction/${thread.auction_id}`}

@@ -11,7 +11,9 @@ import ListingPreview, {
 } from "@/components/dashboard/ListingPreview";
 import GradeSelect from "@/components/dashboard/GradeSelect";
 import ImageUpload from "@/components/ui/ImageUpload";
+import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
+import type { Auction } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
   buildGradingItemDetails,
@@ -54,6 +56,9 @@ export default function CreateListingForm() {
   const { showToast } = useToast();
   const [form, setForm] = useState<ListingFormState>(initialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [publishedAuction, setPublishedAuction] = useState<Auction | null>(
+    null
+  );
 
   const updateForm = <K extends keyof ListingFormState>(
     key: K,
@@ -102,7 +107,7 @@ export default function CreateListingForm() {
         Object.assign(itemDetails, grading);
       }
 
-      await createAuction({
+      const auction = await createAuction({
         sellerWallet: publicKey.toBase58(),
         title: form.title,
         description: form.description,
@@ -115,8 +120,9 @@ export default function CreateListingForm() {
         itemDetails,
       });
 
+      setPublishedAuction(auction);
       showToast("Auction published successfully!");
-      router.push("/dashboard");
+      setTimeout(() => router.push("/dashboard"), 2500);
     } catch (error) {
       logSupabaseError("CreateListingForm", error);
       showToast(getErrorMessage(error), "error");
@@ -145,6 +151,25 @@ export default function CreateListingForm() {
           Fill in the details below and preview how your auction will appear.
         </p>
       </header>
+
+      {publishedAuction && (
+        <div className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+          <p className="text-sm font-semibold text-emerald-300">
+            Auction published successfully!
+          </p>
+          <p className="mt-1 text-sm text-zinc-300">
+            Your private reference number (share only with the winning buyer):
+          </p>
+          {publishedAuction.reference_number && (
+            <div className="mt-2">
+              <ReferenceNumber referenceNumber={publishedAuction.reference_number} />
+            </div>
+          )}
+          <p className="mt-2 text-xs text-muted">
+            Redirecting to dashboard...
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form

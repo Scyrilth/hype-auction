@@ -1,4 +1,5 @@
 import type { Auction, Review, User } from "@/lib/database.types";
+import { parseAuctionRow } from "@/lib/parse-auction";
 import { parseReviewRow } from "@/lib/reviews";
 import { getProfileSlug } from "@/lib/profile-links";
 import { supabase } from "@/lib/supabase";
@@ -42,32 +43,6 @@ export interface BuyerProfileData {
   reviewedAuctionIds: string[];
 }
 
-function parseAuction(row: Record<string, unknown>): Auction {
-  const itemDetails = row.item_details;
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string | null) ?? null,
-    image_url: (row.image_url as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    start_price: Number(row.start_price),
-    end_time: row.end_time as string,
-    status: row.status as Auction["status"],
-    category: (row.category as string | null) ?? null,
-    condition: (row.condition as string | null) ?? null,
-    additional_images: Array.isArray(row.additional_images)
-      ? (row.additional_images as string[])
-      : [],
-    item_details:
-      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
-        ? (itemDetails as Record<string, string>)
-        : {},
-    created_at: row.created_at as string,
-    is_featured: Boolean(row.is_featured),
-  };
-}
-
 function getBidActivityStatus(
   auction: Auction,
   wallet: string,
@@ -83,7 +58,7 @@ function getBidActivityStatus(
   }
 
   if (
-    auction.status === "ended" &&
+    (auction.status === "ended" || auction.status === "completed") &&
     topBidderWallet === wallet &&
     userHighestBid >= currentBid
   ) {
@@ -235,11 +210,11 @@ export async function getBuyerProfileData(
     }
 
     bidActivity = (auctions ?? []).map((row) => {
-      const auction = parseAuction(row as Record<string, unknown>);
+      const auction = parseAuctionRow(row as Record<string, unknown>);
       const userBid = userBidByAuction.get(auction.id)!;
       const topBid = topBidderByAuction.get(auction.id);
       const isWinner =
-        auction.status === "ended" &&
+        (auction.status === "ended" || auction.status === "completed") &&
         topBid?.wallet === wallet &&
         userBid.highest === topBid.amount;
 

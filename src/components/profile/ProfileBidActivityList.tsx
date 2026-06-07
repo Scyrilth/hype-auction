@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import WonAuctionShipping from "@/components/profile/WonAuctionShipping";
 import LeaveReviewModal from "@/components/reviews/LeaveReviewModal";
 import FiatValue from "@/components/ui/FiatValue";
 import type { BuyerBidActivity, BidActivityStatus } from "@/lib/profile";
@@ -85,11 +86,13 @@ function ReviewActionButton({
 function BidActivityCard({
   item,
   showReviewActions,
+  showWonShipping,
   reviewedAuctionIds,
   onReviewSubmitted,
 }: {
   item: BuyerBidActivity;
   showReviewActions?: boolean;
+  showWonShipping?: boolean;
   reviewedAuctionIds: Set<string>;
   onReviewSubmitted: (auctionId: string) => void;
 }) {
@@ -107,7 +110,8 @@ function BidActivityCard({
 
   return (
     <>
-      <div className="flex gap-4 overflow-hidden rounded-2xl border border-border bg-surface p-4">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <div className="flex gap-4 p-4">
         <Link
           href={`/auction/${item.auction.id}`}
           className="flex min-w-0 flex-1 gap-4 transition-colors hover:opacity-95"
@@ -176,6 +180,13 @@ function BidActivityCard({
             />
           </div>
         )}
+        </div>
+
+        {showWonShipping && item.status === "WON" && (
+          <div className="border-t border-border px-4 pb-4 pt-0">
+            <WonAuctionShipping auction={item.auction} />
+          </div>
+        )}
       </div>
 
       {showReview && publicKey && (
@@ -196,11 +207,13 @@ export default function ProfileBidActivityList({
   items,
   emptyMessage,
   showReviewActions = false,
+  showWonShipping = false,
   reviewedAuctionIds: initialReviewedIds = [],
 }: {
   items: BuyerBidActivity[];
   emptyMessage: string;
   showReviewActions?: boolean;
+  showWonShipping?: boolean;
   reviewedAuctionIds?: string[];
 }) {
   const [submittedIds, setSubmittedIds] = useState<Set<string>>(new Set());
@@ -226,6 +239,7 @@ export default function ProfileBidActivityList({
           key={item.auction.id}
           item={item}
           showReviewActions={showReviewActions}
+          showWonShipping={showWonShipping}
           reviewedAuctionIds={reviewedAuctionIds}
           onReviewSubmitted={(auctionId) =>
             setSubmittedIds((current) => new Set([...current, auctionId]))

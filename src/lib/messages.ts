@@ -1,5 +1,6 @@
 import type { Auction } from "@/lib/database.types";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
+import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
@@ -77,35 +78,29 @@ function parseDirectMessage(row: Record<string, unknown>): DirectMessage {
   };
 }
 
-function parseAuctionRow(row: Record<string, unknown>): Auction {
-  const itemDetails = row.item_details;
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string | null) ?? null,
-    image_url: (row.image_url as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    start_price: Number(row.start_price),
-    end_time: row.end_time as string,
-    status: row.status as Auction["status"],
-    category: (row.category as string | null) ?? null,
-    condition: (row.condition as string | null) ?? null,
-    additional_images: Array.isArray(row.additional_images)
-      ? (row.additional_images as string[])
-      : [],
-    item_details:
-      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
-        ? (itemDetails as Record<string, string>)
-        : {},
-    created_at: row.created_at as string,
-    is_featured: Boolean(row.is_featured),
-  };
-}
-
 export function formatOrderRef(auctionId: string | null): string {
   if (!auctionId) return "General Inquiry";
   return `#${auctionId.slice(0, 8)}`;
+}
+
+export function formatReferenceLabel(referenceNumber: string | null): string | null {
+  if (!referenceNumber) return null;
+  return referenceNumber;
+}
+
+export async function getAuctionThreadId(
+  auctionId: string,
+  buyerWallet: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("message_threads")
+    .select("id")
+    .eq("auction_id", auctionId)
+    .eq("buyer_wallet", buyerWallet)
+    .maybeSingle();
+
+  if (error) throw error;
+  return (data?.id as string | undefined) ?? null;
 }
 
 export async function checkAndArchiveThreads(): Promise<void> {
@@ -563,7 +558,10 @@ export async function confirmReceipt(
   if (thread.auction_id) {
     const { error: auctionError } = await supabase
       .from("auctions")
-      .update({ status: "completed" })
+      .update({
+        status: "completed",
+        shipping_status: "delivered",
+      })
       .eq("id", thread.auction_id as string)
       .neq("status", "completed");
 

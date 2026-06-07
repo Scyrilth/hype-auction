@@ -11,6 +11,7 @@ import {
   getBidCountsForAuctions,
   getBidCountsInLast24Hours,
 } from "@/lib/auctions";
+import { parseAuctionRow } from "@/lib/parse-auction";
 import { getTopFeaturedAuctionIds, type AuctionLabelMaps } from "@/lib/auction-labels";
 import { normalizeSocialHandle } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
@@ -36,32 +37,6 @@ export function parseUser(row: Record<string, unknown>): User {
     average_rating: Number(row.average_rating ?? 0),
     show_copy_wallet: row.show_copy_wallet !== false,
     show_won_auctions: Boolean(row.show_won_auctions),
-  };
-}
-
-function parseAuction(row: Record<string, unknown>): Auction {
-  const itemDetails = row.item_details;
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string | null) ?? null,
-    image_url: (row.image_url as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    start_price: Number(row.start_price),
-    end_time: row.end_time as string,
-    status: row.status as Auction["status"],
-    category: (row.category as string | null) ?? null,
-    condition: (row.condition as string | null) ?? null,
-    additional_images: Array.isArray(row.additional_images)
-      ? (row.additional_images as string[])
-      : [],
-    item_details:
-      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
-        ? (itemDetails as Record<string, string>)
-        : {},
-    created_at: row.created_at as string,
-    is_featured: Boolean(row.is_featured),
   };
 }
 
@@ -102,7 +77,7 @@ export async function getVendorLiveAuctions(
     .order("end_time", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map(parseAuction);
+  return (data ?? []).map(parseAuctionRow);
 }
 
 export async function getVendorPastAuctions(
@@ -116,7 +91,7 @@ export async function getVendorPastAuctions(
     .order("end_time", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []).map(parseAuction);
+  return (data ?? []).map(parseAuctionRow);
 }
 
 export function buildVendorStats(

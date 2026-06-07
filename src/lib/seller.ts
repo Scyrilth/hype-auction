@@ -1,6 +1,8 @@
 import { getCategoryLabels } from "@/lib/categories";
-import type { Auction, AuctionStatus } from "@/lib/database.types";
+import type { Auction } from "@/lib/database.types";
 import { AUCTION_CONDITIONS } from "@/lib/grading";
+import { parseAuctionRow } from "@/lib/parse-auction";
+import { generateReferenceNumber } from "@/lib/reference-number";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
@@ -19,32 +21,6 @@ export const AUCTION_DURATIONS = [
   { label: "7 days", hours: 168 },
 ] as const;
 
-function parseAuction(row: Record<string, unknown>): Auction {
-  const itemDetails = row.item_details;
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string | null) ?? null,
-    image_url: (row.image_url as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    start_price: Number(row.start_price),
-    end_time: row.end_time as string,
-    status: row.status as AuctionStatus,
-    category: (row.category as string | null) ?? null,
-    condition: (row.condition as string | null) ?? null,
-    additional_images: Array.isArray(row.additional_images)
-      ? (row.additional_images as string[])
-      : [],
-    item_details:
-      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
-        ? (itemDetails as Record<string, string>)
-        : {},
-    created_at: row.created_at as string,
-    is_featured: Boolean(row.is_featured),
-  };
-}
-
 export async function getSellerAuctions(
   sellerWallet: string
 ): Promise<Auction[]> {
@@ -55,7 +31,9 @@ export async function getSellerAuctions(
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return (data ?? []).map((row) => parseAuction(row as Record<string, unknown>));
+  return (data ?? []).map((row) =>
+    parseAuctionRow(row as Record<string, unknown>)
+  );
 }
 
 export async function createAuction({
@@ -98,27 +76,43 @@ export async function createAuction({
     .filter(Boolean)
     .slice(0, 4);
 
-  const insertPayload: Record<string, unknown> = {
-    title: title.trim(),
-    description: description.trim() || null,
-    category,
-    condition,
-    start_price: startPrice,
-    current_bid: 0,
-    image_url: imageUrl?.trim() || null,
-    seller_wallet: sellerWallet,
-    end_time: endTime,
-    status: "live",
-    additional_images: cleanedImages,
-    item_details: cleanedDetails,
-  };
+  let lastError: Error | null = null;
 
-  const { data, error } = await supabase
-    .from("auctions")
-    .insert(insertPayload)
-    .select()
-    .single();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const insertPayload: Record<string, unknown> = {
+      title: title.trim(),
+      description: description.trim() || null,
+      category,
+      condition,
+      start_price: startPrice,
+      current_bid: 0,
+      image_url: imageUrl?.trim() || null,
+      seller_wallet: sellerWallet,
+      end_time: endTime,
+      status: "live",
+      additional_images: cleanedImages,
+      item_details: cleanedDetails,
+      reference_number: generateReferenceNumber(),
+      shipping_status: "pending",
+    };
 
-  if (error) throw error;
-  return parseAuction(data as Record<string, unknown>);
+    const { data, error } = await supabase
+      .from("auctions")
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    if (!error) {
+      return parseAuctionRow(data as Record<string, unknown>);
+    }
+
+    if (error.code === "23505") {
+      lastError = error;
+      continue;
+    }
+
+    throw error;
+  }
+
+  throw lastError ?? new Error("Failed to create auction.");
 }

@@ -12,9 +12,11 @@ import {
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import PastAuctionShipping from "@/components/dashboard/PastAuctionShipping";
 import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import ReviewCard from "@/components/reviews/ReviewCard";
 import FiatValue from "@/components/ui/FiatValue";
+import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
 import type {
   DashboardActivityItem,
@@ -101,6 +103,11 @@ function ActiveAuctionCard({
                 bidCount={auction.bidCount}
                 className="mt-2"
               />
+              {auction.reference_number && (
+                <div className="mt-2">
+                  <ReferenceNumber referenceNumber={auction.reference_number} />
+                </div>
+              )}
             </>
           }
           footer={
@@ -173,6 +180,11 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
               bidCount={auction.bidCount}
               className="mt-2"
             />
+            {auction.reference_number && (
+              <div className="mt-2">
+                <ReferenceNumber referenceNumber={auction.reference_number} />
+              </div>
+            )}
           </>
         }
         footer={
@@ -201,6 +213,9 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
                   className="w-full rounded-full border border-border py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
                 />
               </div>
+            )}
+            {auction.winnerWallet && (
+              <PastAuctionShipping auction={auction} />
             )}
           </>
         }

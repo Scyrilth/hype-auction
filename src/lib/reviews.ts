@@ -19,7 +19,7 @@ export function parseReviewRow(row: Record<string, unknown>): Review {
 }
 
 export function isReviewEligible(auction: Auction): boolean {
-  return auction.status === "ended";
+  return auction.status === "ended" || auction.status === "completed";
 }
 
 export async function getReviewedAuctionIds(

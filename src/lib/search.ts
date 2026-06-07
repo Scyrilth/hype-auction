@@ -5,6 +5,7 @@ import {
   resolveCategoryLabels,
   vendorCategoriesMatchQuery,
 } from "@/lib/categories";
+import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
 import {
   getVendorDirectory,
@@ -165,32 +166,6 @@ export interface GlobalSearchResults {
   pastAuctions: AuctionSearchHit[];
 }
 
-function parseAuction(row: Record<string, unknown>): Auction {
-  const itemDetails = row.item_details;
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string | null) ?? null,
-    image_url: (row.image_url as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    start_price: Number(row.start_price),
-    end_time: row.end_time as string,
-    status: row.status as Auction["status"],
-    category: (row.category as string | null) ?? null,
-    condition: (row.condition as string | null) ?? null,
-    additional_images: Array.isArray(row.additional_images)
-      ? (row.additional_images as string[])
-      : [],
-    item_details:
-      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
-        ? (itemDetails as Record<string, string>)
-        : {},
-    created_at: row.created_at as string,
-    is_featured: Boolean(row.is_featured),
-  };
-}
-
 function matchesAuction(auction: Auction, q: string) {
   return auctionMatchesSearchQuery(auction, q);
 }
@@ -275,8 +250,8 @@ export async function performGlobalSearch(
   if (liveRows === null) throw new Error("Failed to fetch live auctions");
   if (pastRows === null) throw new Error("Failed to fetch past auctions");
 
-  const liveAuctions = liveRows.map(parseAuction);
-  const pastAuctions = pastRows.map(parseAuction);
+  const liveAuctions = liveRows.map(parseAuctionRow);
+  const pastAuctions = pastRows.map(parseAuctionRow);
   const allAuctions = [...liveAuctions, ...pastAuctions];
   const bidCounts = await getBidCountsForAuctions(allAuctions.map((a) => a.id));
 

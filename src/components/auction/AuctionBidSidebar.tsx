@@ -5,12 +5,16 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AuctionSellerCard from "@/components/auction/AuctionSellerCard";
+import BidAddressPromptModal from "@/components/auction/BidAddressPromptModal";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import LiveChat from "@/components/auction/LiveChat";
 import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
+import { useBidAddressGate } from "@/hooks/useBidAddressGate";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { useSidebarUser } from "@/hooks/useSidebarUser";
+import { getProfileSlug } from "@/lib/profile-links";
 import { placeBid } from "@/lib/bids";
 import type { Auction, User } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
@@ -40,6 +44,19 @@ export default function AuctionBidSidebar({
   const { showToast } = useToast();
   const connectPhantom = usePhantomConnect();
   const { publicKey, connected } = useWallet();
+  const { username } = useSidebarUser();
+  const wallet = publicKey?.toBase58() ?? null;
+  const {
+    modalOpen,
+    addresses,
+    loadingAddresses,
+    gateBid,
+    handleContinue,
+    closeModal,
+  } = useBidAddressGate(wallet);
+  const profilePath = wallet
+    ? `/profile/${getProfileSlug(username, wallet)}`
+    : "/profile";
 
   const [bidCount, setBidCount] = useState(initialBidCount);
   const [topBidder, setTopBidder] = useState(initialTopBidder);
@@ -93,21 +110,8 @@ export default function AuctionBidSidebar({
       ? shortenAddress(topBidder, 4)
       : "—";
 
-  const handlePlaceBid = async (amount: number) => {
-    if (!isLive) {
-      showToast("This auction is no longer live.", "error");
-      return;
-    }
-
-    if (!connected || !publicKey) {
-      try {
-        await connectPhantom();
-        showToast("Wallet connected! Click Place Bid again.");
-      } catch {
-        showToast("Connect your wallet to place a bid.", "error");
-      }
-      return;
-    }
+  const executePlaceBid = async (amount: number) => {
+    if (!publicKey) return;
 
     const floor = Math.max(currentBid, auction.start_price);
     if (amount <= floor) {
@@ -140,6 +144,25 @@ export default function AuctionBidSidebar({
     }
   };
 
+  const handlePlaceBid = async (amount: number) => {
+    if (!isLive) {
+      showToast("This auction is no longer live.", "error");
+      return;
+    }
+
+    if (!connected || !publicKey) {
+      try {
+        await connectPhantom();
+        showToast("Wallet connected! Click Place Bid again.");
+      } catch {
+        showToast("Connect your wallet to place a bid.", "error");
+      }
+      return;
+    }
+
+    await gateBid(() => executePlaceBid(amount));
+  };
+
   const floor = Math.max(currentBid, auction.start_price);
   const quickBids = [
     { label: "+0.1 SOL", amount: Math.round((floor + 0.1) * 100) / 100 },
@@ -148,6 +171,14 @@ export default function AuctionBidSidebar({
   ];
 
   return (
+    <>
+    <BidAddressPromptModal
+      open={modalOpen}
+      addresses={addresses}
+      profilePath={profilePath}
+      onContinue={handleContinue}
+      onClose={closeModal}
+    />
     <div className="space-y-4 lg:sticky lg:top-5">
       <div className="rounded-2xl border border-border bg-surface p-5">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted">
@@ -202,11 +233,11 @@ export default function AuctionBidSidebar({
 
             <button
               type="button"
-              disabled={isPlacingBid}
+              disabled={isPlacingBid || loadingAddresses}
               onClick={() => handlePlaceBid(parseFloat(bidInput))}
               className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isPlacingBid ? "Placing bid..." : "Place Bid"}
+              {isPlacingBid || loadingAddresses ? "Placing bid..." : "Place Bid"}
             </button>
 
             <div className="grid grid-cols-3 gap-2">
@@ -214,10 +245,10 @@ export default function AuctionBidSidebar({
                 <button
                   key={quick.label}
                   type="button"
-                  disabled={isPlacingBid}
+                  disabled={isPlacingBid || loadingAddresses}
                   onClick={() => {
                     setBidInput(quick.amount.toFixed(2));
-                    handlePlaceBid(quick.amount);
+                    void handlePlaceBid(quick.amount);
                   }}
                   className="rounded-full border border-border py-2 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
                 >
@@ -249,5 +280,6 @@ export default function AuctionBidSidebar({
         <LiveChat auctionId={auction.id} />
       </div>
     </div>
+    </>
   );
 }
