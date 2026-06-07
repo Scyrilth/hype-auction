@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -35,6 +36,7 @@ function ActiveAuctionCard({
   auction: SellerAuctionWithStats;
   onEnded: () => void;
 }) {
+  const router = useRouter();
   const { publicKey } = useWallet();
   const { showToast } = useToast();
   const [ending, setEnding] = useState(false);
@@ -43,7 +45,9 @@ function ActiveAuctionCard({
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
   const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
-  const handleEnd = async () => {
+  const handleEnd = async (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
     if (!publicKey || ending) return;
     setEnding(true);
     try {
@@ -58,55 +62,69 @@ function ActiveAuctionCard({
     }
   };
 
+  const handleViewItem = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
+    router.push(`/auction/${auction.id}`);
+  };
+
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="relative aspect-[16/10] bg-surface-elevated">
-        <Image
-          src={imageSrc}
-          alt={auction.title}
-          fill
-          className="object-cover"
-          unoptimized
-        />
-        <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-          Live
-        </span>
-      </div>
-      <div className="p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white">
-          {auction.title}
-        </h3>
-        <div className="mt-3 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-xs text-muted">Current bid</p>
-            <p className="text-lg font-bold text-accent">
-              {formatSol(displayBid)}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-muted">Time left</p>
-            <CountdownTimer endTime={auction.end_time} compact />
-          </div>
+    <article className="relative overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
+      <Link
+        href={`/auction/${auction.id}`}
+        className="absolute inset-0 z-0 cursor-pointer"
+        aria-label={`View ${auction.title}`}
+      />
+      <div className="relative z-10 pointer-events-none">
+        <div className="relative aspect-[16/10] bg-surface-elevated">
+          <Image
+            src={imageSrc}
+            alt={auction.title}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+            Live
+          </span>
         </div>
-        <p className="mt-2 text-xs text-muted">
-          {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
-        </p>
-        <div className="mt-4 flex gap-2">
-          <Link
-            href={`/auction/${auction.id}`}
-            className="flex-1 rounded-full border border-border py-2 text-center text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
-          >
-            View Item
-          </Link>
-          <button
-            type="button"
-            onClick={handleEnd}
-            disabled={ending}
-            className="flex-1 rounded-full bg-surface-elevated py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-accent/20 hover:text-white disabled:opacity-60"
-          >
-            {ending ? "Ending..." : "End Auction"}
-          </button>
+        <div className="p-4">
+          <h3 className="line-clamp-2 text-sm font-semibold text-white">
+            {auction.title}
+          </h3>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs text-muted">Current bid</p>
+              <p className="text-lg font-bold text-accent">
+                {formatSol(displayBid)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted">Time left</p>
+              <CountdownTimer endTime={auction.end_time} compact />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
+          </p>
+          <div className="pointer-events-auto mt-4 flex gap-2">
+            <button
+              type="button"
+              onClick={handleViewItem}
+              className="flex-1 rounded-full border border-border py-2 text-center text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+            >
+              View Item
+            </button>
+            <button
+              type="button"
+              onClick={handleEnd}
+              disabled={ending}
+              className="flex-1 rounded-full bg-surface-elevated py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-accent/20 hover:text-white disabled:opacity-60"
+            >
+              {ending ? "Ending..." : "End Auction"}
+            </button>
+          </div>
         </div>
       </div>
     </article>
