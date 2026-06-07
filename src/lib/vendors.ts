@@ -4,7 +4,9 @@ import type {
   User,
   VendorShopStats,
 } from "@/lib/database.types";
-import { averageRatingFromReviews, parseReviewRow } from "@/lib/reviews";
+import { averageRatingFromReviews, getVendorReviews } from "@/lib/reviews";
+
+export { getVendorReviews };
 import {
   getBidCountsForAuctions,
   getBidCountsInLast24Hours,
@@ -117,45 +119,6 @@ export async function getVendorPastAuctions(
   return (data ?? []).map(parseAuction);
 }
 
-export async function getVendorReviews(
-  vendorWallet: string
-): Promise<ReviewWithReviewer[]> {
-  const { data: reviews, error } = await supabase
-    .from("reviews")
-    .select("*")
-    .eq("vendor_wallet", vendorWallet)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  if (!reviews?.length) return [];
-
-  const reviewerWallets = [
-    ...new Set(reviews.map((r) => r.reviewer_wallet as string)),
-  ];
-
-  const { data: reviewers, error: reviewersError } = await supabase
-    .from("users")
-    .select("wallet_address, username, avatar_url")
-    .in("wallet_address", reviewerWallets);
-
-  if (reviewersError) throw reviewersError;
-
-  const reviewerMap = new Map(
-    (reviewers ?? []).map((u) => [u.wallet_address as string, u])
-  );
-
-  return reviews.map((row) => {
-    const reviewer = reviewerMap.get(row.reviewer_wallet as string);
-    const review = parseReviewRow(row as Record<string, unknown>);
-
-    return {
-      ...review,
-      reviewer_username: (reviewer?.username as string | null) ?? null,
-      reviewer_avatar: (reviewer?.avatar_url as string | null) ?? null,
-    };
-  });
-}
-
 export function buildVendorStats(
   vendor: User,
   pastAuctions: Auction[],
@@ -190,11 +153,19 @@ export async function getVendorShopData(slug: string): Promise<VendorShopData | 
   const vendor = await getVendorBySlug(slug);
   if (!vendor) return null;
 
+  const vendorWallet = vendor.wallet_address;
+
   const [liveAuctions, pastAuctions, reviews] = await Promise.all([
-    getVendorLiveAuctions(vendor.wallet_address),
-    getVendorPastAuctions(vendor.wallet_address),
-    getVendorReviews(vendor.wallet_address),
+    getVendorLiveAuctions(vendorWallet),
+    getVendorPastAuctions(vendorWallet),
+    getVendorReviews(vendorWallet),
   ]);
+
+  console.log("[getVendorShopData] reviews loaded", {
+    slug,
+    vendorWallet,
+    reviewCount: reviews.length,
+  });
 
   const allAuctionIds = [...liveAuctions, ...pastAuctions].map(
     (auction) => auction.id
@@ -444,7 +415,7 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
         ? Math.round(
             (ratings.reduce((sum, r) => sum + r, 0) / ratings.length) * 10
           ) / 10
-        : 0;
+        : Math.max(vendor.average_rating, vendor.reputation, 0);
 
     return {
       vendor,

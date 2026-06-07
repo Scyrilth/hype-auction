@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import StarRating from "@/components/shop/StarRating";
 import UserAvatar from "@/components/ui/UserAvatar";
 import type { VendorDirectoryEntry } from "@/lib/vendors";
 import { shortenAddress } from "@/lib/format";
@@ -24,12 +23,22 @@ function VerifiedBadge() {
   );
 }
 
+function formatVendorRating(
+  averageRating: number,
+  vendor: VendorDirectoryEntry["vendor"]
+): number {
+  if (averageRating > 0) return averageRating;
+  if (vendor.average_rating > 0) return vendor.average_rating;
+  if (vendor.reputation > 0) return vendor.reputation;
+  return 0;
+}
+
 export default function VendorCard({ entry }: { entry: VendorDirectoryEntry }) {
-  const { vendor, averageRating, totalSales, categories, isLive, shopSlug } =
-    entry;
+  const { vendor, averageRating, totalSales, categories, shopSlug } = entry;
 
   const displayName =
     vendor.shop_name ?? vendor.username ?? shortenAddress(vendor.wallet_address);
+  const displayRating = formatVendorRating(averageRating, vendor);
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
@@ -46,13 +55,6 @@ export default function VendorCard({ entry }: { entry: VendorDirectoryEntry }) {
           <div className="h-full w-full bg-gradient-to-br from-accent/50 via-purple-900/80 to-background" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />
-
-        {isLive && (
-          <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
-        )}
       </div>
 
       <div className="relative flex flex-1 flex-col justify-between px-4 pb-4 pt-0">
@@ -99,8 +101,13 @@ export default function VendorCard({ entry }: { entry: VendorDirectoryEntry }) {
             <div>
               <p className="text-xs text-muted">Rating</p>
               <div className="mt-0.5 flex justify-center">
-                {averageRating > 0 ? (
-                  <StarRating rating={averageRating} />
+                {displayRating > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold">
+                    <span className="text-amber-400">★</span>
+                    <span className="text-white">
+                      {displayRating.toFixed(1)}
+                    </span>
+                  </span>
                 ) : (
                   <span className="text-sm text-muted">—</span>
                 )}

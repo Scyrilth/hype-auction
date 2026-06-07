@@ -1,4 +1,4 @@
-import type { Auction, Review } from "@/lib/database.types";
+import type { Auction, Review, ReviewWithReviewer } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 
 export function parseReviewRow(row: Record<string, unknown>): Review {
@@ -41,6 +41,53 @@ export async function getReviewedAuctionIds(
       .map((row) => row.auction_id as string | null)
       .filter((id): id is string => Boolean(id))
   );
+}
+
+export async function getVendorReviews(
+  vendorWallet: string
+): Promise<ReviewWithReviewer[]> {
+  const { data: reviews, error } = await supabase
+    .from("reviews")
+    .select("*")
+    .eq("vendor_wallet", vendorWallet)
+    .or("is_flagged.eq.false,is_flagged.is.null")
+    .order("created_at", { ascending: false });
+
+  console.log("[getVendorReviews] raw response", {
+    vendorWallet,
+    rowCount: reviews?.length ?? 0,
+    data: reviews,
+    error,
+  });
+
+  if (error) throw error;
+  if (!reviews?.length) return [];
+
+  const reviewerWallets = [
+    ...new Set(reviews.map((row) => row.reviewer_wallet as string)),
+  ];
+
+  const { data: reviewers, error: reviewersError } = await supabase
+    .from("users")
+    .select("wallet_address, username, avatar_url")
+    .in("wallet_address", reviewerWallets);
+
+  if (reviewersError) throw reviewersError;
+
+  const reviewerMap = new Map(
+    (reviewers ?? []).map((user) => [user.wallet_address as string, user])
+  );
+
+  return reviews.map((row) => {
+    const reviewer = reviewerMap.get(row.reviewer_wallet as string);
+    const review = parseReviewRow(row as Record<string, unknown>);
+
+    return {
+      ...review,
+      reviewer_username: (reviewer?.username as string | null) ?? null,
+      reviewer_avatar: (reviewer?.avatar_url as string | null) ?? null,
+    };
+  });
 }
 
 export async function getVendorReviewCount(vendorWallet: string): Promise<number> {
