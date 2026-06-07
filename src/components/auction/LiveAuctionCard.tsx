@@ -81,7 +81,7 @@ export default function LiveAuctionCard({
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
       <Link href={`/auction/${auction.id}`} className="flex flex-1 flex-col">
-        <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
+        <div className="relative h-48 overflow-hidden bg-surface-elevated">
           <Image
             src={imageSrc}
             alt={auction.title}
