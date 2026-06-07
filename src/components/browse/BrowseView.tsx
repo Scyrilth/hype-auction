@@ -10,12 +10,21 @@ import {
   BROWSE_SORT_OPTIONS,
   filterBrowseAuctions,
   isBrowseFilterActive,
+  resolveBrowseCategory,
   sortBrowseAuctions,
   type BrowseSortOption,
 } from "@/lib/browse-filters";
 import { getTopFeaturedAuctionIds } from "@/lib/auction-labels";
-import type { BrowsePageData } from "@/lib/browse";
+import type { BrowseAuctionItem, BrowsePageData } from "@/lib/browse";
 import { CATEGORIES } from "@/lib/categories";
+
+type SectionKey = "trending" | "endingSoon" | "recentlyListed";
+
+const SECTION_LIMITS: Record<SectionKey, number> = {
+  trending: 10,
+  endingSoon: 8,
+  recentlyListed: 8,
+};
 
 function FilterOption({
   label,
@@ -47,21 +56,48 @@ function FilterOption({
   );
 }
 
+function buildSectionItems(
+  items: BrowseAuctionItem[],
+  globalCategory: string,
+  sectionCategory: string,
+  sortBy: BrowseSortOption,
+  limit: number
+) {
+  const effectiveCategory = resolveBrowseCategory(globalCategory, sectionCategory);
+  const filtered = filterBrowseAuctions(items, effectiveCategory);
+  return sortBrowseAuctions(filtered, sortBy).slice(0, limit);
+}
+
 export default function BrowseView({ data }: { data: BrowsePageData }) {
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<BrowseSortOption>("trending");
+  const [globalCategory, setGlobalCategory] = useState("all");
+  const [sortBy, setSortBy] = useState<BrowseSortOption>("most-bids");
+  const [sectionCategories, setSectionCategories] = useState<
+    Record<SectionKey, string>
+  >({
+    trending: "all",
+    endingSoon: "all",
+    recentlyListed: "all",
+  });
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
-  const filtersActive = isBrowseFilterActive(categoryFilter, sortBy);
+  const filtersActive = isBrowseFilterActive(
+    globalCategory,
+    sortBy,
+    sectionCategories
+  );
 
   const labelMaps = useMemo(() => {
     const bidCounts24h = new Map(
       data.auctions.map((item) => [item.auction.id, item.bidCount24h])
     );
+    const bidCounts = new Map(
+      data.auctions.map((item) => [item.auction.id, item.bidCount])
+    );
 
     return {
       bidCounts24h,
+      bidCounts,
       topFeaturedIds: getTopFeaturedAuctionIds(
         data.auctions.map((item) => ({
           id: item.auction.id,
@@ -71,39 +107,45 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
     };
   }, [data.auctions]);
 
-  const filtered = useMemo(
-    () => filterBrowseAuctions(data.auctions, categoryFilter),
-    [data.auctions, categoryFilter]
-  );
-
   const trendingItems = useMemo(
     () =>
-      sortBrowseAuctions(
-        filtered,
-        sortBy === "trending" ? "trending" : sortBy
-      ).slice(0, 10),
-    [filtered, sortBy]
+      buildSectionItems(
+        data.auctions,
+        globalCategory,
+        sectionCategories.trending,
+        sortBy,
+        SECTION_LIMITS.trending
+      ),
+    [data.auctions, globalCategory, sectionCategories.trending, sortBy]
   );
+
   const endingSoon = useMemo(
     () =>
-      sortBrowseAuctions(
-        filtered,
-        sortBy === "trending" ? "ending-soon" : sortBy
-      )
-        .slice(0, 8)
-        .map((item) => item.auction),
-    [filtered, sortBy]
+      buildSectionItems(
+        data.auctions,
+        globalCategory,
+        sectionCategories.endingSoon,
+        sortBy,
+        SECTION_LIMITS.endingSoon
+      ).map((item) => item.auction),
+    [data.auctions, globalCategory, sectionCategories.endingSoon, sortBy]
   );
+
   const recentlyListed = useMemo(
     () =>
-      sortBrowseAuctions(
-        filtered,
-        sortBy === "trending" ? "recently-listed" : sortBy
-      )
-        .slice(0, 8)
-        .map((item) => item.auction),
-    [filtered, sortBy]
+      buildSectionItems(
+        data.auctions,
+        globalCategory,
+        sectionCategories.recentlyListed,
+        sortBy,
+        SECTION_LIMITS.recentlyListed
+      ).map((item) => item.auction),
+    [data.auctions, globalCategory, sectionCategories.recentlyListed, sortBy]
   );
+
+  const updateSectionCategory = (section: SectionKey, category: string) => {
+    setSectionCategories((current) => ({ ...current, [section]: category }));
+  };
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -163,15 +205,15 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
                   <div className="max-h-48 space-y-0.5 overflow-y-auto">
                     <FilterOption
                       label="All Categories"
-                      selected={categoryFilter === "all"}
-                      onSelect={() => setCategoryFilter("all")}
+                      selected={globalCategory === "all"}
+                      onSelect={() => setGlobalCategory("all")}
                     />
                     {CATEGORIES.map((category) => (
                       <FilterOption
                         key={category.id}
                         label={category.label}
-                        selected={categoryFilter === category.label}
-                        onSelect={() => setCategoryFilter(category.label)}
+                        selected={globalCategory === category.label}
+                        onSelect={() => setGlobalCategory(category.label)}
                       />
                     ))}
                   </div>
@@ -209,6 +251,8 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
         variant="trending"
         trendingItems={trendingItems}
         labelMaps={labelMaps}
+        categoryFilter={sectionCategories.trending}
+        onCategoryChange={(category) => updateSectionCategory("trending", category)}
       />
 
       <BrowseSection
@@ -216,6 +260,10 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
         count={endingSoon.length}
         auctions={endingSoon}
         labelMaps={labelMaps}
+        categoryFilter={sectionCategories.endingSoon}
+        onCategoryChange={(category) =>
+          updateSectionCategory("endingSoon", category)
+        }
       />
 
       <BrowseSection
@@ -223,6 +271,10 @@ export default function BrowseView({ data }: { data: BrowsePageData }) {
         count={recentlyListed.length}
         auctions={recentlyListed}
         labelMaps={labelMaps}
+        categoryFilter={sectionCategories.recentlyListed}
+        onCategoryChange={(category) =>
+          updateSectionCategory("recentlyListed", category)
+        }
       />
     </div>
   );

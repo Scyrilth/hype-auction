@@ -74,6 +74,7 @@ export async function getTrendingAuctions(
     .slice(0, limit);
 }
 
+/** Fetches every active live auction (no row cap). PostgREST max is ~1000 rows. */
 export async function getAllLiveAuctions(): Promise<Auction[]> {
   const { data, error } = await supabase
     .from("auctions")
@@ -331,6 +332,13 @@ export async function getAuctionsPageData() {
     getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id)),
   ]);
 
+  // Keep ending-soonest first (matches LiveAuctionsGrid "Ending Soon" default).
+  const sortedLive = [...enrichedLive].sort(
+    (a, b) =>
+      new Date(a.auction.end_time).getTime() -
+      new Date(b.auction.end_time).getTime()
+  );
+
   const topFeaturedIds = getTopFeaturedAuctionIds(
     liveAuctions.map((auction) => ({
       id: auction.id,
@@ -339,11 +347,11 @@ export async function getAuctionsPageData() {
   );
 
   const bidCounts = new Map(
-    enrichedLive.map((item) => [item.auction.id, item.bidCount])
+    sortedLive.map((item) => [item.auction.id, item.bidCount])
   );
 
-  const featured = enrichedLive[0] ?? null;
-  const otherLive = enrichedLive.slice(1).map((item) => item.auction);
+  const featured = sortedLive[0] ?? null;
+  const otherLive = sortedLive.slice(1).map((item) => item.auction);
 
   return {
     featured,

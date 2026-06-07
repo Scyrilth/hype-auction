@@ -1,19 +1,19 @@
-import type { AuctionWithBidCount24h } from "@/lib/auctions";
+import type { BrowseAuctionItem } from "@/lib/browse";
 import type { Auction } from "@/lib/database.types";
 
 export type BrowseSortOption =
-  | "trending"
-  | "ending-soon"
-  | "recently-listed"
+  | "most-bids"
   | "highest-bid"
-  | "lowest-bid";
+  | "lowest-bid"
+  | "newest"
+  | "ending-soon";
 
 export const BROWSE_SORT_OPTIONS: { id: BrowseSortOption; label: string }[] = [
-  { id: "trending", label: "Trending" },
-  { id: "ending-soon", label: "Ending Soon" },
-  { id: "recently-listed", label: "Recently Listed" },
+  { id: "most-bids", label: "Most Bids" },
   { id: "highest-bid", label: "Highest Bid" },
   { id: "lowest-bid", label: "Lowest Bid" },
+  { id: "newest", label: "Newest" },
+  { id: "ending-soon", label: "Ending Soon" },
 ];
 
 function getDisplayBid(auction: Auction) {
@@ -21,15 +21,23 @@ function getDisplayBid(auction: Auction) {
 }
 
 export function filterBrowseAuctions(
-  items: AuctionWithBidCount24h[],
+  items: BrowseAuctionItem[],
   categoryFilter: string
 ) {
   if (categoryFilter === "all") return items;
   return items.filter((item) => item.auction.category === categoryFilter);
 }
 
+export function resolveBrowseCategory(
+  globalCategory: string,
+  sectionCategory: string
+) {
+  if (sectionCategory !== "all") return sectionCategory;
+  return globalCategory;
+}
+
 export function sortBrowseAuctions(
-  items: AuctionWithBidCount24h[],
+  items: BrowseAuctionItem[],
   sortBy: BrowseSortOption
 ) {
   const sorted = [...items];
@@ -41,7 +49,7 @@ export function sortBrowseAuctions(
           new Date(a.auction.end_time).getTime() -
           new Date(b.auction.end_time).getTime()
       );
-    case "recently-listed":
+    case "newest":
       return sorted.sort(
         (a, b) =>
           new Date(b.auction.created_at).getTime() -
@@ -55,10 +63,11 @@ export function sortBrowseAuctions(
       return sorted.sort(
         (a, b) => getDisplayBid(a.auction) - getDisplayBid(b.auction)
       );
-    case "trending":
+    case "most-bids":
     default:
       return sorted.sort(
         (a, b) =>
+          b.bidCount - a.bidCount ||
           b.bidCount24h - a.bidCount24h ||
           getDisplayBid(b.auction) - getDisplayBid(a.auction)
       );
@@ -66,8 +75,10 @@ export function sortBrowseAuctions(
 }
 
 export function isBrowseFilterActive(
-  categoryFilter: string,
-  sortBy: BrowseSortOption
+  globalCategory: string,
+  sortBy: BrowseSortOption,
+  sectionCategories: Record<string, string>
 ) {
-  return categoryFilter !== "all" || sortBy !== "trending";
+  if (globalCategory !== "all" || sortBy !== "most-bids") return true;
+  return Object.values(sectionCategories).some((category) => category !== "all");
 }

@@ -10,7 +10,6 @@ import type { Auction } from "@/lib/database.types";
 type SortOption = "ending-soon" | "newest" | "highest-bid" | "lowest-bid";
 
 const ROW_SIZE = 5;
-const MAX_ROWS = 3;
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
   { id: "ending-soon", label: "Ending Soon" },
@@ -108,7 +107,6 @@ export default function LiveAuctionsGrid({
     const rows: Auction[][] = [];
     for (let i = 0; i < filteredAuctions.length; i += ROW_SIZE) {
       rows.push(filteredAuctions.slice(i, i + ROW_SIZE));
-      if (rows.length >= MAX_ROWS) break;
     }
     return rows;
   }, [filteredAuctions]);

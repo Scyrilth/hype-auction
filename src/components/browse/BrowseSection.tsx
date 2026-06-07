@@ -1,7 +1,8 @@
 "use client";
 
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
-import type { AuctionWithBidCount24h } from "@/lib/auctions";
+import BrowseCategoryPill from "@/components/browse/BrowseCategoryPill";
+import type { BrowseAuctionItem } from "@/lib/browse";
 import type { AuctionLabelMaps } from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
 
@@ -12,13 +13,17 @@ export default function BrowseSection({
   trendingItems,
   variant = "browse",
   labelMaps,
+  categoryFilter,
+  onCategoryChange,
 }: {
   title: string;
   count: number;
   auctions?: Auction[];
-  trendingItems?: AuctionWithBidCount24h[];
+  trendingItems?: BrowseAuctionItem[];
   variant?: "browse" | "trending";
   labelMaps?: AuctionLabelMaps;
+  categoryFilter: string;
+  onCategoryChange: (category: string) => void;
 }) {
   const hasItems =
     variant === "trending"
@@ -27,10 +32,13 @@ export default function BrowseSection({
 
   return (
     <section className="space-y-4">
-      <h2 className="text-xl font-bold text-white">
-        {title}{" "}
-        <span className="text-base font-normal text-muted">({count})</span>
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-bold text-white">
+          {title}{" "}
+          <span className="text-base font-normal text-muted">({count})</span>
+        </h2>
+        <BrowseCategoryPill value={categoryFilter} onChange={onCategoryChange} />
+      </div>
 
       {hasItems ? (
         variant === "trending" && trendingItems ? (
