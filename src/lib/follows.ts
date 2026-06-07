@@ -1,4 +1,5 @@
 import { logSupabaseError } from "@/lib/errors";
+import { notifyNewFollower } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
@@ -44,8 +45,16 @@ export async function toggleFollow(
 
     if (vendorError) throw vendorError;
 
+    const isFollowing = Boolean(rpcResult);
+    if (isFollowing) {
+      await notifyNewFollower({
+        followingWallet,
+        followerWallet,
+      });
+    }
+
     return {
-      isFollowing: Boolean(rpcResult),
+      isFollowing,
       followersCount: Number(vendor.followers_count ?? 0),
     };
   }
@@ -106,6 +115,11 @@ export async function toggleFollow(
     .eq("wallet_address", followingWallet);
 
   if (updateError) throw updateError;
+
+  await notifyNewFollower({
+    followingWallet,
+    followerWallet,
+  });
 
   return { isFollowing: true, followersCount: nextCount };
 }

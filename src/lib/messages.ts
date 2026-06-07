@@ -1,6 +1,10 @@
 import type { Auction } from "@/lib/database.types";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { parseAuctionRow } from "@/lib/parse-auction";
+import {
+  getUserDisplayName,
+  notifyNewMessage,
+} from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
@@ -541,6 +545,20 @@ export async function sendDirectMessage(
     .single();
 
   if (error) throw error;
+
+  const recipientWallet =
+    thread.buyer_wallet === senderWallet
+      ? thread.seller_wallet
+      : thread.buyer_wallet;
+  const senderDisplayName = await getUserDisplayName(senderWallet);
+
+  await notifyNewMessage({
+    recipientWallet: recipientWallet as string,
+    senderDisplayName,
+    preview: trimmed,
+    threadId,
+  });
+
   return parseDirectMessage(data as Record<string, unknown>);
 }
 

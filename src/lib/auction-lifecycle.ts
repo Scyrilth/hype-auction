@@ -3,6 +3,7 @@ import {
   createAuctionThread,
   insertThreadSystemMessage,
 } from "@/lib/messages";
+import { notifyAuctionWon } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
 
@@ -142,6 +143,13 @@ export async function createWinnerThread(
     JSON.stringify(summary),
     auction.seller_wallet
   );
+
+  await notifyAuctionWon({
+    winnerWallet,
+    auctionTitle: auction.title,
+    amount: winnerBidAmount,
+    threadId: thread.id,
+  });
 }
 
 async function getWinningBid(auctionId: string): Promise<{

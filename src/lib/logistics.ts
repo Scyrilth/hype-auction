@@ -4,6 +4,10 @@ import {
   createAuctionThread,
   insertThreadSystemMessage,
 } from "@/lib/messages";
+import {
+  getUserDisplayName,
+  notifyItemShipped,
+} from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 
 export const SHIPPING_COURIERS = [
@@ -61,6 +65,16 @@ async function notifyBuyerShipment({
   }
 
   await insertThreadSystemMessage(threadId, content, sellerWallet);
+
+  const sellerDisplayName = await getUserDisplayName(sellerWallet);
+  await notifyItemShipped({
+    buyerWallet,
+    sellerDisplayName,
+    auctionTitle,
+    courier,
+    trackingNumber,
+    threadId,
+  });
 }
 
 export async function saveAuctionShippingTracking({

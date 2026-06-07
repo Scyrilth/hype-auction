@@ -1,4 +1,8 @@
 import { logSupabaseError } from "@/lib/errors";
+import {
+  getUserDisplayName,
+  notifyBidPlaced,
+} from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
@@ -14,11 +18,21 @@ export async function placeBid({
 }) {
   console.log("[placeBid] starting", { auctionId, bidderWallet, amount });
 
-  const { data: auction, error: auctionError } = await supabase
-    .from("auctions")
-    .select("current_bid, start_price")
-    .eq("id", auctionId)
-    .maybeSingle();
+  const [{ data: auction, error: auctionError }, { data: previousTopBid }] =
+    await Promise.all([
+      supabase
+        .from("auctions")
+        .select("id, title, seller_wallet, current_bid, start_price")
+        .eq("id", auctionId)
+        .maybeSingle(),
+      supabase
+        .from("bids")
+        .select("bidder_wallet")
+        .eq("auction_id", auctionId)
+        .order("amount", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   if (auctionError) {
     logSupabaseError("placeBid: fetch auction", auctionError);
@@ -81,5 +95,18 @@ export async function placeBid({
   }
 
   console.log("[placeBid] auction updated", auctionData);
+
+  const bidderDisplayName = await getUserDisplayName(bidderWallet);
+  await notifyBidPlaced({
+    bidderWallet,
+    sellerWallet: auction.seller_wallet as string,
+    previousBidderWallet:
+      (previousTopBid?.bidder_wallet as string | undefined) ?? null,
+    auctionId,
+    auctionTitle: auction.title as string,
+    amount,
+    bidderDisplayName,
+  });
+
   console.log("[placeBid] success");
 }
