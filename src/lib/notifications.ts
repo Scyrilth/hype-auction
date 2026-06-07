@@ -23,7 +23,7 @@ export interface Notification {
   created_at: string;
 }
 
-function parseNotification(row: Record<string, unknown>): Notification {
+export function parseNotification(row: Record<string, unknown>): Notification {
   return {
     id: row.id as string,
     wallet_address: row.wallet_address as string,

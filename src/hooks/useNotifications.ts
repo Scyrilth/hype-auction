@@ -1,14 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import {
   getNotifications,
   getUnreadCount,
+  parseNotification,
   type Notification,
 } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
+
+type RefreshOptions = {
+  silent?: boolean;
+};
 
 export function useNotifications() {
   const { publicKey, connected } = useWallet();
@@ -17,6 +22,7 @@ export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const unreadCountRef = useRef(0);
 
   const wallet = publicKey?.toBase58();
 
@@ -24,35 +30,92 @@ export function useNotifications() {
     setMounted(true);
   }, []);
 
-  const refresh = useCallback(async () => {
-    if (!mounted) return;
+  useEffect(() => {
+    unreadCountRef.current = unreadCount;
+  }, [unreadCount]);
 
-    if (!connected || !wallet) {
-      setNotifications([]);
-      setUnreadCount(0);
+  const refresh = useCallback(
+    async (options: RefreshOptions = {}) => {
+      if (!mounted) return;
+
+      if (!connected || !wallet) {
+        setNotifications([]);
+        setUnreadCount(0);
+        unreadCountRef.current = 0;
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      if (!options.silent) {
+        setLoading(true);
+      }
       setError(null);
-      setLoading(false);
-      return;
-    }
 
-    setLoading(true);
-    setError(null);
+      try {
+        const [items, count] = await Promise.all([
+          getNotifications(wallet),
+          getUnreadCount(wallet),
+        ]);
+        setNotifications(items);
+        setUnreadCount(count);
+        unreadCountRef.current = count;
+      } catch {
+        if (!options.silent) {
+          setNotifications([]);
+          setUnreadCount(0);
+          unreadCountRef.current = 0;
+          setError("Could not load notifications");
+        }
+      } finally {
+        if (!options.silent) {
+          setLoading(false);
+        }
+      }
+    },
+    [connected, mounted, wallet]
+  );
+
+  const refreshUnreadCount = useCallback(async () => {
+    if (!mounted || !connected || !wallet) return;
 
     try {
-      const [items, count] = await Promise.all([
-        getNotifications(wallet),
-        getUnreadCount(wallet),
-      ]);
-      setNotifications(items);
+      const count = await getUnreadCount(wallet);
+      const countChanged = unreadCountRef.current !== count;
+
       setUnreadCount(count);
+      unreadCountRef.current = count;
+
+      if (countChanged) {
+        await refresh({ silent: true });
+      }
     } catch {
-      setNotifications([]);
-      setUnreadCount(0);
-      setError("Could not load notifications");
-    } finally {
-      setLoading(false);
+      // Polling is best-effort
     }
-  }, [connected, mounted, wallet]);
+  }, [connected, mounted, refresh, wallet]);
+
+  const prependNotification = useCallback((row: Record<string, unknown>) => {
+    try {
+      const notification = parseNotification(row);
+
+      setNotifications((prev) => {
+        if (prev.some((item) => item.id === notification.id)) {
+          return prev;
+        }
+        return [notification, ...prev];
+      });
+
+      if (!notification.is_read) {
+        setUnreadCount((prev) => {
+          const next = prev + 1;
+          unreadCountRef.current = next;
+          return next;
+        });
+      }
+    } catch {
+      void refresh({ silent: true });
+    }
+  }, [refresh]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -62,6 +125,7 @@ export function useNotifications() {
   useEffect(() => {
     if (!mounted || !wallet) return;
 
+    // Ensure notifications table has Realtime enabled in Supabase Dashboard → Database → Replication
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     try {
@@ -75,8 +139,12 @@ export function useNotifications() {
             table: "notifications",
             filter: `wallet_address=eq.${wallet}`,
           },
-          () => {
-            void refresh();
+          (payload) => {
+            if (payload.new && typeof payload.new === "object") {
+              prependNotification(payload.new as Record<string, unknown>);
+            } else {
+              void refresh({ silent: true });
+            }
           }
         )
         .on(
@@ -88,12 +156,16 @@ export function useNotifications() {
             filter: `wallet_address=eq.${wallet}`,
           },
           () => {
-            void refresh();
+            void refresh({ silent: true });
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "SUBSCRIBED") {
+            void refresh({ silent: true });
+          }
+        });
     } catch {
-      // Realtime is optional — page still works without it
+      // Realtime is optional — polling fallback still runs
     }
 
     return () => {
@@ -101,7 +173,17 @@ export function useNotifications() {
         supabase.removeChannel(channel);
       }
     };
-  }, [mounted, wallet, refresh]);
+  }, [mounted, wallet, prependNotification, refresh]);
+
+  useEffect(() => {
+    if (!mounted || !wallet) return;
+
+    const interval = setInterval(() => {
+      void refreshUnreadCount();
+    }, 10_000);
+
+    return () => clearInterval(interval);
+  }, [mounted, wallet, refreshUnreadCount]);
 
   return {
     notifications,
@@ -110,6 +192,7 @@ export function useNotifications() {
     error,
     mounted,
     refresh,
+    refreshUnreadCount,
     isConnected: connected && Boolean(wallet),
   };
 }
