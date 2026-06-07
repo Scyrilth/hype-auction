@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getSecondsUntil } from "@/lib/format";
+import { getTimerColor } from "@/lib/timer-color";
 
 function formatTime(totalSeconds: number) {
   const h = Math.floor(totalSeconds / 3600);
@@ -15,12 +16,10 @@ export default function CountdownTimer({
   endTime,
   compact = false,
   large = false,
-  urgentThresholdSeconds = 300,
 }: {
   endTime: string;
   compact?: boolean;
   large?: boolean;
-  urgentThresholdSeconds?: number;
 }) {
   const [seconds, setSeconds] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -33,32 +32,23 @@ export default function CountdownTimer({
     return () => clearInterval(id);
   }, [endTime]);
 
-  const isUrgent = seconds > 0 && seconds <= urgentThresholdSeconds;
-  const fontSize = large
-    ? "clamp(1.75rem, 4vw, 2.75rem)"
-    : compact
-      ? "clamp(0.75rem, 1.2vw, 0.875rem)"
-      : "clamp(1.125rem, 2.5vw, 1.5rem)";
+  const colorClass = !mounted
+    ? "text-muted"
+    : seconds <= 0
+      ? "text-muted"
+      : getTimerColor(seconds);
 
-  if (!mounted) {
-    return (
-      <span
-        className={`whitespace-nowrap font-mono font-bold tracking-wider ${isUrgent ? "text-live-red" : "text-live-red"}`}
-        style={{ fontSize }}
-      >
-        --:--:--
-      </span>
-    );
-  }
+  const sizeClass = large
+    ? "text-[clamp(1.75rem,4vw,2.75rem)]"
+    : compact
+      ? "text-xs"
+      : "text-[clamp(1.125rem,2.5vw,1.5rem)]";
 
   return (
     <span
-      className={`whitespace-nowrap font-mono font-bold tracking-wider ${
-        isUrgent || large ? "text-live-red" : "text-live-red"
-      } ${isUrgent && large ? "animate-pulse" : ""}`}
-      style={{ fontSize }}
+      className={`whitespace-nowrap font-mono font-bold tracking-wider ${sizeClass} ${colorClass}`}
     >
-      {seconds <= 0 ? "00:00:00" : formatTime(seconds)}
+      {!mounted ? "--:--:--" : seconds <= 0 ? "00:00:00" : formatTime(seconds)}
     </span>
   );
 }
