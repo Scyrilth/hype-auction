@@ -378,6 +378,17 @@ export async function insertThreadSystemMessage(
   content: string,
   senderWallet: string
 ) {
+  const { data: existing, error: existingError } = await supabase
+    .from("direct_messages")
+    .select("id")
+    .eq("thread_id", threadId)
+    .eq("content", content)
+    .eq("is_system", true)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (existing) return;
+
   const { error } = await supabase.from("direct_messages").insert({
     thread_id: threadId,
     sender_wallet: senderWallet,

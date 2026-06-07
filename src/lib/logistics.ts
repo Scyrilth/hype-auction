@@ -1,5 +1,9 @@
 import { parseAuctionRow } from "@/lib/parse-auction";
 import type { Auction, ShippingStatus } from "@/lib/database.types";
+import {
+  createAuctionThread,
+  insertThreadSystemMessage,
+} from "@/lib/messages";
 import { supabase } from "@/lib/supabase";
 
 export const SHIPPING_COURIERS = [
@@ -17,34 +21,46 @@ export const SHIPPING_COURIERS = [
 
 export type ShippingCourier = (typeof SHIPPING_COURIERS)[number];
 
-async function insertShippingSystemMessage(
-  auctionId: string,
-  buyerWallet: string,
-  sellerWallet: string,
-  courier: string,
-  trackingNumber: string
-): Promise<void> {
+async function notifyBuyerShipment({
+  auctionId,
+  auctionTitle,
+  buyerWallet,
+  sellerWallet,
+  courier,
+  trackingNumber,
+}: {
+  auctionId: string;
+  auctionTitle: string;
+  buyerWallet: string;
+  sellerWallet: string;
+  courier: string;
+  trackingNumber: string;
+}): Promise<void> {
+  const content = `📦 Your item has been shipped! Courier: ${courier}. Tracking number: ${trackingNumber}`;
+
   const { data: thread, error } = await supabase
     .from("message_threads")
     .select("id")
     .eq("auction_id", auctionId)
+    .eq("status", "active")
     .eq("buyer_wallet", buyerWallet)
-    .eq("seller_wallet", sellerWallet)
     .maybeSingle();
 
   if (error) throw error;
-  if (!thread) return;
 
-  const content = `📦 Your item has been shipped via ${courier}. Tracking number: ${trackingNumber}`;
-  const { error: messageError } = await supabase.from("direct_messages").insert({
-    thread_id: thread.id as string,
-    sender_wallet: sellerWallet,
-    content,
-    is_system: true,
-    is_read: false,
-  });
+  let threadId = thread?.id as string | undefined;
+  if (!threadId) {
+    const created = await createAuctionThread(
+      auctionId,
+      buyerWallet,
+      sellerWallet,
+      auctionTitle,
+      { skipWelcomeMessage: true }
+    );
+    threadId = created.id;
+  }
 
-  if (messageError) throw messageError;
+  await insertThreadSystemMessage(threadId, content, sellerWallet);
 }
 
 export async function saveAuctionShippingTracking({
@@ -66,7 +82,7 @@ export async function saveAuctionShippingTracking({
 
   const { data: existing, error: fetchError } = await supabase
     .from("auctions")
-    .select("id, seller_wallet, shipping_status")
+    .select("id, seller_wallet, shipping_status, title")
     .eq("id", auctionId)
     .eq("seller_wallet", sellerWallet)
     .maybeSingle();
@@ -101,13 +117,14 @@ export async function saveAuctionShippingTracking({
   if (error) throw error;
 
   if (winnerBid?.bidder_wallet) {
-    await insertShippingSystemMessage(
+    await notifyBuyerShipment({
       auctionId,
-      winnerBid.bidder_wallet as string,
+      auctionTitle: existing.title as string,
+      buyerWallet: winnerBid.bidder_wallet as string,
       sellerWallet,
-      trimmedCourier,
-      trimmedTracking
-    );
+      courier: trimmedCourier,
+      trackingNumber: trimmedTracking,
+    });
   }
 
   return parseAuctionRow(data as Record<string, unknown>);

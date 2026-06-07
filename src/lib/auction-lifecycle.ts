@@ -121,12 +121,6 @@ export async function createWinnerThread(
     { skipWelcomeMessage: true }
   );
 
-  await insertThreadSystemMessage(
-    thread.id,
-    "🎉 Congratulations! You won this auction.",
-    auction.seller_wallet
-  );
-
   const itemDetails = auction.item_details ?? {};
   const summary: AuctionSummaryPayload = {
     type: "auction_summary",
@@ -143,23 +137,11 @@ export async function createWinnerThread(
     auction_id: auction.id,
   };
 
-  const summaryJson = JSON.stringify(summary);
-  console.log("[createWinnerThread] inserting auction summary", {
-    threadId: thread.id,
-    auctionId: auction.id,
-    summaryJson,
-  });
-
   await insertThreadSystemMessage(
     thread.id,
-    summaryJson,
+    JSON.stringify(summary),
     auction.seller_wallet
   );
-
-  console.log("[createWinnerThread] auction summary inserted", {
-    threadId: thread.id,
-    auctionId: auction.id,
-  });
 }
 
 async function getWinningBid(auctionId: string): Promise<{
