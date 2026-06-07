@@ -1,6 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import {
+  AuctionCardCategorySlot,
+  AuctionCardContent,
+  AuctionCardTitle,
+} from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import FiatValue from "@/components/ui/FiatValue";
 import type { Auction } from "@/lib/database.types";
@@ -35,7 +40,7 @@ export default function ShopAuctionGrid({
           <Link
             key={auction.id}
             href={`/auction/${auction.id}`}
-            className="block overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+            className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
           >
             <div className="relative aspect-[4/3] bg-surface-elevated">
               <Image
@@ -51,25 +56,31 @@ export default function ShopAuctionGrid({
                 </span>
               )}
             </div>
-            <div className="p-4">
-              <h3 className="line-clamp-2 text-sm font-semibold text-white">
-                {auction.title}
-              </h3>
-              {auction.category && (
-                <span className="mt-2 inline-block rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">
-                  {auction.category}
-                </span>
-              )}
-              <p className="mt-3 text-lg font-bold text-accent">
-                {formatSol(displayBid)}
-              </p>
-              <FiatValue solAmount={displayBid} />
-              {showCountdown && (
-                <p className="mt-1 text-xs text-muted">
-                  Ends in <CountdownTimer endTime={auction.end_time} compact />
-                </p>
-              )}
-            </div>
+            <AuctionCardContent
+              header={
+                <>
+                  <AuctionCardTitle>{auction.title}</AuctionCardTitle>
+                  <AuctionCardCategorySlot category={auction.category} />
+                </>
+              }
+              footer={
+                <div className="flex items-end justify-between gap-2">
+                  <div>
+                    <p className="text-xs text-muted">Current bid</p>
+                    <p className="text-lg font-bold text-accent">
+                      {formatSol(displayBid)}
+                    </p>
+                    <FiatValue solAmount={displayBid} showTooltip={false} />
+                  </div>
+                  {showCountdown && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted">Time left</p>
+                      <CountdownTimer endTime={auction.end_time} compact />
+                    </div>
+                  )}
+                </div>
+              }
+            />
           </Link>
         );
       })}

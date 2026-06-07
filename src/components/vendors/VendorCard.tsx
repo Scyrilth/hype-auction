@@ -32,7 +32,7 @@ export default function VendorCard({ entry }: { entry: VendorDirectoryEntry }) {
     vendor.shop_name ?? vendor.username ?? shortenAddress(vendor.wallet_address);
 
   return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
       <div className="relative h-28 bg-surface-elevated sm:h-32">
         {vendor.banner_image ? (
           <Image
@@ -55,69 +55,79 @@ export default function VendorCard({ entry }: { entry: VendorDirectoryEntry }) {
         )}
       </div>
 
-      <div className="relative flex flex-1 flex-col px-4 pb-4 pt-0">
-        <div className="-mt-8 flex items-end gap-3">
-          <UserAvatar
-            walletAddress={vendor.wallet_address}
-            avatarUrl={vendor.avatar_url}
-            alt={displayName}
-            size="lg"
-            rounded="xl"
-            className="border-4 border-surface"
-          />
-          <div className="min-w-0 flex-1 pb-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="truncate text-sm font-semibold text-white">
-                {displayName}
-              </h3>
-              {vendor.is_verified && <VerifiedBadge />}
+      <div className="relative flex flex-1 flex-col justify-between px-4 pb-4 pt-0">
+        <div>
+          <div className="-mt-8 flex items-end gap-3">
+            <UserAvatar
+              walletAddress={vendor.wallet_address}
+              avatarUrl={vendor.avatar_url}
+              alt={displayName}
+              size="lg"
+              rounded="xl"
+              className="border-4 border-surface"
+            />
+            <div className="min-w-0 flex-1 pb-1">
+              <div className="flex h-12 flex-col justify-center">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <h3 className="truncate text-sm font-semibold text-white">
+                    {displayName}
+                  </h3>
+                  {vendor.is_verified && <VerifiedBadge />}
+                </div>
+                {vendor.username ? (
+                  <p className="truncate text-xs text-muted">
+                    @{vendor.username}
+                  </p>
+                ) : (
+                  <span className="block h-4" aria-hidden />
+                )}
+              </div>
             </div>
-            {vendor.username && (
-              <p className="truncate text-xs text-muted">@{vendor.username}</p>
-            )}
           </div>
-        </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div>
-            <p className="text-xs text-muted">Followers</p>
-            <p className="text-sm font-semibold text-white">
-              {vendor.followers_count}
-            </p>
+          <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-xs text-muted">Followers</p>
+              <p className="text-sm font-semibold text-white">
+                {vendor.followers_count}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-muted">Sales</p>
+              <p className="text-sm font-semibold text-white">{totalSales}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted">Rating</p>
+              <div className="mt-0.5 flex justify-center">
+                {averageRating > 0 ? (
+                  <StarRating rating={averageRating} />
+                ) : (
+                  <span className="text-sm text-muted">—</span>
+                )}
+              </div>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-muted">Sales</p>
-            <p className="text-sm font-semibold text-white">{totalSales}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted">Rating</p>
-            <div className="mt-0.5 flex justify-center">
-              {averageRating > 0 ? (
-                <StarRating rating={averageRating} />
-              ) : (
-                <span className="text-sm text-muted">—</span>
+
+          {categories.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {categories.slice(0, 3).map((category) => (
+                <span
+                  key={category}
+                  className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-purple-300"
+                >
+                  {category}
+                </span>
+              ))}
+              {categories.length > 3 && (
+                <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-[10px] text-muted">
+                  +{categories.length - 3}
+                </span>
               )}
             </div>
-          </div>
+          ) : (
+            <span className="mt-3 block h-5" aria-hidden />
+          )}
         </div>
-
-        {categories.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {categories.slice(0, 3).map((category) => (
-              <span
-                key={category}
-                className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-medium text-purple-300"
-              >
-                {category}
-              </span>
-            ))}
-            {categories.length > 3 && (
-              <span className="rounded-full bg-surface-elevated px-2 py-0.5 text-[10px] text-muted">
-                +{categories.length - 3}
-              </span>
-            )}
-          </div>
-        )}
 
         <Link
           href={`/shop/${shopSlug}`}

@@ -1,6 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import {
+  AuctionCardCategorySlot,
+  AuctionCardContent,
+  AuctionCardTitle,
+} from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import FiatValue from "@/components/ui/FiatValue";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
@@ -37,31 +42,33 @@ export default function BrowseAuctionCard({ auction }: { auction: Auction }) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-purple-100">
-          {auction.title}
-        </h3>
-
-        {auction.category && (
-          <span className="mt-2 inline-block w-fit rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">
-            {auction.category}
-          </span>
-        )}
-
-        <div className="mt-3 flex items-end justify-between gap-2">
-          <div>
-            <p className="text-xs text-muted">Current bid</p>
-            <p className="text-lg font-bold text-accent">{formatSol(displayBid)}</p>
-            <FiatValue solAmount={displayBid} showTooltip={false} />
-          </div>
-          {isLive && (
-            <div className="text-right">
-              <p className="text-xs text-muted">Time left</p>
-              <CountdownTimer endTime={auction.end_time} compact />
+      <AuctionCardContent
+        header={
+          <>
+            <AuctionCardTitle className="group-hover:text-purple-100">
+              {auction.title}
+            </AuctionCardTitle>
+            <AuctionCardCategorySlot category={auction.category} />
+          </>
+        }
+        footer={
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <p className="text-xs text-muted">Current bid</p>
+              <p className="text-lg font-bold text-accent">
+                {formatSol(displayBid)}
+              </p>
+              <FiatValue solAmount={displayBid} showTooltip={false} />
             </div>
-          )}
-        </div>
-      </div>
+            {isLive && (
+              <div className="text-right">
+                <p className="text-xs text-muted">Time left</p>
+                <CountdownTimer endTime={auction.end_time} compact />
+              </div>
+            )}
+          </div>
+        }
+      />
     </Link>
   );
 }

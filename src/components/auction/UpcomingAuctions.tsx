@@ -1,3 +1,7 @@
+import {
+  AuctionCardContent,
+  AuctionCardTitle,
+} from "@/components/auction/AuctionCardLayout";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import { formatRelativeFuture, formatSol } from "@/lib/format";
@@ -24,7 +28,7 @@ export default function UpcomingAuctions({
             <Link
               key={auction.id}
               href={`/auction/${auction.id}`}
-              className="group block overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+              className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
             >
               <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
                 <Image
@@ -35,17 +39,30 @@ export default function UpcomingAuctions({
                   unoptimized
                 />
               </div>
-              <div className="p-3.5">
-                <h3 className="truncate text-sm font-medium text-white">
-                  {auction.title}
-                </h3>
-                <p className="mt-1 text-sm font-semibold text-accent">
-                  Starting {formatSol(auction.start_price)}
-                </p>
-                <p className="mt-0.5 text-xs text-muted">
-                  Starts in {formatRelativeFuture(auction.end_time)}
-                </p>
-              </div>
+              <AuctionCardContent
+                className="p-3.5"
+                header={
+                  <AuctionCardTitle className="font-medium">
+                    {auction.title}
+                  </AuctionCardTitle>
+                }
+                footer={
+                  <div className="flex items-end justify-between gap-2">
+                    <div>
+                      <p className="text-xs text-muted">Starting bid</p>
+                      <p className="text-lg font-bold text-accent">
+                        {formatSol(auction.start_price)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-muted">Starts in</p>
+                      <p className="text-sm font-medium text-white">
+                        {formatRelativeFuture(auction.end_time)}
+                      </p>
+                    </div>
+                  </div>
+                }
+              />
             </Link>
           );
         })}

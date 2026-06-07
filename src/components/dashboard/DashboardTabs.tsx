@@ -6,6 +6,10 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import {
+  AuctionCardContent,
+  AuctionCardTitle,
+} from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import StarRating from "@/components/shop/StarRating";
 import FiatValue from "@/components/ui/FiatValue";
@@ -70,13 +74,13 @@ function ActiveAuctionCard({
   };
 
   return (
-    <article className="relative overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
+    <article className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
       <Link
         href={`/auction/${auction.id}`}
         className="absolute inset-0 z-0 cursor-pointer"
         aria-label={`View ${auction.title}`}
       />
-      <div className="relative z-10 pointer-events-none">
+      <div className="relative z-10 flex flex-1 flex-col pointer-events-none">
         <div className="relative aspect-[16/10] bg-surface-elevated">
           <Image
             src={imageSrc}
@@ -90,27 +94,31 @@ function ActiveAuctionCard({
             Live
           </span>
         </div>
-        <div className="p-4">
-          <h3 className="line-clamp-2 text-sm font-semibold text-white">
-            {auction.title}
-          </h3>
-          <div className="mt-3 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted">Current bid</p>
-              <p className="text-lg font-bold text-accent">
-                {formatSol(displayBid)}
+        <AuctionCardContent
+          header={<AuctionCardTitle>{auction.title}</AuctionCardTitle>}
+          footer={
+            <>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted">Current bid</p>
+                  <p className="text-lg font-bold text-accent">
+                    {formatSol(displayBid)}
+                  </p>
+                  <FiatValue solAmount={displayBid} />
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted">Time left</p>
+                  <CountdownTimer endTime={auction.end_time} compact />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-muted">
+                {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
               </p>
-              <FiatValue solAmount={displayBid} />
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted">Time left</p>
-              <CountdownTimer endTime={auction.end_time} compact />
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-muted">
-            {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
-          </p>
-          <div className="pointer-events-auto mt-4 flex gap-2">
+            </>
+          }
+        />
+        <div className="pointer-events-auto px-4 pb-4">
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={handleViewItem}
@@ -139,7 +147,7 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
   const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
   return (
-    <article className="overflow-hidden rounded-2xl border border-border bg-surface">
+    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="relative aspect-[16/10] bg-surface-elevated opacity-90">
         <Image
           src={imageSrc}
@@ -152,21 +160,26 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
           Ended
         </span>
       </div>
-      <div className="p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white">
-          {auction.title}
-        </h3>
-        <p className="mt-2 text-lg font-bold text-accent">
-          {formatSol(displayBid)}
-        </p>
-        <FiatValue solAmount={displayBid} />
-        <p className="mt-2 text-xs text-muted">
-          Winner:{" "}
-          {auction.winnerWallet
-            ? shortenAddress(auction.winnerWallet, 6)
-            : "No bids"}
-        </p>
-      </div>
+      <AuctionCardContent
+        header={<AuctionCardTitle>{auction.title}</AuctionCardTitle>}
+        footer={
+          <>
+            <div>
+              <p className="text-xs text-muted">Final bid</p>
+              <p className="text-lg font-bold text-accent">
+                {formatSol(displayBid)}
+              </p>
+              <FiatValue solAmount={displayBid} />
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Winner:{" "}
+              {auction.winnerWallet
+                ? shortenAddress(auction.winnerWallet, 6)
+                : "No bids"}
+            </p>
+          </>
+        }
+      />
     </article>
   );
 }

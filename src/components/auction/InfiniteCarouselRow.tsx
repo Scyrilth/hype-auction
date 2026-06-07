@@ -100,7 +100,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
         {visibleItems.map((item, slotIndex) => (
           <div
             key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
-            className="min-w-0 transition-opacity duration-300"
+            className="flex h-full min-w-0 transition-opacity duration-300"
           >
             {renderCarouselItem(variant, item)}
           </div>

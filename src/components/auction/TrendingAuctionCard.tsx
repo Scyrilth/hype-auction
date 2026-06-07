@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import {
+  AuctionCardContent,
+  AuctionCardTitle,
+} from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
@@ -42,22 +46,27 @@ export default function TrendingAuctionCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold text-white group-hover:text-purple-100">
-          {auction.title}
-        </h3>
-
-        <div className="mt-3 flex items-end justify-between gap-2">
-          <div>
-            <p className="text-xs text-muted">Current bid</p>
-            <p className="text-lg font-bold text-accent">{formatSol(displayBid)}</p>
+      <AuctionCardContent
+        header={
+          <AuctionCardTitle className="group-hover:text-purple-100">
+            {auction.title}
+          </AuctionCardTitle>
+        }
+        footer={
+          <div className="flex items-end justify-between gap-2">
+            <div>
+              <p className="text-xs text-muted">Current bid</p>
+              <p className="text-lg font-bold text-accent">
+                {formatSol(displayBid)}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted">Time left</p>
+              <CountdownTimer endTime={auction.end_time} compact />
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-xs text-muted">Time left</p>
-            <CountdownTimer endTime={auction.end_time} compact />
-          </div>
-        </div>
-      </div>
+        }
+      />
     </Link>
   );
 }

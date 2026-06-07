@@ -6,6 +6,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import {
+  AuctionCardCategorySlot,
+  AuctionCardContent,
+  AuctionCardTitle,
+} from "@/components/auction/AuctionCardLayout";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
@@ -58,8 +63,8 @@ export default function LiveAuctionCard({ auction }: { auction: Auction }) {
   };
 
   return (
-    <article className="flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
-      <Link href={`/auction/${auction.id}`} className="block">
+    <article className="flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
+      <Link href={`/auction/${auction.id}`} className="flex flex-1 flex-col">
         <div className="relative aspect-[4/3] overflow-hidden bg-surface-elevated">
           <Image
             src={imageSrc}
@@ -75,31 +80,29 @@ export default function LiveAuctionCard({ auction }: { auction: Auction }) {
           </span>
         </div>
 
-        <div className="flex flex-1 flex-col p-4">
-          <h3 className="line-clamp-2 text-sm font-semibold text-white">
-            {auction.title}
-          </h3>
-
-          {auction.category && (
-            <span className="mt-2 inline-block w-fit rounded-full bg-accent/20 px-2.5 py-0.5 text-xs font-medium text-purple-300">
-              {auction.category}
-            </span>
-          )}
-
-          <div className="mt-3 flex items-end justify-between gap-2">
-            <div>
-              <p className="text-xs text-muted">Current bid</p>
-              <p className="text-lg font-bold text-accent">
-                {formatSol(displayBid)}
-              </p>
-              <FiatValue solAmount={displayBid} showTooltip={false} />
+        <AuctionCardContent
+          header={
+            <>
+              <AuctionCardTitle>{auction.title}</AuctionCardTitle>
+              <AuctionCardCategorySlot category={auction.category} />
+            </>
+          }
+          footer={
+            <div className="flex items-end justify-between gap-2">
+              <div>
+                <p className="text-xs text-muted">Current bid</p>
+                <p className="text-lg font-bold text-accent">
+                  {formatSol(displayBid)}
+                </p>
+                <FiatValue solAmount={displayBid} showTooltip={false} />
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-muted">Time left</p>
+                <CountdownTimer endTime={auction.end_time} compact />
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-muted">Time left</p>
-              <CountdownTimer endTime={auction.end_time} compact />
-            </div>
-          </div>
-        </div>
+          }
+        />
       </Link>
 
       <div className="px-4 pb-4">
