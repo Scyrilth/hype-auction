@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import FiatValue from "@/components/ui/FiatValue";
 import type { BuyerBidActivity, BidActivityStatus } from "@/lib/profile";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
@@ -92,12 +93,14 @@ function BidActivityCard({ item }: { item: BuyerBidActivity }) {
             <p className="font-semibold text-accent">
               {formatSol(item.userHighestBid)}
             </p>
+            <FiatValue solAmount={item.userHighestBid} />
           </div>
           <div>
             <p className="text-xs text-muted">Current bid</p>
             <p className="font-semibold text-white">
               {formatSol(item.currentBid)}
             </p>
+            <FiatValue solAmount={item.currentBid} />
           </div>
         </div>
       </div>

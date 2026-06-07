@@ -65,9 +65,11 @@ export default function FiatValue({
   return (
     <>
       <span
-        className="text-xs text-muted"
+        className="pointer-events-auto text-xs text-muted"
         style={wrapperStyle}
-        onMouseEnter={() => {
+        onMouseEnter={(event) => {
+          console.log("[FiatValue] mouseEnter");
+          setPos({ x: event.clientX, y: event.clientY });
           if (showTooltip) setShowTip(true);
         }}
         onMouseLeave={() => setShowTip(false)}

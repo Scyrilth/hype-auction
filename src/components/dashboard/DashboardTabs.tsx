@@ -104,7 +104,7 @@ function ActiveAuctionCard({
           }
           footer={
             <>
-              <div className="flex items-end justify-between gap-3">
+              <div className="pointer-events-auto flex items-end justify-between gap-3">
                 <div>
                   <p className="text-xs text-muted">Current bid</p>
                   <p className="text-lg font-bold text-accent">
