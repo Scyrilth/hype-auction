@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import MessageContent from "@/components/messages/MessageContent";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage } from "@/lib/errors";
@@ -38,6 +39,7 @@ function MessageBubble({
   senderLabel,
   senderWallet,
   senderAvatar,
+  onCopyTracking,
 }: {
   message: EnrichedDirectMessage;
   isMine: boolean;
@@ -45,6 +47,7 @@ function MessageBubble({
   senderLabel: string;
   senderWallet: string;
   senderAvatar: string | null;
+  onCopyTracking: (trackingNumber: string) => void;
 }) {
   if (message.is_system) {
     return (
@@ -80,7 +83,11 @@ function MessageBubble({
               : "border border-border bg-surface-elevated text-zinc-200"
           }`}
         >
-          {message.content}
+          <MessageContent
+            content={message.content}
+            isMine={isMine}
+            onCopyTracking={onCopyTracking}
+          />
         </div>
       </div>
     </div>
@@ -175,6 +182,15 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     }
   };
 
+  const handleCopyTracking = async (trackingNumber: string) => {
+    try {
+      await navigator.clipboard.writeText(trackingNumber);
+      showToast("Copied!");
+    } catch {
+      showToast("Failed to copy tracking number.", "error");
+    }
+  };
+
   const handleConfirmReceipt = async () => {
     if (!wallet || !isBuyer || confirming || thread?.confirmed_at) return;
     setConfirming(true);
@@ -193,7 +209,17 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
   if (loading || !thread) {
     return (
-      <p className="py-12 text-center text-sm text-muted">Loading conversation...</p>
+      <div className="mx-auto max-w-3xl">
+        <Link
+          href="/messages"
+          className="mb-3 inline-block text-sm text-muted transition-colors hover:text-white"
+        >
+          ← Back to Messages
+        </Link>
+        <p className="py-12 text-center text-sm text-muted">
+          Loading conversation...
+        </p>
+      </div>
     );
   }
 
@@ -221,6 +247,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
   return (
     <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col">
+      <Link
+        href="/messages"
+        className="mb-3 inline-block shrink-0 text-sm text-muted transition-colors hover:text-white"
+      >
+        ← Back to Messages
+      </Link>
+
       <div className="shrink-0 rounded-2xl border border-border bg-surface p-4">
         <div className="flex items-start gap-3">
           <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-elevated">
@@ -281,6 +314,9 @@ export default function ThreadView({ threadId }: { threadId: string }) {
                 senderLabel={senderLabel}
                 senderWallet={message.sender_wallet}
                 senderAvatar={sender.avatar_url}
+                onCopyTracking={(trackingNumber) =>
+                  void handleCopyTracking(trackingNumber)
+                }
               />
               {showTimestamp && !message.is_system && (
                 <p
