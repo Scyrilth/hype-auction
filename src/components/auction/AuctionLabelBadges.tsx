@@ -1,5 +1,6 @@
 import {
   AUCTION_LABEL_DISPLAY,
+  createAuctionLabelInput,
   getAuctionLabels,
   type AuctionLabelInput,
 } from "@/lib/auction-labels";
@@ -11,12 +12,13 @@ export default function AuctionLabelBadges({
   isTopFeaturedByBids,
   className = "",
 }: AuctionLabelInput & { className?: string }) {
-  const labels = getAuctionLabels({
-    auction,
-    bidCount,
-    bidCount24h,
-    isTopFeaturedByBids,
-  });
+  const labels = getAuctionLabels(
+    createAuctionLabelInput(auction, {
+      bidCount,
+      bidCount24h,
+      isTopFeaturedByBids,
+    })
+  );
 
   if (labels.length === 0) return null;
 

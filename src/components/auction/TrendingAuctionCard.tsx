@@ -32,16 +32,16 @@ export default function TrendingAuctionCard({
   return (
     <Link
       href={`/auction/${auction.id}`}
-      className="group flex h-full w-full min-w-[11.5rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+      className="group flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
-      <div className="relative h-48 overflow-hidden bg-surface-elevated">
+      <div className="relative h-48 w-full shrink-0 overflow-hidden bg-surface-elevated">
         <Image
           src={imageSrc}
           alt={auction.title}
           fill
           sizes="20vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-105"
+          className="object-cover object-center transition-transform duration-300 group-hover:scale-105"
           unoptimized
         />
         <WatchlistHeart auctionId={auction.id} />
@@ -59,7 +59,17 @@ export default function TrendingAuctionCard({
               {auction.title}
             </AuctionCardTitle>
             <AuctionLabelBadges
-              auction={auction}
+              auction={{
+                id: auction.id,
+                current_bid: auction.current_bid,
+                start_price: auction.start_price,
+                end_time: auction.end_time,
+                created_at: auction.created_at,
+                category: auction.category,
+                item_details: auction.item_details,
+                status: auction.status,
+                is_featured: auction.is_featured,
+              }}
               bidCount={bidCount}
               bidCount24h={bidCount24h}
               isTopFeaturedByBids={isTopFeaturedByBids}

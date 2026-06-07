@@ -82,7 +82,7 @@ export default function LiveAuctionCard({
     >
       <Link
         href={`/auction/${auction.id}`}
-        className="flex w-full min-w-0 flex-1 flex-col overflow-hidden"
+        className="flex min-h-0 w-full flex-1 flex-col overflow-hidden"
       >
         <div className="relative h-48 w-full shrink-0 overflow-hidden bg-surface-elevated">
           <Image
@@ -90,7 +90,7 @@ export default function LiveAuctionCard({
             alt={auction.title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="h-full w-full object-cover object-center"
+            className="object-cover object-center"
             unoptimized
           />
           <WatchlistHeart auctionId={auction.id} />
@@ -102,7 +102,17 @@ export default function LiveAuctionCard({
               <AuctionCardTitle>{auction.title}</AuctionCardTitle>
               <AuctionCardCategorySlot category={auction.category} />
               <AuctionLabelBadges
-                auction={auction}
+                auction={{
+                  id: auction.id,
+                  current_bid: auction.current_bid,
+                  start_price: auction.start_price,
+                  end_time: auction.end_time,
+                  created_at: auction.created_at,
+                  category: auction.category,
+                  item_details: auction.item_details,
+                  status: auction.status,
+                  is_featured: auction.is_featured,
+                }}
                 bidCount={bidCount}
                 bidCount24h={bidCount24h}
                 isTopFeaturedByBids={isTopFeaturedByBids}
@@ -126,7 +136,7 @@ export default function LiveAuctionCard({
         />
       </Link>
 
-      <div className="px-4 pb-4">
+      <div className="shrink-0 px-4 pb-4">
         <button
           type="button"
           disabled={isPlacingBid}

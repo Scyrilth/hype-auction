@@ -16,7 +16,7 @@ export function AuctionCardContent({
 }) {
   return (
     <div
-      className={`flex flex-1 flex-col justify-between p-4 ${className}`.trim()}
+      className={`flex min-h-0 flex-1 flex-col justify-between p-4 ${className}`.trim()}
     >
       <div>{header}</div>
       <div>{footer}</div>

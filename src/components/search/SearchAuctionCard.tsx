@@ -64,8 +64,8 @@ export default function SearchAuctionCard({
                 end_time: auction.endTime,
                 created_at: auction.createdAt,
                 category: auction.category,
-                item_details: auction.itemDetails,
-                status: auction.status,
+                item_details: auction.itemDetails ?? {},
+                status: auction.status === "live" ? "live" : "ended",
                 is_featured: auction.isFeatured,
               }}
               bidCount={auction.bidCount}

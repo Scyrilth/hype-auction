@@ -48,11 +48,15 @@ export function getAuctionCardLabelProps(
   labelMaps?: AuctionLabelMaps,
   bidCount24h?: number
 ) {
+  const bidCount = labelMaps?.bidCounts?.get(auctionId);
+  const resolvedBidCount24h =
+    bidCount24h ?? labelMaps?.bidCounts24h?.get(auctionId);
+
   return {
-    bidCount: labelMaps?.bidCounts?.get(auctionId),
+    bidCount: typeof bidCount === "number" ? bidCount : undefined,
     bidCount24h:
-      bidCount24h ?? labelMaps?.bidCounts24h?.get(auctionId),
-    isTopFeaturedByBids: labelMaps?.topFeaturedIds?.has(auctionId),
+      typeof resolvedBidCount24h === "number" ? resolvedBidCount24h : undefined,
+    isTopFeaturedByBids: labelMaps?.topFeaturedIds?.has(auctionId) ?? false,
   };
 }
 
@@ -179,9 +183,39 @@ function isEndingSoon(endTime: string, now: number, status: string): boolean {
 }
 
 function resolveBidCount(bidCount?: number, bidCount24h?: number): number | null {
-  if (typeof bidCount === "number") return bidCount;
-  if (typeof bidCount24h === "number") return bidCount24h;
+  const hasBidCount = typeof bidCount === "number";
+  const hasBidCount24h = typeof bidCount24h === "number";
+
+  if (hasBidCount && hasBidCount24h) {
+    return Math.max(bidCount, bidCount24h);
+  }
+  if (hasBidCount) return bidCount;
+  if (hasBidCount24h) return bidCount24h;
   return null;
+}
+
+/** Normalize auction fields required by label rules. */
+export function createAuctionLabelInput(
+  auction: AuctionLabelInput["auction"],
+  options: Omit<AuctionLabelInput, "auction"> = {}
+): AuctionLabelInput {
+  return {
+    auction: {
+      id: auction.id,
+      current_bid: Number(auction.current_bid ?? 0),
+      start_price: Number(auction.start_price ?? 0),
+      end_time: auction.end_time,
+      created_at: auction.created_at,
+      category: auction.category ?? null,
+      item_details: auction.item_details ?? {},
+      status: auction.status,
+      is_featured: Boolean(auction.is_featured),
+    },
+    bidCount: options.bidCount,
+    bidCount24h: options.bidCount24h,
+    isTopFeaturedByBids: options.isTopFeaturedByBids,
+    now: options.now,
+  };
 }
 
 export function getTopFeaturedAuctionIds(
@@ -196,8 +230,14 @@ export function getTopFeaturedAuctionIds(
 }
 
 export function getAuctionLabels(input: AuctionLabelInput): AuctionLabelId[] {
-  const { auction, bidCount, bidCount24h, isTopFeaturedByBids } = input;
-  const now = input.now ?? Date.now();
+  const normalized = createAuctionLabelInput(input.auction, {
+    bidCount: input.bidCount,
+    bidCount24h: input.bidCount24h,
+    isTopFeaturedByBids: input.isTopFeaturedByBids,
+    now: input.now,
+  });
+  const { auction, bidCount, bidCount24h, isTopFeaturedByBids } = normalized;
+  const now = normalized.now ?? Date.now();
   const details = auction.item_details ?? {};
   const matched = new Set<AuctionLabelId>();
   const resolvedBidCount = resolveBidCount(bidCount, bidCount24h);
@@ -234,7 +274,27 @@ export function getAuctionLabels(input: AuctionLabelInput): AuctionLabelId[] {
     matched.add("NEW");
   }
 
-  return LABEL_PRIORITY.filter((label) => matched.has(label)).slice(0, 2);
+  const labels = LABEL_PRIORITY.filter((label) => matched.has(label)).slice(0, 2);
+
+  console.log("[getAuctionLabels]", {
+    auctionId: auction.id,
+    inputs: {
+      end_time: auction.end_time,
+      current_bid: auction.current_bid,
+      bid_count: bidCount,
+      bidCount24h,
+      created_at: auction.created_at,
+      item_details: auction.item_details,
+      is_featured: auction.is_featured,
+      category: auction.category,
+      status: auction.status,
+      isTopFeaturedByBids,
+    },
+    resolvedBidCount,
+    labels,
+  });
+
+  return labels;
 }
 
 export const AUCTION_LABEL_DISPLAY: Record<

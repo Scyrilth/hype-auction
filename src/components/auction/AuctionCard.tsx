@@ -60,7 +60,17 @@ export default function AuctionCard({
             </AuctionCardTitle>
             <AuctionCardCategorySlot category={auction.category} />
             <AuctionLabelBadges
-              auction={auction}
+              auction={{
+                id: auction.id,
+                current_bid: auction.current_bid,
+                start_price: auction.start_price,
+                end_time: auction.end_time,
+                created_at: auction.created_at,
+                category: auction.category,
+                item_details: auction.item_details,
+                status: auction.status,
+                is_featured: auction.is_featured,
+              }}
               bidCount={bidCount}
               bidCount24h={bidCount24h}
               isTopFeaturedByBids={isTopFeaturedByBids}
