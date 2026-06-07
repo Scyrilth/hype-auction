@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import FollowButton from "@/components/shop/FollowButton";
 import StarRating from "@/components/shop/StarRating";
+import FiatValue from "@/components/ui/FiatValue";
 import UserAvatar from "@/components/ui/UserAvatar";
 import type { User, VendorShopStats } from "@/lib/database.types";
 import { formatSol, displaySocialHandle, shortenAddress } from "@/lib/format";
@@ -122,7 +123,7 @@ export default function ShopHeader({
 
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard label="Total sales" value={String(stats.total_sales)} />
-          <StatCard label="Volume" value={formatSol(stats.total_volume)} />
+          <StatCard label="Volume" value={formatSol(stats.total_volume)} fiatSolAmount={stats.total_volume} />
           <StatCard label="Followers" value={String(followersCount)} />
           <div className="rounded-xl border border-border bg-background px-4 py-3">
             <p className="text-xs uppercase tracking-wider text-muted">Rating</p>
@@ -160,11 +161,24 @@ export default function ShopHeader({
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  fiatSolAmount,
+}: {
+  label: string;
+  value: string;
+  fiatSolAmount?: number;
+}) {
   return (
     <div className="rounded-xl border border-border bg-background px-4 py-3">
       <p className="text-xs uppercase tracking-wider text-muted">{label}</p>
       <p className="mt-1 text-lg font-bold text-white">{value}</p>
+      {fiatSolAmount !== undefined && (
+        <div className="mt-0.5">
+          <FiatValue solAmount={fiatSolAmount} />
+        </div>
+      )}
     </div>
   );
 }

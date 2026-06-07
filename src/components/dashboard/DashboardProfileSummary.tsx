@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { CopyIcon } from "@/components/icons";
 import StarRating from "@/components/shop/StarRating";
+import FiatValue from "@/components/ui/FiatValue";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import type { SellerDashboardStats } from "@/lib/dashboard";
@@ -48,11 +49,19 @@ export default function DashboardProfileSummary({
     }
   };
 
-  const statItems = [
+  const statItems: {
+    label: string;
+    value: string | number;
+    fiatSolAmount?: number;
+  }[] = [
     { label: "Total Listings", value: stats.totalListings },
     { label: "Active Auctions", value: stats.activeAuctions },
     { label: "Total Bids Received", value: stats.totalBidsReceived },
-    { label: "Total Volume", value: formatSol(stats.totalVolume) },
+    {
+      label: "Total Volume",
+      value: formatSol(stats.totalVolume),
+      fiatSolAmount: stats.totalVolume,
+    },
     { label: "Followers", value: stats.followers },
     {
       label: "Average Rating",
@@ -158,6 +167,11 @@ export default function DashboardProfileSummary({
                   item.value
                 )}
               </p>
+              {item.fiatSolAmount !== undefined && (
+                <div className="mt-0.5 flex justify-center">
+                  <FiatValue solAmount={item.fiatSolAmount} />
+                </div>
+              )}
             </div>
           ))}
         </div>
