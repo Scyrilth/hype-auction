@@ -124,10 +124,21 @@ export async function getNotifications(wallet: string): Promise<Notification[]> 
     .order("created_at", { ascending: false })
     .limit(50);
 
-  if (error) throw error;
-  return (data ?? []).map((row) =>
-    parseNotification(row as Record<string, unknown>)
-  );
+  if (error) {
+    logSupabaseError("getNotifications", error);
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => {
+      try {
+        return parseNotification(row as Record<string, unknown>);
+      } catch (parseError) {
+        logSupabaseError("parseNotification", parseError);
+        return null;
+      }
+    })
+    .filter((item): item is Notification => item !== null);
 }
 
 export async function getUnreadCount(wallet: string): Promise<number> {
@@ -137,7 +148,11 @@ export async function getUnreadCount(wallet: string): Promise<number> {
     .eq("wallet_address", wallet)
     .eq("is_read", false);
 
-  if (error) throw error;
+  if (error) {
+    logSupabaseError("getUnreadCount", error);
+    throw error;
+  }
+
   return count ?? 0;
 }
 

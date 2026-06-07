@@ -5,6 +5,8 @@ import { useCallback, useMemo } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import NotificationRow from "@/components/notifications/NotificationRow";
+import NotificationsEmptyState from "@/components/notifications/NotificationsEmptyState";
+import BackButton from "@/components/ui/BackButton";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   markAllAsRead,
@@ -14,6 +16,8 @@ import {
 
 function getDateGroup(iso: string): string {
   const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Older";
+
   const now = new Date();
   const startOfToday = new Date(
     now.getFullYear(),
@@ -33,8 +37,16 @@ function getDateGroup(iso: string): string {
 
 export default function NotificationsView() {
   const router = useRouter();
-  const { publicKey } = useWallet();
-  const { notifications, unreadCount, refresh } = useNotifications();
+  const { publicKey, connected } = useWallet();
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    mounted,
+    refresh,
+    isConnected,
+  } = useNotifications();
 
   const grouped = useMemo(() => {
     const groups = new Map<string, Notification[]>();
@@ -55,15 +67,23 @@ export default function NotificationsView() {
   const handleMarkAllRead = useCallback(async () => {
     const wallet = publicKey?.toBase58();
     if (!wallet) return;
-    await markAllAsRead(wallet);
-    await refresh();
+    try {
+      await markAllAsRead(wallet);
+      await refresh();
+    } catch {
+      // keep list visible
+    }
   }, [publicKey, refresh]);
 
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
       if (!notification.is_read) {
-        await markAsRead(notification.id);
-        await refresh();
+        try {
+          await markAsRead(notification.id);
+          await refresh();
+        } catch {
+          // navigation still proceeds
+        }
       }
       if (notification.link) {
         router.push(notification.link);
@@ -72,33 +92,59 @@ export default function NotificationsView() {
     [refresh, router]
   );
 
-  if (!publicKey) {
+  if (!mounted) {
     return (
-      <p className="py-12 text-center text-sm text-muted">
-        Connect your wallet to view notifications.
-      </p>
+      <div className="mx-auto max-w-3xl">
+        <BackButton className="mb-4" />
+        <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-16 text-center">
+          <p className="text-sm text-muted">Loading notifications...</p>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-xl font-bold text-white">Notifications</h1>
-        {unreadCount > 0 && (
+      <BackButton className="mb-4" />
+
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold text-white">Notifications</h1>
+        {isConnected && unreadCount > 0 && (
           <button
             type="button"
             onClick={() => void handleMarkAllRead()}
-            className="rounded-full border border-border px-4 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+            className="shrink-0 rounded-full border border-white/10 bg-[#1a1835] px-4 py-2 text-xs font-semibold text-purple-300 transition-colors hover:border-accent/50 hover:text-white"
           >
             Mark all read
           </button>
         )}
       </div>
 
-      {notifications.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
-          <p className="text-sm text-muted">No notifications yet</p>
+      {!connected || !publicKey ? (
+        <NotificationsEmptyState
+          title="Connect your wallet to see notifications"
+          subtitle="Activity from bids, messages, and auctions will appear here once you are signed in."
+        />
+      ) : loading ? (
+        <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-16 text-center">
+          <p className="text-sm text-muted">Loading notifications...</p>
         </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-16 text-center">
+          <p className="text-sm font-medium text-white">{error}</p>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="mt-4 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-purple-300 transition-colors hover:border-accent/50 hover:text-white"
+          >
+            Try again
+          </button>
+        </div>
+      ) : notifications.length === 0 ? (
+        <NotificationsEmptyState
+          title="No notifications yet"
+          subtitle="Activity from bids, messages, and auctions will appear here."
+        />
       ) : (
         <div className="space-y-6">
           {grouped.map((group) => (
@@ -107,12 +153,18 @@ export default function NotificationsView() {
                 {group.label}
               </h2>
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835]">
-                {group.items.map((notification) => (
-                  <NotificationRow
+                {group.items.map((notification, index) => (
+                  <div
                     key={notification.id}
-                    notification={notification}
-                    onClick={(item) => void handleNotificationClick(item)}
-                  />
+                    className={
+                      index === group.items.length - 1 ? "" : "border-b border-white/5"
+                    }
+                  >
+                    <NotificationRow
+                      notification={notification}
+                      onClick={(item) => void handleNotificationClick(item)}
+                    />
+                  </div>
                 ))}
               </div>
             </section>

@@ -29,7 +29,7 @@ export default function NotificationRow({
     <button
       type="button"
       onClick={() => onClick(notification)}
-      className={`flex w-full items-start gap-3 border-b border-white/5 px-4 py-3 text-left transition-colors hover:bg-white/5 ${
+      className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5 ${
         notification.is_read
           ? "bg-transparent"
           : "border-l-2 border-l-accent bg-white/[0.03]"
