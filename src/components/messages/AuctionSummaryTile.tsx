@@ -46,6 +46,8 @@ export default function AuctionSummaryTile({
 }: {
   summary: AuctionSummaryPayload;
 }) {
+  console.log("[AuctionSummaryTile] rendering", summary);
+
   const imageSrc = resolveAuctionImageUrl(summary.image_url, {
     title: summary.title,
     category: summary.category,

@@ -23,6 +23,8 @@ export interface DirectMessage {
   thread_id: string;
   sender_wallet: string;
   content: string;
+  /** Unnormalized DB value — may be a JSON object for auction_summary messages. */
+  rawContent?: unknown;
   is_system: boolean;
   is_read: boolean;
   created_at: string;
@@ -79,11 +81,13 @@ function normalizeMessageContent(value: unknown): string {
 }
 
 function parseDirectMessage(row: Record<string, unknown>): DirectMessage {
+  const rawContent = row.content;
   return {
     id: row.id as string,
     thread_id: row.thread_id as string,
     sender_wallet: row.sender_wallet as string,
-    content: normalizeMessageContent(row.content),
+    content: normalizeMessageContent(rawContent),
+    rawContent,
     is_system: Boolean(row.is_system),
     is_read: Boolean(row.is_read),
     created_at: row.created_at as string,

@@ -73,7 +73,18 @@ function MessageBubble({
   senderAvatar: string | null;
   onCopyTracking: (trackingNumber: string) => void;
 }) {
-  const auctionSummary = parseAuctionSummaryMessage(message.content);
+  const messageContent = message.rawContent ?? message.content;
+  const auctionSummary = parseAuctionSummaryMessage(messageContent);
+
+  console.log("[ThreadView] message parse", {
+    messageId: message.id,
+    is_system: message.is_system,
+    content: message.content,
+    rawContent: message.rawContent,
+    messageContent,
+    parsedSummary: auctionSummary,
+  });
+
   if (auctionSummary) {
     return (
       <div className="w-full py-2">
@@ -250,6 +261,16 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       </div>
     );
   }
+
+  console.log(
+    "[ThreadView] all messages",
+    thread.messages.map((message) => ({
+      id: message.id,
+      is_system: message.is_system,
+      content: message.content,
+      rawContent: message.rawContent,
+    }))
+  );
 
   const title = thread.auction?.title ?? "General Inquiry";
   const thumb = getThreadThumbnail(thread.auction);

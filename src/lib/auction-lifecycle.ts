@@ -72,28 +72,40 @@ function coerceAuctionSummaryPayload(
   };
 }
 
+export function isAuctionSummaryContent(content: unknown): boolean {
+  if (typeof content === "object" && content !== null && !Array.isArray(content)) {
+    return (content as { type?: string }).type === "auction_summary";
+  }
+
+  if (typeof content === "string") {
+    return (
+      content.includes('"type":"auction_summary"') ||
+      content.includes('"type": "auction_summary"')
+    );
+  }
+
+  return false;
+}
+
 export function parseAuctionSummaryMessage(
   content: unknown
 ): AuctionSummaryPayload | null {
-  if (content == null) return null;
+  if (!isAuctionSummaryContent(content)) return null;
 
-  if (typeof content === "object" && !Array.isArray(content)) {
+  if (typeof content === "object" && content !== null && !Array.isArray(content)) {
     return coerceAuctionSummaryPayload(content as Record<string, unknown>);
   }
 
-  if (typeof content !== "string") return null;
-
-  const trimmed = content.trim();
-  if (!trimmed.startsWith("{") || !trimmed.includes("auction_summary")) {
-    return null;
+  if (typeof content === "string") {
+    try {
+      const parsed = JSON.parse(content.trim()) as Record<string, unknown>;
+      return coerceAuctionSummaryPayload(parsed);
+    } catch {
+      return null;
+    }
   }
 
-  try {
-    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
-    return coerceAuctionSummaryPayload(parsed);
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function createWinnerThread(
@@ -131,11 +143,23 @@ export async function createWinnerThread(
     auction_id: auction.id,
   };
 
+  const summaryJson = JSON.stringify(summary);
+  console.log("[createWinnerThread] inserting auction summary", {
+    threadId: thread.id,
+    auctionId: auction.id,
+    summaryJson,
+  });
+
   await insertThreadSystemMessage(
     thread.id,
-    JSON.stringify(summary),
+    summaryJson,
     auction.seller_wallet
   );
+
+  console.log("[createWinnerThread] auction summary inserted", {
+    threadId: thread.id,
+    auctionId: auction.id,
+  });
 }
 
 async function getWinningBid(auctionId: string): Promise<{
