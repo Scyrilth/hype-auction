@@ -35,6 +35,27 @@ function formatMessageTime(iso: string) {
   });
 }
 
+function getThreadStatusBadge(thread: ThreadDetail) {
+  if (thread.status === "archived") {
+    return {
+      label: "Archived",
+      className: "bg-surface-elevated text-muted",
+    };
+  }
+
+  if (thread.confirmed_at) {
+    return {
+      label: "Receipt Confirmed ✓",
+      className: "bg-emerald-500/20 text-emerald-300",
+    };
+  }
+
+  return {
+    label: "Active",
+    className: "bg-emerald-500/20 text-emerald-300",
+  };
+}
+
 function MessageBubble({
   message,
   isMine,
@@ -52,18 +73,10 @@ function MessageBubble({
   senderAvatar: string | null;
   onCopyTracking: (trackingNumber: string) => void;
 }) {
-  console.log("[ThreadView] message content", {
-    messageId: message.id,
-    is_system: message.is_system,
-    rawContent: message.content,
-    contentType: typeof message.content,
-  });
-
   const auctionSummary = parseAuctionSummaryMessage(message.content);
   if (auctionSummary) {
-    console.log("[ThreadView] auction summary parsed", auctionSummary);
     return (
-      <div className="flex w-full justify-center py-2">
+      <div className="w-full py-2">
         <AuctionSummaryTile summary={auctionSummary} />
       </div>
     );
@@ -128,6 +141,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const wallet = publicKey?.toBase58();
   const isArchived = thread?.status === "archived";
   const isBuyer = wallet === thread?.buyer_wallet;
+  const statusBadge = thread ? getThreadStatusBadge(thread) : null;
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -269,15 +283,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-bold text-white">{title}</h1>
-              <span
-                className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                  isArchived
-                    ? "bg-surface-elevated text-muted"
-                    : "bg-emerald-500/20 text-emerald-300"
-                }`}
-              >
-                {isArchived ? "Archived" : "Active"}
-              </span>
+              {statusBadge && (
+                <span
+                  className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadge.className}`}
+                >
+                  {statusBadge.label}
+                </span>
+              )}
             </div>
             <p className="text-xs text-muted">
               {formatOrderRef(thread.auction_id)} · with {otherLabel}

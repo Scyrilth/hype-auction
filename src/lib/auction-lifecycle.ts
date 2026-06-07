@@ -14,7 +14,25 @@ export interface AuctionSummaryPayload {
   reference_number: string | null;
   category: string | null;
   condition: string | null;
+  item_details: Record<string, string>;
+  grading_company?: string | null;
+  grade?: string | null;
+  grade_label?: string | null;
   auction_id: string;
+}
+
+function normalizeItemDetails(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const details: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof raw === "string" && raw.trim()) {
+      details[key] = raw.trim();
+    }
+  }
+  return details;
 }
 
 function coerceAuctionSummaryPayload(
@@ -24,6 +42,8 @@ function coerceAuctionSummaryPayload(
 
   const auctionId = value.auction_id;
   if (typeof auctionId !== "string" || !auctionId) return null;
+
+  const itemDetails = normalizeItemDetails(value.item_details);
 
   return {
     type: "auction_summary",
@@ -37,6 +57,17 @@ function coerceAuctionSummaryPayload(
         : null,
     category: typeof value.category === "string" ? value.category : null,
     condition: typeof value.condition === "string" ? value.condition : null,
+    item_details: itemDetails,
+    grading_company:
+      typeof value.grading_company === "string"
+        ? value.grading_company
+        : itemDetails.grading_company ?? null,
+    grade:
+      typeof value.grade === "string" ? value.grade : itemDetails.grade ?? null,
+    grade_label:
+      typeof value.grade_label === "string"
+        ? value.grade_label
+        : itemDetails.grade_label ?? null,
     auction_id: auctionId,
   };
 }
@@ -84,14 +115,19 @@ export async function createWinnerThread(
     auction.seller_wallet
   );
 
+  const itemDetails = auction.item_details ?? {};
   const summary: AuctionSummaryPayload = {
     type: "auction_summary",
     title: auction.title,
     image_url: auction.image_url,
-    winning_bid: winnerBidAmount,
-    reference_number: auction.reference_number,
     category: auction.category,
     condition: auction.condition,
+    item_details: itemDetails,
+    grading_company: itemDetails.grading_company ?? null,
+    grade: itemDetails.grade ?? null,
+    grade_label: itemDetails.grade_label ?? null,
+    winning_bid: winnerBidAmount,
+    reference_number: auction.reference_number,
     auction_id: auction.id,
   };
 
