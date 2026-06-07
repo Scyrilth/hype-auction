@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { SearchIcon } from "@/components/icons";
 import VendorCard from "@/components/vendors/VendorCard";
+import VendorSearchBar from "@/components/vendors/VendorSearchBar";
 import {
   filterVendorEntries,
   getSellerWalletsWithMatchingAuctionTitles,
@@ -70,6 +70,7 @@ export default function VendorDirectory({
   vendors: VendorDirectoryEntry[];
 }) {
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [sort, setSort] = useState<SortOption>("followers");
   const [titleMatchWallets, setTitleMatchWallets] = useState<Set<string>>(
@@ -100,11 +101,19 @@ export default function VendorDirectory({
   }, [search]);
 
   const filtered = useMemo(() => {
-    const result = filterVendorEntries(vendors, search, titleMatchWallets).filter(
-      (entry) => applyFilter(entry, activeTab)
-    );
+    let result = filterVendorEntries(vendors, search, titleMatchWallets);
+
+    if (categoryFilter) {
+      result = result.filter((entry) =>
+        entry.categories.some(
+          (category) => category.toLowerCase() === categoryFilter.toLowerCase()
+        )
+      );
+    }
+
+    result = result.filter((entry) => applyFilter(entry, activeTab));
     return sortEntries(result, sort);
-  }, [vendors, search, titleMatchWallets, activeTab, sort]);
+  }, [vendors, search, titleMatchWallets, categoryFilter, activeTab, sort]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -118,16 +127,28 @@ export default function VendorDirectory({
         </p>
       </header>
 
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name, category, or items sold..."
-          className="w-full rounded-xl border border-border bg-surface py-3 pl-11 pr-4 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-        />
-      </div>
+      <VendorSearchBar
+        vendors={vendors}
+        search={search}
+        onSearchChange={setSearch}
+        onCategorySelect={setCategoryFilter}
+      />
+
+      {categoryFilter && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted">Filtered by category:</span>
+          <button
+            type="button"
+            onClick={() => setCategoryFilter(null)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-purple-200 transition-colors hover:bg-accent/20"
+          >
+            {categoryFilter}
+            <span aria-hidden className="text-muted">
+              ×
+            </span>
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
