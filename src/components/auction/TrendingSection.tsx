@@ -1,5 +1,6 @@
+"use client";
+
 import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
-import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
 import { TrendingUpIcon } from "@/components/icons";
 import type { AuctionWithBidCount24h } from "@/lib/auctions";
 
@@ -18,16 +19,7 @@ export default function TrendingSection({
         <span aria-hidden>🔥</span>
       </div>
 
-      <InfiniteCarouselRow
-        items={items}
-        getKey={(item) => item.auction.id}
-        renderItem={(item) => (
-          <TrendingAuctionCard
-            auction={item.auction}
-            bidCount24h={item.bidCount24h}
-          />
-        )}
-      />
+      <InfiniteCarouselRow variant="trending" items={items} />
     </section>
   );
 }

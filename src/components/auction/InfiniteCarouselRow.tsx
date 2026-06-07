@@ -2,19 +2,63 @@
 
 import { useEffect, useState } from "react";
 
+import LiveAuctionCard from "@/components/auction/LiveAuctionCard";
+import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
+import BrowseAuctionCard from "@/components/browse/BrowseAuctionCard";
 import { ChevronLeftIcon, ChevronRightIcon } from "@/components/icons";
+import type { AuctionWithBidCount24h } from "@/lib/auctions";
+import type { Auction } from "@/lib/database.types";
 
-export default function InfiniteCarouselRow<T>({
-  items,
-  renderItem,
-  getKey,
-  visibleCount = 5,
-}: {
-  items: T[];
-  renderItem: (item: T) => React.ReactNode;
-  getKey: (item: T) => string;
-  visibleCount?: number;
-}) {
+type InfiniteCarouselRowProps =
+  | {
+      variant: "trending";
+      items: AuctionWithBidCount24h[];
+      visibleCount?: number;
+    }
+  | {
+      variant: "browse";
+      items: Auction[];
+      visibleCount?: number;
+    }
+  | {
+      variant: "live";
+      items: Auction[];
+      visibleCount?: number;
+    };
+
+function getItemKey(
+  variant: InfiniteCarouselRowProps["variant"],
+  item: Auction | AuctionWithBidCount24h
+): string {
+  if (variant === "trending") {
+    return (item as AuctionWithBidCount24h).auction.id;
+  }
+  return (item as Auction).id;
+}
+
+function renderCarouselItem(
+  variant: InfiniteCarouselRowProps["variant"],
+  item: Auction | AuctionWithBidCount24h
+) {
+  if (variant === "trending") {
+    const trendingItem = item as AuctionWithBidCount24h;
+    return (
+      <TrendingAuctionCard
+        auction={trendingItem.auction}
+        bidCount24h={trendingItem.bidCount24h}
+      />
+    );
+  }
+
+  if (variant === "browse") {
+    return <BrowseAuctionCard auction={item as Auction} />;
+  }
+
+  return <LiveAuctionCard auction={item as Auction} />;
+}
+
+export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
+  const { variant, items, visibleCount = 5 } = props;
   const [startIndex, setStartIndex] = useState(0);
   const itemCount = items.length;
   const slots = Math.min(visibleCount, itemCount);
@@ -55,10 +99,10 @@ export default function InfiniteCarouselRow<T>({
       >
         {visibleItems.map((item, slotIndex) => (
           <div
-            key={`${getKey(item)}-${slotIndex}-${startIndex}`}
+            key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
             className="min-w-0 transition-opacity duration-300"
           >
-            {renderItem(item)}
+            {renderCarouselItem(variant, item)}
           </div>
         ))}
       </div>
