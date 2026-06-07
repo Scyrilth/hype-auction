@@ -2,27 +2,48 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
+import { CopyIcon } from "@/components/icons";
 import StarRating from "@/components/shop/StarRating";
+import { useToast } from "@/components/ui/Toast";
 import type { SellerDashboardStats } from "@/lib/dashboard";
 import type { User } from "@/lib/database.types";
 import { formatSol, shortenAddress } from "@/lib/format";
 
 export default function DashboardProfileSummary({
   profile,
-  shopSlug,
   walletAddress,
   stats,
 }: {
   profile: User | null;
-  shopSlug: string;
   walletAddress: string;
   stats: SellerDashboardStats;
 }) {
+  const { showToast } = useToast();
+  const [copied, setCopied] = useState(false);
+
   const displayName =
-    profile?.shop_name ??
-    profile?.username ??
+    profile?.shop_name?.trim() ||
+    profile?.username?.trim() ||
     shortenAddress(walletAddress);
+
+  const shopHref = profile?.username?.trim()
+    ? `/shop/${profile.username.trim()}`
+    : `/shop/${walletAddress}`;
+
+  const showCopyWallet = profile?.show_copy_wallet ?? true;
+
+  const handleCopyWallet = async () => {
+    try {
+      await navigator.clipboard.writeText(walletAddress);
+      setCopied(true);
+      showToast("Copied!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast("Failed to copy address.", "error");
+    }
+  };
 
   const statItems = [
     { label: "Total Listings", value: stats.totalListings },
@@ -54,8 +75,8 @@ export default function DashboardProfileSummary({
       </div>
 
       <div className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
-        <div className="-mt-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex items-end gap-4">
+        <div className="-mt-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex min-w-0 items-end gap-4">
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-4 border-surface bg-surface-elevated sm:h-20 sm:w-20">
               {profile?.avatar_url ? (
                 <Image
@@ -71,22 +92,36 @@ export default function DashboardProfileSummary({
                 </div>
               )}
             </div>
-            <div className="min-w-0 pb-1">
-              <h1 className="truncate text-xl font-bold text-white sm:text-2xl">
+            <div className="min-w-0 flex-1 pb-1">
+              <h1 className="break-words text-xl font-bold leading-tight text-white sm:text-2xl">
                 {displayName}
               </h1>
-              {profile?.username && (
-                <p className="truncate text-sm text-muted">
-                  @{profile.username}
+              {profile?.username?.trim() && (
+                <p className="mt-0.5 break-all text-sm text-muted">
+                  @{profile.username.trim()}
                 </p>
               )}
-              <p className="mt-0.5 truncate font-mono text-xs text-muted">
-                {shortenAddress(walletAddress, 6)}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="break-all font-mono text-xs text-muted">
+                  {shortenAddress(walletAddress, 6)}
+                </p>
+                {showCopyWallet && (
+                  <button
+                    type="button"
+                    onClick={handleCopyWallet}
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-surface-elevated px-2 py-1 text-xs text-muted transition-colors hover:border-accent/50 hover:text-white"
+                    aria-label="Copy wallet address"
+                    title="Copy wallet address"
+                  >
+                    <CopyIcon className="h-3.5 w-3.5" />
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
             <Link
               href="/dashboard/create"
               className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
@@ -94,7 +129,7 @@ export default function DashboardProfileSummary({
               Create New Listing
             </Link>
             <Link
-              href={`/shop/${shopSlug}`}
+              href={shopHref}
               className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-sm font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
             >
               View Shop

@@ -18,6 +18,7 @@ export interface User {
   total_sales: number;
   total_volume: number;
   average_rating: number;
+  show_copy_wallet: boolean;
 }
 
 export interface Auction {

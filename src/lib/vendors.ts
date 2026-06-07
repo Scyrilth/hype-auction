@@ -26,6 +26,7 @@ function parseUser(row: Record<string, unknown>): User {
     total_sales: Number(row.total_sales ?? 0),
     total_volume: Number(row.total_volume ?? 0),
     average_rating: Number(row.average_rating ?? 0),
+    show_copy_wallet: row.show_copy_wallet !== false,
   };
 }
 
@@ -208,6 +209,7 @@ export interface VendorSettingsInput {
   instagramHandle?: string;
   isVendor?: boolean;
   username?: string;
+  showCopyWallet?: boolean;
 }
 
 export async function updateVendorSettings(
@@ -228,6 +230,7 @@ export async function updateVendorSettings(
         social_instagram: normalizeSocialHandle(settings.instagramHandle ?? ""),
         is_vendor: settings.isVendor ?? true,
         username: settings.username?.trim() || null,
+        show_copy_wallet: settings.showCopyWallet ?? true,
       },
       { onConflict: "wallet_address" }
     )

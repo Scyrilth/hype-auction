@@ -36,6 +36,7 @@ export default function VendorSettingsForm() {
   const [twitterHandle, setTwitterHandle] = useState("");
   const [instagramHandle, setInstagramHandle] = useState("");
   const [isVendor, setIsVendor] = useState(false);
+  const [showCopyWallet, setShowCopyWallet] = useState(true);
 
   useEffect(() => {
     if (!publicKey) return;
@@ -59,6 +60,7 @@ export default function VendorSettingsForm() {
         setTwitterHandle(displaySocialHandle(data.social_twitter));
         setInstagramHandle(displaySocialHandle(data.social_instagram));
         setIsVendor(data.is_vendor);
+        setShowCopyWallet(data.show_copy_wallet ?? true);
       } catch (error) {
         logSupabaseError("VendorSettingsForm.load", error);
         showToast(getErrorMessage(error), "error");
@@ -94,6 +96,7 @@ export default function VendorSettingsForm() {
         twitterHandle,
         instagramHandle,
         isVendor,
+        showCopyWallet,
       });
 
       setProfile(updated);
@@ -114,7 +117,8 @@ export default function VendorSettingsForm() {
     );
   }
 
-  const shopSlug = profile?.username ?? publicKey?.toBase58();
+  const shopSlug =
+    profile?.username?.trim() || publicKey?.toBase58() || "";
 
   return (
     <form
@@ -257,6 +261,21 @@ export default function VendorSettingsForm() {
       </div>
 
       <p className="text-xs text-muted">OAuth verification coming soon</p>
+
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
+        <input
+          type="checkbox"
+          checked={showCopyWallet}
+          onChange={(e) => setShowCopyWallet(e.target.checked)}
+          className="h-4 w-4 rounded border-border accent-accent"
+        />
+        <div>
+          <p className="text-sm font-medium text-white">Show copy wallet button</p>
+          <p className="text-xs text-muted">
+            Display a copy button next to your wallet on the dashboard
+          </p>
+        </div>
+      </label>
 
       <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
         <input

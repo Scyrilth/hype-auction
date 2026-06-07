@@ -4,6 +4,7 @@ import type {
   User,
 } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
+import { upsertUser } from "@/lib/users";
 import { getVendorReviews, getVendorSettings } from "@/lib/vendors";
 
 export interface SellerAuctionWithStats extends Auction {
@@ -145,18 +146,21 @@ function enrichAuctions(
 export async function getSellerDashboardData(
   sellerWallet: string
 ): Promise<SellerDashboardData> {
-  const profile = await getVendorSettings(sellerWallet);
+  const wallet = sellerWallet.trim();
+
+  await upsertUser(wallet);
+  const profile = await getVendorSettings(wallet);
 
   const [
     { data: auctionRows, error: auctionsError },
     { data: bidRows, error: bidsError },
-    { data: followRows, error: followsError },
+    { data: followRows },
     reviews,
   ] = await Promise.all([
     supabase
       .from("auctions")
       .select("*")
-      .eq("seller_wallet", sellerWallet)
+      .eq("seller_wallet", wallet)
       .order("created_at", { ascending: false }),
     supabase
       .from("bids")
@@ -166,15 +170,14 @@ export async function getSellerDashboardData(
     supabase
       .from("follows")
       .select("follower_wallet, created_at")
-      .eq("following_wallet", sellerWallet)
+      .eq("following_wallet", wallet)
       .order("created_at", { ascending: false })
       .limit(20),
-    getVendorReviews(sellerWallet),
+    getVendorReviews(wallet),
   ]);
 
   if (auctionsError) throw auctionsError;
   if (bidsError) throw bidsError;
-  if (followsError) throw followsError;
 
   const auctions = (auctionRows ?? []).map((row) =>
     parseAuctionRow(row as Record<string, unknown>)
@@ -188,15 +191,13 @@ export async function getSellerDashboardData(
   ]);
 
   const enriched = enrichAuctions(auctions, bidCounts, winners);
-  const now = Date.now();
 
-  const activeAuctions = enriched.filter(
-    (a) => a.status === "live" && new Date(a.end_time).getTime() > now
-  );
+  const activeAuctions = enriched.filter((a) => a.status === "live");
   const pastAuctions = enriched.filter(
     (a) =>
       a.status === "ended" ||
-      (a.status === "live" && new Date(a.end_time).getTime() <= now)
+      a.status === "cancelled" ||
+      a.status === "draft"
   );
 
   const bidsReceived: SellerBidRow[] = (bidRows ?? [])
@@ -252,7 +253,7 @@ export async function getSellerDashboardData(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  const shopSlug = profile?.username ?? sellerWallet;
+  const shopSlug = profile?.username?.trim() || wallet;
 
   return {
     profile,

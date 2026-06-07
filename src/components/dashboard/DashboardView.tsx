@@ -67,7 +67,6 @@ export default function DashboardView() {
     <div className="mx-auto max-w-6xl space-y-6">
       <DashboardProfileSummary
         profile={data.profile}
-        shopSlug={data.shopSlug}
         walletAddress={publicKey.toBase58()}
         stats={data.stats}
       />
