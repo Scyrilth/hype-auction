@@ -30,6 +30,8 @@ export const COUNTRIES = [
   "Taiwan",
   "Thailand",
   "Malaysia",
+  "Maldives",
+  "Mali",
   "Indonesia",
   "South Africa",
   "Argentina",
