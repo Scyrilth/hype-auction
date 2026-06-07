@@ -5,13 +5,18 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import AddCollectionItemModal from "@/components/collections/AddCollectionItemModal";
 import CollectionItemCard from "@/components/collections/CollectionItemCard";
 import FollowButton from "@/components/shop/FollowButton";
 import BackButton from "@/components/ui/BackButton";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
-import type { CollectionComment, CollectionDetail } from "@/lib/collections";
+import type {
+  CollectionComment,
+  CollectionDetail,
+  CollectionItem,
+} from "@/lib/collections";
 import {
   addCollectionComment,
   getCollectionById,
@@ -46,6 +51,7 @@ export default function CollectionDetailView({
   const [commentText, setCommentText] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
   const [viewsIncremented, setViewsIncremented] = useState(false);
+  const [addItemOpen, setAddItemOpen] = useState(false);
 
   const loadCollection = useCallback(async () => {
     setLoading(true);
@@ -175,6 +181,18 @@ export default function CollectionDetailView({
     } finally {
       setLikeLoading(false);
     }
+  };
+
+  const handleItemAdded = (item: CollectionItem) => {
+    setCollection((current) =>
+      current
+        ? {
+            ...current,
+            items: [...current.items, item],
+            item_count: current.item_count + 1,
+          }
+        : current
+    );
   };
 
   const handleComment = async (event: React.FormEvent) => {
@@ -350,6 +368,16 @@ export default function CollectionDetailView({
             {collection.liked_by_viewer ? "Liked" : "Like"}
           </button>
         </div>
+
+        {isOwner && wallet && (
+          <button
+            type="button"
+            onClick={() => setAddItemOpen(true)}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+          >
+            ＋ Add Item
+          </button>
+        )}
       </div>
 
       {collection.items.length === 0 ? (
@@ -362,6 +390,16 @@ export default function CollectionDetailView({
             <CollectionItemCard key={item.id} item={item} />
           ))}
         </div>
+      )}
+
+      {isOwner && wallet && (
+        <AddCollectionItemModal
+          open={addItemOpen}
+          onClose={() => setAddItemOpen(false)}
+          collectionId={collectionId}
+          wallet={wallet}
+          onItemAdded={handleItemAdded}
+        />
       )}
 
       {showComments && (
