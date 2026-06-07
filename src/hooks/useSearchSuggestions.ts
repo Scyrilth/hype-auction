@@ -8,6 +8,7 @@ import {
   type AuctionSuggestionSource,
   type SuggestionGroupOrder,
 } from "@/lib/vendor-suggestions";
+import { auctionMatchesSearchQuery } from "@/lib/auction-search";
 import { normalizeSearchQuery } from "@/lib/search";
 import { resolveCategoryLabels } from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
@@ -44,20 +45,36 @@ async function fetchMatchingAuctions(
   const requests = [
     supabase
       .from("auctions")
-      .select("id, title, category, seller_wallet, current_bid, status, end_time")
-      .or(`title.ilike.%${q}%,category.ilike.%${q}%`)
-      .limit(20),
+      .select(
+        "id, title, description, condition, category, item_details, seller_wallet, current_bid, status, end_time"
+      )
+      .or(
+        `title.ilike.%${q}%,category.ilike.%${q}%,description.ilike.%${q}%,condition.ilike.%${q}%`
+      )
+      .limit(40),
   ];
 
   if (resolvedLabels.length) {
     requests.push(
       supabase
         .from("auctions")
-        .select("id, title, category, seller_wallet, current_bid, status, end_time")
+        .select(
+          "id, title, description, condition, category, item_details, seller_wallet, current_bid, status, end_time"
+        )
         .in("category", resolvedLabels)
         .limit(20)
     );
   }
+
+  requests.push(
+    supabase
+      .from("auctions")
+      .select(
+        "id, title, description, condition, category, item_details, seller_wallet, current_bid, status, end_time"
+      )
+      .not("item_details", "eq", "{}")
+      .limit(60)
+  );
 
   const results = await Promise.all(
     requests.map((request) =>
@@ -80,19 +97,30 @@ async function fetchMatchingAuctions(
   const auctionIds = [...rowsById.keys()];
   const bidCounts = await fetchBidCounts(auctionIds);
 
-  return auctionIds.map((id) => {
-    const row = rowsById.get(id)!;
-    return {
-      id,
-      title: row.title as string,
-      category: (row.category as string | null) ?? null,
-      seller_wallet: row.seller_wallet as string,
-      current_bid: Number(row.current_bid),
-      status: row.status as string,
-      end_time: row.end_time as string,
-      bid_count: bidCounts.get(id) ?? 0,
-    };
-  });
+  return auctionIds
+    .map((id) => {
+      const row = rowsById.get(id)!;
+      const itemDetails = row.item_details;
+      return {
+        id,
+        title: row.title as string,
+        description: (row.description as string | null) ?? null,
+        condition: (row.condition as string | null) ?? null,
+        category: (row.category as string | null) ?? null,
+        item_details:
+          itemDetails &&
+          typeof itemDetails === "object" &&
+          !Array.isArray(itemDetails)
+            ? (itemDetails as Record<string, string>)
+            : {},
+        seller_wallet: row.seller_wallet as string,
+        current_bid: Number(row.current_bid),
+        status: row.status as string,
+        end_time: row.end_time as string,
+        bid_count: bidCounts.get(id) ?? 0,
+      } satisfies AuctionSuggestionSource;
+    })
+    .filter((auction) => auctionMatchesSearchQuery(auction, query));
 }
 
 export function useSearchSuggestions({

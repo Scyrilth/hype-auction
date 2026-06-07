@@ -1,17 +1,20 @@
 import type { VendorDirectoryEntry } from "@/lib/vendors";
 import {
-  auctionCategoryMatchesQuery,
   countVendorsForCategoryLabel,
   findMatchingCategories,
   vendorCategoriesMatchQuery,
 } from "@/lib/categories";
+import { auctionMatchesSearchQuery } from "@/lib/auction-search";
 import { normalizeSearchQuery } from "@/lib/search";
 import { shortenAddress } from "@/lib/format";
 
 export type AuctionSuggestionSource = {
   id: string;
   title: string;
+  description?: string | null;
+  condition?: string | null;
   category: string | null;
+  item_details?: Record<string, string>;
   seller_wallet: string;
   current_bid: number;
   status: string;
@@ -80,12 +83,13 @@ function isAuctionLive(status: string, endTime: string) {
 }
 
 export function matchesAuctionSearchTerm(
-  auction: Pick<AuctionSuggestionSource, "title" | "category">,
+  auction: Pick<
+    AuctionSuggestionSource,
+    "title" | "description" | "condition" | "category" | "item_details"
+  >,
   query: string
 ): boolean {
-  const q = normalizeSearchQuery(query);
-  if (auction.title.toLowerCase().includes(q)) return true;
-  return auctionCategoryMatchesQuery(auction.category, query);
+  return auctionMatchesSearchQuery(auction, query);
 }
 
 export function buildVendorSuggestions(

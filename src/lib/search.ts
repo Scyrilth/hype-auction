@@ -1,6 +1,6 @@
 import type { Auction } from "@/lib/database.types";
+import { auctionMatchesSearchQuery, itemDetailsMatchQuery } from "@/lib/auction-search";
 import {
-  auctionCategoryMatchesQuery,
   findMatchingCategories,
   resolveCategoryLabels,
   vendorCategoriesMatchQuery,
@@ -56,13 +56,15 @@ export async function getSellerWalletsWithMatchingAuctionTitles(
   const resolvedLabels = resolveCategoryLabels(query);
   const wallets = new Set<string>();
 
-  const requests = [
+  const directRequests = [
     supabase.from("auctions").select("seller_wallet, title").ilike("title", `%${q}%`),
     supabase.from("auctions").select("seller_wallet, category").ilike("category", `%${q}%`),
+    supabase.from("auctions").select("seller_wallet, description").ilike("description", `%${q}%`),
+    supabase.from("auctions").select("seller_wallet, condition").ilike("condition", `%${q}%`),
   ];
 
   if (resolvedLabels.length) {
-    requests.push(
+    directRequests.push(
       supabase
         .from("auctions")
         .select("seller_wallet, category")
@@ -70,13 +72,34 @@ export async function getSellerWalletsWithMatchingAuctionTitles(
     );
   }
 
-  const results = await Promise.all(requests);
+  const directResults = await Promise.all(directRequests);
 
-  for (const { data, error } of results) {
+  for (const { data, error } of directResults) {
     if (error) throw error;
     for (const row of data ?? []) {
       const wallet = row.seller_wallet as string;
       if (wallet) wallets.add(wallet);
+    }
+  }
+
+  const { data: detailRows, error: detailError } = await supabase
+    .from("auctions")
+    .select("seller_wallet, item_details")
+    .not("item_details", "eq", "{}");
+
+  if (detailError) throw detailError;
+
+  for (const row of detailRows ?? []) {
+    const wallet = row.seller_wallet as string;
+    const itemDetails = row.item_details;
+    if (
+      wallet &&
+      itemDetails &&
+      typeof itemDetails === "object" &&
+      !Array.isArray(itemDetails) &&
+      itemDetailsMatchQuery(itemDetails as Record<string, string>, q)
+    ) {
+      wallets.add(wallet);
     }
   }
 
@@ -165,11 +188,7 @@ function parseAuction(row: Record<string, unknown>): Auction {
 }
 
 function matchesAuction(auction: Auction, q: string) {
-  return (
-    auction.title.toLowerCase().includes(q) ||
-    auction.description?.toLowerCase().includes(q) ||
-    auctionCategoryMatchesQuery(auction.category, q)
-  );
+  return auctionMatchesSearchQuery(auction, q);
 }
 
 function toAuctionHit(
