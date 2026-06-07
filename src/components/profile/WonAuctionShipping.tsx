@@ -9,13 +9,18 @@ import TrackingCopyButton from "@/components/ui/TrackingCopyButton";
 import { useToast } from "@/components/ui/Toast";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
-import { confirmReceipt, getAuctionThreadId } from "@/lib/messages";
+import {
+  confirmReceipt,
+  createAuctionThread,
+  getAuctionThreadId,
+} from "@/lib/messages";
 
 export default function WonAuctionShipping({ auction }: { auction: Auction }) {
   const router = useRouter();
   const { publicKey } = useWallet();
   const { showToast } = useToast();
   const [confirming, setConfirming] = useState(false);
+  const [messaging, setMessaging] = useState(false);
   const [localStatus, setLocalStatus] = useState(auction.shipping_status);
 
   const wallet = publicKey?.toBase58();
@@ -23,6 +28,24 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
     localStatus === "shipped" || localStatus === "delivered"
       ? localStatus
       : "pending";
+
+  const handleMessageSeller = async () => {
+    if (!wallet || messaging) return;
+    setMessaging(true);
+    try {
+      const thread = await createAuctionThread(
+        auction.id,
+        wallet,
+        auction.seller_wallet,
+        auction.title
+      );
+      router.push(`/messages/${thread.id}`);
+    } catch (error) {
+      showToast(getErrorMessage(error), "error");
+    } finally {
+      setMessaging(false);
+    }
+  };
 
   const handleConfirmReceipt = async () => {
     if (!wallet || confirming) return;
@@ -71,14 +94,24 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
               </>
             )}
           </div>
-          <button
-            type="button"
-            disabled={confirming}
-            onClick={handleConfirmReceipt}
-            className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
-          >
-            {confirming ? "Confirming..." : "Confirm Receipt"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={confirming || messaging}
+              onClick={handleConfirmReceipt}
+              className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+            >
+              {confirming ? "Confirming..." : "Confirm Receipt"}
+            </button>
+            <button
+              type="button"
+              disabled={confirming || messaging}
+              onClick={handleMessageSeller}
+              className="rounded-full border border-border bg-surface-elevated px-4 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
+            >
+              {messaging ? "Opening..." : "Message Seller"}
+            </button>
+          </div>
         </div>
       )}
 
