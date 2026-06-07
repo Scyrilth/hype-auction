@@ -139,6 +139,7 @@ export interface GlobalSearchResults {
 }
 
 function parseAuction(row: Record<string, unknown>): Auction {
+  const itemDetails = row.item_details;
   return {
     id: row.id as string,
     title: row.title as string,
@@ -150,6 +151,14 @@ function parseAuction(row: Record<string, unknown>): Auction {
     end_time: row.end_time as string,
     status: row.status as Auction["status"],
     category: (row.category as string | null) ?? null,
+    condition: (row.condition as string | null) ?? null,
+    additional_images: Array.isArray(row.additional_images)
+      ? (row.additional_images as string[])
+      : [],
+    item_details:
+      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
+        ? (itemDetails as Record<string, string>)
+        : {},
     created_at: row.created_at as string,
   };
 }

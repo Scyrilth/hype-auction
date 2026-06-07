@@ -1,34 +1,87 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
-import CreateAuctionForm from "@/components/dashboard/CreateAuctionForm";
-import SellerAuctionsList from "@/components/dashboard/SellerAuctionsList";
+import DashboardProfileSummary from "@/components/dashboard/DashboardProfileSummary";
+import DashboardTabs, {
+  DashboardActivityFeed,
+} from "@/components/dashboard/DashboardTabs";
+import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { getSellerDashboardData, type SellerDashboardData } from "@/lib/dashboard";
+
+const emptyData: SellerDashboardData = {
+  profile: null,
+  shopSlug: "",
+  stats: {
+    totalListings: 0,
+    activeAuctions: 0,
+    totalBidsReceived: 0,
+    totalVolume: 0,
+    followers: 0,
+    averageRating: 0,
+  },
+  activeAuctions: [],
+  pastAuctions: [],
+  bidsReceived: [],
+  reviews: [],
+  activity: [],
+};
+
 export default function DashboardView() {
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { publicKey } = useWallet();
+  const [data, setData] = useState<SellerDashboardData>(emptyData);
+  const [loading, setLoading] = useState(true);
 
-  const handleCreated = () => {
-    setRefreshKey((k) => k + 1);
-  };
+  const loadDashboard = useCallback(async () => {
+    if (!publicKey) return;
+
+    setLoading(true);
+    try {
+      const dashboard = await getSellerDashboardData(publicKey.toBase58());
+      setData(dashboard);
+    } catch (error) {
+      logSupabaseError("DashboardView", error);
+      console.error(getErrorMessage(error));
+      setData(emptyData);
+    } finally {
+      setLoading(false);
+    }
+  }, [publicKey]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
+
+  if (!publicKey) return null;
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl py-12 text-center text-sm text-muted">
+        Loading dashboard...
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Seller Dashboard</h1>
-          <p className="mt-1 text-sm text-muted">
-            Create listings and manage your live auctions.
-          </p>
-          <Link
-            href="/dashboard/settings"
-            className="mt-2 inline-block text-sm text-accent hover:underline"
-          >
-            Customize your shop →
-          </Link>
-        </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <DashboardProfileSummary
+        profile={data.profile}
+        shopSlug={data.shopSlug}
+        walletAddress={publicKey.toBase58()}
+        stats={data.stats}
+      />
 
-      <CreateAuctionForm onCreated={handleCreated} />
-      <SellerAuctionsList refreshKey={refreshKey} />
+      <DashboardTabs
+        activeAuctions={data.activeAuctions}
+        pastAuctions={data.pastAuctions}
+        bidsReceived={data.bidsReceived}
+        reviews={data.reviews}
+        shopSlug={data.shopSlug}
+        onRefresh={loadDashboard}
+      />
+
+      <DashboardActivityFeed activity={data.activity} />
     </div>
   );
 }

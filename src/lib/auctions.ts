@@ -7,23 +7,28 @@ export interface LiveAuctionView {
   topBidder: string | null;
 }
 
-function parseAuction(row: {
-  id: string;
-  title: string;
-  description: string | null;
-  image_url: string | null;
-  seller_wallet: string;
-  current_bid: number | string;
-  start_price: number | string;
-  end_time: string;
-  status: Auction["status"];
-  category: string | null;
-  created_at: string;
-}): Auction {
+function parseAuction(row: Record<string, unknown>): Auction {
+  const itemDetails = row.item_details;
   return {
-    ...row,
+    id: row.id as string,
+    title: row.title as string,
+    description: (row.description as string | null) ?? null,
+    image_url: (row.image_url as string | null) ?? null,
+    seller_wallet: row.seller_wallet as string,
     current_bid: Number(row.current_bid),
     start_price: Number(row.start_price),
+    end_time: row.end_time as string,
+    status: row.status as Auction["status"],
+    category: (row.category as string | null) ?? null,
+    condition: (row.condition as string | null) ?? null,
+    additional_images: Array.isArray(row.additional_images)
+      ? (row.additional_images as string[])
+      : [],
+    item_details:
+      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
+        ? (itemDetails as Record<string, string>)
+        : {},
+    created_at: row.created_at as string,
   };
 }
 
@@ -36,7 +41,7 @@ export async function getAllLiveAuctions(): Promise<Auction[]> {
     .order("end_time", { ascending: true });
 
   if (error) throw error;
-  return (data ?? []).map(parseAuction);
+  return (data ?? []).map((row) => parseAuction(row as Record<string, unknown>));
 }
 
 async function getAuctionBidStats(auctionId: string) {
@@ -78,7 +83,7 @@ export async function getUpcomingAuctions(): Promise<Auction[]> {
     .limit(8);
 
   if (error) throw error;
-  return (data ?? []).map(parseAuction);
+  return (data ?? []).map((row) => parseAuction(row as Record<string, unknown>));
 }
 
 export async function getAuctionsPageData() {

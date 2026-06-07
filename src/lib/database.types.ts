@@ -31,6 +31,9 @@ export interface Auction {
   end_time: string;
   status: AuctionStatus;
   category: string | null;
+  condition: string | null;
+  additional_images: string[];
+  item_details: Record<string, string>;
   created_at: string;
 }
 
