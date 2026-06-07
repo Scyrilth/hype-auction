@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.collection_items (
   images TEXT[] DEFAULT '{}',
   notes TEXT,
   estimated_value_sol NUMERIC,
+  verification_url TEXT,
   acquisition_method TEXT DEFAULT 'other',
   item_details JSONB DEFAULT '{}',
   display_order INTEGER DEFAULT 0,

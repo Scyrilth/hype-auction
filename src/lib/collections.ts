@@ -44,6 +44,7 @@ export interface CollectionItem {
   images: string[];
   notes: string | null;
   estimated_value_sol: number | null;
+  verification_url: string | null;
   acquisition_method: string;
   item_details: Record<string, string>;
   display_order: number;
@@ -87,6 +88,7 @@ export type CollectionItemInput = {
   images?: string[];
   notes?: string | null;
   estimated_value_sol?: number | null;
+  verification_url?: string | null;
   acquisition_method?: string;
   item_details?: Record<string, string>;
   display_order?: number;
@@ -133,6 +135,7 @@ function parseCollectionItem(row: Record<string, unknown>): CollectionItem {
       row.estimated_value_sol === null || row.estimated_value_sol === undefined
         ? null
         : Number(row.estimated_value_sol),
+    verification_url: (row.verification_url as string | null) ?? null,
     acquisition_method: (row.acquisition_method as string) ?? "other",
     item_details:
       details && typeof details === "object" && !Array.isArray(details)
@@ -413,6 +416,7 @@ export async function addCollectionItem(
       images: itemData.images ?? [],
       notes: itemData.notes ?? null,
       estimated_value_sol: itemData.estimated_value_sol ?? null,
+      verification_url: itemData.verification_url?.trim() || null,
       acquisition_method: itemData.acquisition_method ?? "other",
       item_details: itemData.item_details ?? {},
       display_order: itemData.display_order ?? 0,

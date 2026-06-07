@@ -51,6 +51,7 @@ type AddItemFormState = {
   brand: string;
   images: string[];
   estimatedValue: string;
+  verificationUrl: string;
   acquisitionMethod: (typeof ACQUISITION_METHODS)[number]["value"];
   notes: string;
   itemDetails: ItemDetailRow[];
@@ -68,6 +69,7 @@ function createInitialForm(): AddItemFormState {
     brand: "",
     images: ["", "", "", ""],
     estimatedValue: "",
+    verificationUrl: "",
     acquisitionMethod: "other" as (typeof ACQUISITION_METHODS)[number]["value"],
     notes: "",
     itemDetails: [],
@@ -185,6 +187,7 @@ export default function AddCollectionItemModal({
           estimatedValue != null && !Number.isNaN(estimatedValue)
             ? estimatedValue
             : null,
+        verification_url: form.verificationUrl.trim() || null,
         acquisition_method: form.acquisitionMethod,
         item_details: itemDetails,
       });
@@ -449,6 +452,25 @@ export default function AddCollectionItemModal({
                 SOL
               </span>
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="item-verification-url" className={labelClass}>
+              Verify estimate (optional)
+            </label>
+            <input
+              id="item-verification-url"
+              type="url"
+              value={form.verificationUrl}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  verificationUrl: event.target.value,
+                }))
+              }
+              placeholder="Paste a link to a recent sale e.g. eBay, Heritage Auctions"
+              className={inputClass}
+            />
           </div>
 
           <div>

@@ -2,13 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AddCollectionItemModal from "@/components/collections/AddCollectionItemModal";
 import CollectionItemCard from "@/components/collections/CollectionItemCard";
 import FollowButton from "@/components/shop/FollowButton";
 import BackButton from "@/components/ui/BackButton";
+import FiatValue from "@/components/ui/FiatValue";
+import PortalInfoTooltip from "@/components/ui/PortalInfoTooltip";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
@@ -27,7 +29,7 @@ import {
 } from "@/lib/collections";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { isFollowing } from "@/lib/follows";
-import { displaySocialHandle, formatTimeAgo } from "@/lib/format";
+import { displaySocialHandle, formatSol, formatTimeAgo } from "@/lib/format";
 import { getProfileHref } from "@/lib/profile-links";
 
 export default function CollectionDetailView({
@@ -195,6 +197,19 @@ export default function CollectionDetailView({
     );
   };
 
+  const totalEstimatedValue = useMemo(
+    () =>
+      (collection?.items ?? []).reduce((sum, item) => {
+        if (item.estimated_value_sol != null && item.estimated_value_sol > 0) {
+          return sum + item.estimated_value_sol;
+        }
+        return sum;
+      }, 0),
+    [collection?.items]
+  );
+
+  const hasEstimatedValues = totalEstimatedValue > 0;
+
   const handleComment = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!connected || !wallet) {
@@ -350,6 +365,19 @@ export default function CollectionDetailView({
             <i className="ti ti-eye text-purple-300" />
             {collection.view_count} views
           </span>
+          {hasEstimatedValues && (
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              <i className="ti ti-coins text-purple-300" />
+              <span className="font-medium text-white">
+                Est. {formatSol(totalEstimatedValue)}
+              </span>
+              <FiatValue solAmount={totalEstimatedValue} showTooltip={false} />
+              <PortalInfoTooltip
+                multiline
+                text="Estimated total value is based on owner-provided estimates and may not reflect actual market value. Values are not verified by Hype Auction."
+              />
+            </span>
+          )}
           <button
             type="button"
             onClick={handleLike}
