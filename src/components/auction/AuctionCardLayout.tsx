@@ -1,6 +1,54 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 
+import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
+
+export function hasAuctionImageUrl(
+  imageUrl: string | null | undefined
+): boolean {
+  return Boolean(imageUrl?.trim());
+}
+
+export function AuctionCardImage({
+  imageUrl,
+  title,
+  category,
+  auction,
+  imageClassName = "h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105",
+}: {
+  imageUrl: string | null | undefined;
+  title: string;
+  category?: string | null;
+  auction: { category: string | null; title: string };
+  imageClassName?: string;
+}) {
+  if (!hasAuctionImageUrl(imageUrl)) {
+    return (
+      <div
+        className="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/55 via-purple-950 to-[#120a24] px-4"
+        aria-hidden
+      >
+        <span className="text-center text-xl font-semibold leading-tight text-white">
+          {category?.trim() || "Auction"}
+        </span>
+      </div>
+    );
+  }
+
+  const imageSrc = resolveAuctionImageUrl(imageUrl, auction);
+
+  return (
+    <Image
+      src={imageSrc}
+      alt={title}
+      width={800}
+      height={192}
+      className={imageClassName}
+      unoptimized
+    />
+  );
+}
 
 /** Minimum width for carousel/grid auction cards — keeps price + timer on one line. */
 export const AUCTION_CARD_MIN_WIDTH = "11.5rem";

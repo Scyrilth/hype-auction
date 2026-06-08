@@ -1,17 +1,16 @@
-import Image from "next/image";
 import Link from "next/link";
 
 import {
   AUCTION_CARD_MIN_WIDTH,
   AuctionCardBidPrice,
   AuctionCardContent,
+  AuctionCardImage,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
-import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 
 export default function TrendingAuctionCard({
@@ -27,8 +26,6 @@ export default function TrendingAuctionCard({
 }) {
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
-  const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
-
   return (
     <Link
       href={`/auction/${auction.id}`}
@@ -36,13 +33,11 @@ export default function TrendingAuctionCard({
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
       <div className="relative w-full h-48 overflow-hidden bg-surface-elevated">
-        <Image
-          src={imageSrc}
-          alt={auction.title}
-          width={800}
-          height={192}
-          className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-          unoptimized
+        <AuctionCardImage
+          imageUrl={auction.image_url}
+          title={auction.title}
+          category={auction.category}
+          auction={auction}
         />
         <WatchlistHeart auctionId={auction.id} />
         {bidCount24h > 0 && (

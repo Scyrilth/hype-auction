@@ -10,9 +10,13 @@ import WalletNav from "@/components/WalletNav";
 import NotificationTray from "@/components/notifications/NotificationTray";
 import SearchSuggestionsDropdown from "@/components/search/SearchSuggestionsDropdown";
 import { SearchIcon } from "@/components/icons";
+import UserAvatar from "@/components/ui/UserAvatar";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useSidebarUser } from "@/hooks/useSidebarUser";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { useSearchSuggestions } from "@/hooks/useSearchSuggestions";
+import { shortenAddress } from "@/lib/format";
+import { getProfileHref } from "@/lib/profile-links";
 import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 
 const navLinks = [
@@ -27,13 +31,12 @@ const navLinks = [
 export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
-  const { connected, publicKey } = useWallet();
+  const { connected } = useWallet();
+  const { wallet, username, avatarUrl } = useSidebarUser();
   const { count: unreadMessages } = useUnreadMessageCount();
   const { notifications, unreadCount, refresh } = useNotifications();
   const [query, setQuery] = useState("");
   const [trayOpen, setTrayOpen] = useState(false);
-
-  const wallet = publicKey?.toBase58();
 
   const { queryReady, suggestionGroups, flatSuggestions } = useSearchSuggestions(
     {
@@ -130,21 +133,6 @@ export default function TopNav() {
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <WalletNav />
 
-        {connected && (
-          <Link
-            href="/messages"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
-            aria-label="Messages"
-          >
-            <i className="ti ti-mail text-[20px] leading-none" />
-            {unreadMessages > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-live-red px-1 text-[10px] font-bold text-white">
-                {unreadMessages > 9 ? "9+" : unreadMessages}
-              </span>
-            )}
-          </Link>
-        )}
-
         {connected && wallet && (
           <div className="relative">
             <button
@@ -173,7 +161,40 @@ export default function TopNav() {
           </div>
         )}
 
-        <div className="h-9 w-9 overflow-hidden rounded-full border-2 border-accent bg-gradient-to-br from-purple-500 to-indigo-600" />
+        {connected && (
+          <Link
+            href="/messages"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
+            aria-label="Messages"
+          >
+            <i className="ti ti-mail text-[20px] leading-none" />
+            {unreadMessages > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-live-red px-1 text-[10px] font-bold text-white">
+                {unreadMessages > 9 ? "9+" : unreadMessages}
+              </span>
+            )}
+          </Link>
+        )}
+
+        {connected && wallet && (
+          <Link
+            href={getProfileHref(username, wallet)}
+            className="hidden items-center gap-2.5 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-surface-elevated sm:flex"
+            aria-label="My profile"
+          >
+            <UserAvatar
+              walletAddress={wallet}
+              avatarUrl={avatarUrl}
+              alt={username ?? "My profile"}
+              size="xs"
+              className="h-9 w-9 border-2 border-accent"
+            />
+            <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-sm font-semibold uppercase tracking-widest text-transparent">
+              {username?.replace(/^@+/, "").trim().toUpperCase() ||
+                shortenAddress(wallet).toUpperCase()}
+            </span>
+          </Link>
+        )}
       </div>
     </header>
   );

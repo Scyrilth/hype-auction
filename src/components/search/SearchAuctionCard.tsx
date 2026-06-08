@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 
 import {
@@ -8,13 +7,13 @@ import {
   AuctionCardBidPrice,
   AuctionCardCategorySlot,
   AuctionCardContent,
+  AuctionCardImage,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import FiatValue from "@/components/ui/FiatValue";
-import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { AuctionSearchHit } from "@/lib/search";
 
 export default function SearchAuctionCard({
@@ -24,11 +23,6 @@ export default function SearchAuctionCard({
 }) {
   const displayBid =
     auction.currentBid > 0 ? auction.currentBid : auction.startPrice;
-  const imageSrc = resolveAuctionImageUrl(auction.imageUrl, {
-    title: auction.title,
-    category: auction.category,
-  });
-
   return (
     <Link
       href={`/auction/${auction.id}`}
@@ -36,13 +30,14 @@ export default function SearchAuctionCard({
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
       <div className="relative w-full h-48 overflow-hidden bg-surface-elevated">
-        <Image
-          src={imageSrc}
-          alt={auction.title}
-          width={800}
-          height={192}
-          className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-          unoptimized
+        <AuctionCardImage
+          imageUrl={auction.imageUrl}
+          title={auction.title}
+          category={auction.category}
+          auction={{
+            title: auction.title,
+            category: auction.category,
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 

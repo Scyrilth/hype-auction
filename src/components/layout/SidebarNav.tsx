@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   ChevronDownIcon,
@@ -14,16 +14,10 @@ import {
   StarFilledIcon,
   StoreIcon,
 } from "@/components/icons";
-import UserAvatar from "@/components/ui/UserAvatar";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
-import { getProfileHref } from "@/lib/profile-links";
+import { getProfileSlug } from "@/lib/profile-links";
 
 const MY_SHOP_STORAGE_KEY = "hype-sidebar-my-shop-open";
-
-const shopSubItems = [
-  { href: "/dashboard", label: "Dashboard", icon: DashboardLayoutIcon },
-  { href: "/dashboard/settings", label: "Shop Settings", icon: SettingsIcon },
-] as const;
 
 function navLinkClass(active: boolean) {
   return `flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition-colors ${
@@ -47,7 +41,21 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
   const { connected, wallet, username, isVendor, loading } = useSidebarUser();
   const showBecomeVendorCard = connected && !loading && !isVendor;
 
-  const isShopRoute = currentPath.startsWith("/dashboard");
+  const shopSlug = wallet ? getProfileSlug(username, wallet) : null;
+  const shopSettingsHref = shopSlug ? `/shop/${shopSlug}` : "/dashboard/settings";
+
+  const shopSubItems = useMemo(
+    () => [
+      { href: "/dashboard", label: "Dashboard", icon: DashboardLayoutIcon },
+      { href: shopSettingsHref, label: "Shop Settings", icon: SettingsIcon },
+      { href: "/dashboard/create", label: "Create Listing", icon: StoreIcon },
+    ],
+    [shopSettingsHref]
+  );
+
+  const isShopRoute =
+    currentPath.startsWith("/dashboard") ||
+    (shopSlug !== null && currentPath === shopSettingsHref);
 
   const [shopOpen, setShopOpen] = useState(false);
 
@@ -75,12 +83,11 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
     }
   }, [isShopRoute]);
 
-  const profileHref = wallet ? getProfileHref(username, wallet) : "/";
-  const isProfileActive =
-    !!wallet &&
-    (currentPath === profileHref || currentPath.startsWith(`${profileHref}/`));
   const isHomeActive = currentPath === "/";
   const isShopSectionActive = isShopRoute;
+  const isMyCollectionsActive =
+    currentPath === "/collections/manage" ||
+    currentPath.startsWith("/collections/manage/");
 
   return (
     <aside className="hidden h-full w-[13%] min-w-44 max-w-56 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 md:flex lg:px-5 lg:py-6">
@@ -97,44 +104,10 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
       </div>
 
       <nav className="mb-4 flex flex-1 flex-col gap-1 border-b border-border pb-4">
-        {connected && wallet && (
-          <Link href={profileHref} className={navLinkClass(isProfileActive)}>
-            <UserAvatar
-              walletAddress={wallet}
-              alt="My profile"
-              size="xs"
-              className="border border-border"
-            />
-            <span>My Profile</span>
-          </Link>
-        )}
-
         <Link href="/" className={navLinkClass(isHomeActive)}>
           <HomeIcon className="h-4 w-4 shrink-0" />
           <span>Home</span>
         </Link>
-
-        <Link
-          href="/collections"
-          className={navLinkClass(
-            currentPath === "/collections" ||
-              (currentPath.startsWith("/collections/") &&
-                !currentPath.startsWith("/collections/manage"))
-          )}
-        >
-          <i className="ti ti-stack-2 h-4 w-4 shrink-0 text-base leading-none" />
-          <span>Collections</span>
-        </Link>
-
-        {connected && wallet && (
-          <Link
-            href="/collections/manage"
-            className={subLinkClass(currentPath === "/collections/manage")}
-          >
-            <i className="ti ti-folder h-3.5 w-3.5 shrink-0 text-base leading-none" />
-            <span>My Collections</span>
-          </Link>
-        )}
 
         {connected && isVendor && (
           <div>
@@ -170,6 +143,16 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
               </div>
             )}
           </div>
+        )}
+
+        {connected && wallet && (
+          <Link
+            href="/collections/manage"
+            className={navLinkClass(isMyCollectionsActive)}
+          >
+            <i className="ti ti-stack-2 h-4 w-4 shrink-0 text-base leading-none" />
+            <span>My Collections</span>
+          </Link>
         )}
       </nav>
 

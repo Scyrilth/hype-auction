@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -11,6 +10,7 @@ import {
   AuctionCardBidPrice,
   AuctionCardCategorySlot,
   AuctionCardContent,
+  AuctionCardImage,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
@@ -22,8 +22,6 @@ import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { placeBid } from "@/lib/bids";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
-import { resolveAuctionImageUrl } from "@/lib/auction-images";
-
 export default function LiveAuctionCard({
   auction,
   bidCount,
@@ -44,8 +42,6 @@ export default function LiveAuctionCard({
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
   const nextBid = Math.round((displayBid + 0.1) * 100) / 100;
-  const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
-
   const handleBidNow = async () => {
     if (!connected || !publicKey) {
       try {
@@ -85,13 +81,12 @@ export default function LiveAuctionCard({
         className="flex w-full min-w-0 flex-1 flex-col overflow-hidden"
       >
         <div className="relative w-full h-48 overflow-hidden bg-surface-elevated">
-          <Image
-            src={imageSrc}
-            alt={auction.title}
-            width={800}
-            height={192}
-            className="h-full w-full object-cover object-center"
-            unoptimized
+          <AuctionCardImage
+            imageUrl={auction.image_url}
+            title={auction.title}
+            category={auction.category}
+            auction={auction}
+            imageClassName="h-full w-full object-cover object-center"
           />
           <WatchlistHeart auctionId={auction.id} />
         </div>

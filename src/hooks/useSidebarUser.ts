@@ -9,12 +9,14 @@ export function useSidebarUser() {
   const { publicKey, connected } = useWallet();
   const wallet = publicKey?.toBase58() ?? null;
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isVendor, setIsVendor] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!connected || !wallet) {
       setUsername(null);
+      setAvatarUrl(null);
       setIsVendor(false);
       setLoading(false);
       return;
@@ -27,12 +29,13 @@ export function useSidebarUser() {
       try {
         const { data } = await supabase
           .from("users")
-          .select("username, is_vendor")
+          .select("username, avatar_url, is_vendor")
           .eq("wallet_address", wallet)
           .maybeSingle();
 
         if (cancelled) return;
         setUsername((data?.username as string | null) ?? null);
+        setAvatarUrl((data?.avatar_url as string | null) ?? null);
         setIsVendor(Boolean(data?.is_vendor));
       } finally {
         if (!cancelled) setLoading(false);
@@ -44,5 +47,5 @@ export function useSidebarUser() {
     };
   }, [connected, wallet]);
 
-  return { connected, wallet, username, isVendor, loading };
+  return { connected, wallet, username, avatarUrl, isVendor, loading };
 }
