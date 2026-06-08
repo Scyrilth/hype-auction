@@ -8,8 +8,10 @@ import type { ItemDetailRow } from "@/components/dashboard/ListingPreview";
 import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
 import { getCategoryLabels } from "@/lib/categories";
+import { getCategoryFields } from "@/lib/category-fields";
 import {
   addCollectionItem,
+  updateCollectionItem,
   type CollectionItem,
 } from "@/lib/collections";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
@@ -57,6 +59,43 @@ type AddItemFormState = {
   itemDetails: ItemDetailRow[];
 };
 
+function findGradeId(company: GradingCompany, gradeValue: string): string {
+  const options = GRADES_BY_COMPANY[company] ?? [];
+  const match = options.find((option) => option.grade === gradeValue);
+  return match?.id ?? options[0]?.id ?? "";
+}
+
+function itemDetailsToRows(
+  category: string,
+  details: Record<string, string>
+): ItemDetailRow[] {
+  const filtered = filterCustomItemDetails(details);
+  const suggestedFields = getCategoryFields(category);
+  const suggestedMap = new Map(suggestedFields.map((field) => [field.key, field]));
+
+  return Object.entries(filtered).map(([key, value]) => {
+    const field = suggestedMap.get(key);
+    if (field) {
+      return {
+        key: field.key,
+        label: field.label,
+        value,
+        fieldType: field.type,
+        options: field.options,
+        unit: field.unit,
+        isCustom: false,
+      };
+    }
+    return { key, value, isCustom: true };
+  });
+}
+
+function imagesToSlots(images: string[]): string[] {
+  const slots = [...images];
+  while (slots.length < 4) slots.push("");
+  return slots.slice(0, 4);
+}
+
 function createInitialForm(): AddItemFormState {
   return {
     name: "",
@@ -76,22 +115,78 @@ function createInitialForm(): AddItemFormState {
   };
 }
 
+function formFromItem(item: CollectionItem): AddItemFormState {
+  const category = item.category ?? CATEGORY_OPTIONS[0];
+  const hasGrade = Boolean(item.grading_company && item.grade);
+  const gradingCompany = (item.grading_company as GradingCompany) ?? "PSA";
+  const acquisitionValues = ACQUISITION_METHODS.map((method) => method.value);
+  const acquisitionMethod = acquisitionValues.includes(
+    item.acquisition_method as (typeof ACQUISITION_METHODS)[number]["value"]
+  )
+    ? (item.acquisition_method as (typeof ACQUISITION_METHODS)[number]["value"])
+    : "other";
+
+  return {
+    name: item.name,
+    category,
+    condition: item.condition ?? AUCTION_CONDITIONS[0],
+    hasProfessionalGrade: hasGrade,
+    gradingCompany: GRADING_COMPANIES.some((c) => c.id === gradingCompany)
+      ? gradingCompany
+      : "PSA",
+    gradingGradeId: hasGrade
+      ? findGradeId(
+          GRADING_COMPANIES.some((c) => c.id === gradingCompany)
+            ? gradingCompany
+            : "PSA",
+          item.grade!
+        )
+      : GRADES_BY_COMPANY.PSA[0].id,
+    year: item.year != null ? String(item.year) : "",
+    brand: item.brand ?? "",
+    images: imagesToSlots(item.images),
+    estimatedValue:
+      item.estimated_value_sol != null ? String(item.estimated_value_sol) : "",
+    verificationUrl: item.verification_url ?? "",
+    acquisitionMethod,
+    notes: item.notes ?? "",
+    itemDetails: itemDetailsToRows(category, item.item_details),
+  };
+}
+
 export default function AddCollectionItemModal({
   open,
   onClose,
   collectionId,
   wallet,
+  mode = "add",
+  initialData,
   onItemAdded,
+  onItemUpdated,
 }: {
   open: boolean;
   onClose: () => void;
   collectionId: string;
   wallet: string;
-  onItemAdded: (item: CollectionItem) => void;
+  mode?: "add" | "edit";
+  initialData?: CollectionItem;
+  onItemAdded?: (item: CollectionItem) => void;
+  onItemUpdated?: (item: CollectionItem) => void;
 }) {
   const { showToast } = useToast();
+  const isEditMode = mode === "edit" && Boolean(initialData);
   const [form, setForm] = useState<AddItemFormState>(createInitialForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (isEditMode && initialData) {
+      setForm(formFromItem(initialData));
+    } else {
+      setForm(createInitialForm());
+    }
+  }, [open, isEditMode, initialData]);
 
   useEffect(() => {
     if (!open) return;
@@ -172,7 +267,7 @@ export default function AddCollectionItemModal({
         ? parseFloat(form.estimatedValue)
         : null;
 
-      const item = await addCollectionItem(collectionId, wallet, {
+      const payload = {
         name: trimmedName,
         category: form.category,
         condition: form.condition,
@@ -190,10 +285,18 @@ export default function AddCollectionItemModal({
         verification_url: form.verificationUrl.trim() || null,
         acquisition_method: form.acquisitionMethod,
         item_details: itemDetails,
-      });
+      };
 
-      showToast("Item added to collection!");
-      onItemAdded(item);
+      if (isEditMode && initialData) {
+        const item = await updateCollectionItem(initialData.id, wallet, payload);
+        showToast("Item updated!");
+        onItemUpdated?.(item);
+      } else {
+        const item = await addCollectionItem(collectionId, wallet, payload);
+        showToast("Item added to collection!");
+        onItemAdded?.(item);
+      }
+
       resetForm();
       onClose();
     } catch (error) {
@@ -226,7 +329,7 @@ export default function AddCollectionItemModal({
             id="add-collection-item-title"
             className="text-lg font-bold text-white"
           >
-            Add Item to Collection
+            {isEditMode ? "Edit Item" : "Add Item to Collection"}
           </h2>
           <button
             type="button"
@@ -538,7 +641,13 @@ export default function AddCollectionItemModal({
               disabled={isSubmitting}
               className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Adding..." : "Add to Collection"}
+              {isSubmitting
+                ? isEditMode
+                  ? "Saving..."
+                  : "Adding..."
+                : isEditMode
+                  ? "Save Changes"
+                  : "Add to Collection"}
             </button>
           </div>
         </form>

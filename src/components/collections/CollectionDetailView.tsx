@@ -54,6 +54,7 @@ export default function CollectionDetailView({
   const [commentLoading, setCommentLoading] = useState(false);
   const [viewsIncremented, setViewsIncremented] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<CollectionItem | null>(null);
 
   const loadCollection = useCallback(async () => {
     setLoading(true);
@@ -192,6 +193,31 @@ export default function CollectionDetailView({
             ...current,
             items: [...current.items, item],
             item_count: current.item_count + 1,
+          }
+        : current
+    );
+  };
+
+  const handleItemUpdated = (item: CollectionItem) => {
+    setCollection((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((existing) =>
+              existing.id === item.id ? item : existing
+            ),
+          }
+        : current
+    );
+  };
+
+  const handleItemDeleted = (itemId: string) => {
+    setCollection((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.filter((item) => item.id !== itemId),
+            item_count: Math.max(current.item_count - 1, 0),
           }
         : current
     );
@@ -415,19 +441,39 @@ export default function CollectionDetailView({
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
           {collection.items.map((item) => (
-            <CollectionItemCard key={item.id} item={item} />
+            <CollectionItemCard
+              key={item.id}
+              item={item}
+              isOwner={isOwner}
+              collectionId={collectionId}
+              wallet={wallet}
+              onEdit={setEditingItem}
+              onDeleted={handleItemDeleted}
+            />
           ))}
         </div>
       )}
 
       {isOwner && wallet && (
-        <AddCollectionItemModal
-          open={addItemOpen}
-          onClose={() => setAddItemOpen(false)}
-          collectionId={collectionId}
-          wallet={wallet}
-          onItemAdded={handleItemAdded}
-        />
+        <>
+          <AddCollectionItemModal
+            open={addItemOpen}
+            onClose={() => setAddItemOpen(false)}
+            collectionId={collectionId}
+            wallet={wallet}
+            mode="add"
+            onItemAdded={handleItemAdded}
+          />
+          <AddCollectionItemModal
+            open={Boolean(editingItem)}
+            onClose={() => setEditingItem(null)}
+            collectionId={collectionId}
+            wallet={wallet}
+            mode="edit"
+            initialData={editingItem ?? undefined}
+            onItemUpdated={handleItemUpdated}
+          />
+        </>
       )}
 
       {showComments && (

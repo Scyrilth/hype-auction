@@ -439,6 +439,70 @@ export async function addCollectionItem(
   return parseCollectionItem(row as Record<string, unknown>);
 }
 
+export async function updateCollectionItem(
+  itemId: string,
+  wallet: string,
+  itemData: CollectionItemInput
+): Promise<CollectionItem> {
+  const { data: existing, error: existingError } = await supabase
+    .from("collection_items")
+    .select("id, owner_wallet")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+  if (!existing || (existing.owner_wallet as string) !== wallet) {
+    throw new Error("Item not found.");
+  }
+
+  const payload: Record<string, unknown> = {};
+
+  if (itemData.name !== undefined) payload.name = itemData.name.trim();
+  if (itemData.category !== undefined) payload.category = itemData.category;
+  if (itemData.condition !== undefined) payload.condition = itemData.condition;
+  if (itemData.grading_company !== undefined) {
+    payload.grading_company = itemData.grading_company;
+  }
+  if (itemData.grade !== undefined) payload.grade = itemData.grade;
+  if (itemData.grade_label !== undefined) payload.grade_label = itemData.grade_label;
+  if (itemData.year !== undefined) payload.year = itemData.year;
+  if (itemData.brand !== undefined) payload.brand = itemData.brand;
+  if (itemData.images !== undefined) payload.images = itemData.images;
+  if (itemData.notes !== undefined) payload.notes = itemData.notes;
+  if (itemData.estimated_value_sol !== undefined) {
+    payload.estimated_value_sol = itemData.estimated_value_sol;
+  }
+  if (itemData.verification_url !== undefined) {
+    payload.verification_url = itemData.verification_url?.trim() || null;
+  }
+  if (itemData.acquisition_method !== undefined) {
+    payload.acquisition_method = itemData.acquisition_method;
+  }
+  if (itemData.item_details !== undefined) payload.item_details = itemData.item_details;
+  if (itemData.display_order !== undefined) {
+    payload.display_order = itemData.display_order;
+  }
+
+  const { data: row, error } = await supabase
+    .from("collection_items")
+    .update(payload)
+    .eq("id", itemId)
+    .eq("owner_wallet", wallet)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+
+  const { error: collectionUpdateError } = await supabase
+    .from("collections")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", row.collection_id as string);
+
+  if (collectionUpdateError) throw collectionUpdateError;
+
+  return parseCollectionItem(row as Record<string, unknown>);
+}
+
 export async function removeCollectionItem(
   itemId: string,
   collectionId: string,

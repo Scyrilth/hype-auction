@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import EditCollectionModal from "@/components/collections/EditCollectionModal";
 import BackButton from "@/components/ui/BackButton";
 import { useToast } from "@/components/ui/Toast";
-import type { CollectionWithOwner } from "@/lib/collections";
+import type { Collection, CollectionWithOwner } from "@/lib/collections";
 import {
   deleteCollection,
   getCollectionsByWallet,
@@ -23,6 +24,8 @@ export default function ManageCollectionsView() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [editingCollection, setEditingCollection] =
+    useState<CollectionWithOwner | null>(null);
 
   const loadCollections = useCallback(async () => {
     if (!wallet) return;
@@ -42,6 +45,16 @@ export default function ManageCollectionsView() {
   useEffect(() => {
     loadCollections();
   }, [loadCollections]);
+
+  const handleCollectionUpdated = (updated: Collection) => {
+    setCollections((current) =>
+      current.map((collection) =>
+        collection.id === updated.id
+          ? { ...collection, ...updated }
+          : collection
+      )
+    );
+  };
 
   const handleDelete = async (id: string) => {
     if (!wallet) return;
@@ -141,12 +154,13 @@ export default function ManageCollectionsView() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Link
-                    href={`/collections/${collection.id}`}
+                  <button
+                    type="button"
+                    onClick={() => setEditingCollection(collection)}
                     className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:border-accent/40"
                   >
                     Edit
-                  </Link>
+                  </button>
                   {confirmId === collection.id ? (
                     <>
                       <button
@@ -181,6 +195,16 @@ export default function ManageCollectionsView() {
             </div>
           ))}
         </div>
+      )}
+
+      {wallet && editingCollection && (
+        <EditCollectionModal
+          open={Boolean(editingCollection)}
+          onClose={() => setEditingCollection(null)}
+          collection={editingCollection}
+          wallet={wallet}
+          onUpdated={handleCollectionUpdated}
+        />
       )}
     </div>
   );

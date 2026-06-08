@@ -1,11 +1,17 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 
 import PortalInfoTooltip from "@/components/ui/PortalInfoTooltip";
-import type { CollectionItem } from "@/lib/collections";
-import { formatSol } from "@/lib/format";
+import { useToast } from "@/components/ui/Toast";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
+import {
+  removeCollectionItem,
+  type CollectionItem,
+} from "@/lib/collections";
+import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { formatSol } from "@/lib/format";
 
 const ESTIMATE_TOOLTIP =
   "Estimated value set by owner. Not verified by Hype Auction.";
@@ -15,9 +21,23 @@ const VERIFIED_TOOLTIP =
 
 export default function CollectionItemCard({
   item,
+  isOwner = false,
+  collectionId,
+  wallet,
+  onEdit,
+  onDeleted,
 }: {
   item: CollectionItem;
+  isOwner?: boolean;
+  collectionId?: string;
+  wallet?: string;
+  onEdit?: (item: CollectionItem) => void;
+  onDeleted?: (itemId: string) => void;
 }) {
+  const { showToast } = useToast();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const imageSrc =
     item.images[0] ??
     resolveAuctionImageUrl(null, {
@@ -33,6 +53,23 @@ export default function CollectionItemCard({
   const hasEstimate =
     item.estimated_value_sol != null && item.estimated_value_sol > 0;
 
+  const handleDelete = async () => {
+    if (!wallet || !collectionId) return;
+
+    setDeleting(true);
+    try {
+      await removeCollectionItem(item.id, collectionId, wallet);
+      onDeleted?.(item.id);
+      setConfirmDelete(false);
+      showToast("Item removed from collection.");
+    } catch (error) {
+      logSupabaseError("CollectionItemCard.delete", error);
+      showToast(getErrorMessage(error), "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835]">
       <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-purple-900/50 to-[#1a1835]">
@@ -43,7 +80,56 @@ export default function CollectionItemCard({
           className="object-cover"
           unoptimized
         />
+
+        {isOwner && (
+          <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5">
+            {confirmDelete ? (
+              <div className="rounded-xl border border-white/10 bg-black/80 p-2 text-center backdrop-blur-sm">
+                <p className="mb-2 max-w-[140px] text-[10px] text-white">
+                  Remove this item from your collection?
+                </p>
+                <div className="flex justify-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="rounded-full bg-red-500/80 px-2 py-1 text-[10px] font-semibold text-white hover:bg-red-500 disabled:opacity-60"
+                  >
+                    {deleting ? "..." : "Confirm"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(false)}
+                    className="rounded-full border border-white/20 px-2 py-1 text-[10px] font-semibold text-white hover:bg-white/10"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onEdit?.(item)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                  aria-label="Edit item"
+                >
+                  <i className="ti ti-pencil text-sm" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                  aria-label="Delete item"
+                >
+                  <i className="ti ti-trash text-sm" />
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
+
       <div className="p-3">
         <h4 className="line-clamp-2 text-sm font-semibold text-white">
           {item.name}
