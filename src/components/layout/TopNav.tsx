@@ -73,6 +73,15 @@ export default function TopNav() {
 
   const isLinkActive = (href: string) => {
     if (href === "/") return pathname === "/";
+
+    if (href === "/collections") {
+      if (pathname === "/collections") return true;
+      if (!pathname.startsWith("/collections/")) return false;
+
+      const segment = pathname.slice("/collections/".length).split("/")[0];
+      return segment !== "manage" && segment !== "new";
+    }
+
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
