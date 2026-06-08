@@ -52,6 +52,7 @@ export interface ThreadListItem extends MessageThread {
 
 export interface ThreadDetail extends MessageThread {
   auction: Auction | null;
+  top_bidder_wallet: string | null;
   buyer: ThreadParticipant;
   seller: ThreadParticipant;
   messages: EnrichedDirectMessage[];
@@ -340,17 +341,31 @@ export async function getThreadDetail(
   if (messagesError) throw messagesError;
 
   let auction: Auction | null = null;
+  let topBidderWallet: string | null = null;
   if (thread.auction_id) {
-    const { data: auctionRow, error: auctionError } = await supabase
-      .from("auctions")
-      .select("*")
-      .eq("id", thread.auction_id)
-      .maybeSingle();
+    const [{ data: auctionRow, error: auctionError }, { data: topBid, error: topBidError }] =
+      await Promise.all([
+        supabase
+          .from("auctions")
+          .select("*")
+          .eq("id", thread.auction_id)
+          .maybeSingle(),
+        supabase
+          .from("bids")
+          .select("bidder_wallet")
+          .eq("auction_id", thread.auction_id)
+          .order("amount", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
 
     if (auctionError) throw auctionError;
+    if (topBidError) throw topBidError;
+
     auction = auctionRow
       ? parseAuctionRow(auctionRow as Record<string, unknown>)
       : null;
+    topBidderWallet = (topBid?.bidder_wallet as string | undefined) ?? null;
   }
 
   const messages: EnrichedDirectMessage[] = (messageRows ?? []).map((row) => {
@@ -366,6 +381,7 @@ export async function getThreadDetail(
   return {
     ...thread,
     auction,
+    top_bidder_wallet: topBidderWallet,
     buyer: participants.get(thread.buyer_wallet) ?? {
       wallet_address: thread.buyer_wallet,
       username: null,

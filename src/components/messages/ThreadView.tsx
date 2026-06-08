@@ -351,16 +351,28 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     otherParty.username ??
     shortenAddress(otherParty.wallet_address, 6);
 
-  const escrowState = thread.auction?.escrow_state ?? "none";
+  const escrowState = thread.auction?.escrow_state;
+  const winnerWallet = thread.top_bidder_wallet ?? thread.buyer_wallet;
+  const isAuctionWinner = Boolean(wallet) && wallet === winnerWallet;
+  const needsEscrowPayment =
+    !escrowState || escrowState === "none" || escrowState === "pending";
+
   const showPayNow =
-    isBuyer &&
+    isAuctionWinner &&
     Boolean(thread.auction_id) &&
     Boolean(thread.auction) &&
-    (thread.auction?.status === "ended" ||
-      thread.auction?.status === "completed") &&
-    (escrowState === "none" || escrowState === "pending");
+    thread.auction?.status === "ended" &&
+    needsEscrowPayment;
+
+  const showConfirmReceipt =
+    isBuyer &&
+    Boolean(thread.auction_id) &&
+    !showPayNow &&
+    (escrowState === "shipped" ||
+      ((!escrowState || escrowState === "none") && !thread.confirmed_at));
+
   const paymentSecured = ["funded", "shipped", "complete", "disputed"].includes(
-    escrowState
+    escrowState ?? ""
   );
 
   const groupedMessages = thread.messages.map((message, index) => {
@@ -507,7 +519,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             </div>
           )}
 
-          {isBuyer && thread.auction_id && (
+          {(showConfirmReceipt || thread.confirmed_at) && (
             <button
               type="button"
               onClick={handleConfirmReceipt}
