@@ -538,6 +538,43 @@ export async function removeCollectionItem(
   if (updateError) throw updateError;
 }
 
+export async function updateItemOrder(
+  collectionId: string,
+  orderedItemIds: string[],
+  wallet: string
+): Promise<void> {
+  const { data: collection, error: collectionError } = await supabase
+    .from("collections")
+    .select("owner_wallet")
+    .eq("id", collectionId)
+    .maybeSingle();
+
+  if (collectionError) throw collectionError;
+  if (!collection || (collection.owner_wallet as string) !== wallet) {
+    throw new Error("Collection not found.");
+  }
+
+  const updates = orderedItemIds.map((itemId, index) =>
+    supabase
+      .from("collection_items")
+      .update({ display_order: index })
+      .eq("id", itemId)
+      .eq("collection_id", collectionId)
+      .eq("owner_wallet", wallet)
+  );
+
+  const results = await Promise.all(updates);
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw failed.error;
+
+  const { error: collectionUpdateError } = await supabase
+    .from("collections")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", collectionId);
+
+  if (collectionUpdateError) throw collectionUpdateError;
+}
+
 export async function toggleCollectionLike(
   collectionId: string,
   wallet: string

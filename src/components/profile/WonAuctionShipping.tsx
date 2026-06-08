@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
@@ -9,6 +10,7 @@ import TrackingCopyButton from "@/components/ui/TrackingCopyButton";
 import { useToast } from "@/components/ui/Toast";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
+import { createEscrowProvider, PLATFORM_WALLET } from "@/lib/escrow";
 import {
   confirmReceipt,
   createAuctionThread,
@@ -18,6 +20,8 @@ import {
 export default function WonAuctionShipping({ auction }: { auction: Auction }) {
   const router = useRouter();
   const { publicKey } = useWallet();
+  const anchorWallet = useAnchorWallet();
+  const { connection } = useConnection();
   const { showToast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [messaging, setMessaging] = useState(false);
@@ -56,9 +60,32 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
         showToast("Open a message thread with the seller first.", "error");
         return;
       }
-      await confirmReceipt(threadId, wallet);
+      const provider =
+        anchorWallet && connection
+          ? createEscrowProvider(connection, anchorWallet)
+          : undefined;
+      const result = await confirmReceipt(
+        threadId,
+        wallet,
+        provider
+          ? {
+              provider,
+              sellerWallet: auction.seller_wallet,
+              platformWallet: PLATFORM_WALLET,
+            }
+          : undefined
+      );
       setLocalStatus("delivered");
-      showToast("Receipt confirmed!");
+      if (result.onChainSuccess) {
+        showToast("✅ Receipt confirmed on-chain");
+      } else if (result.onChainWarning) {
+        showToast(
+          `Receipt saved. On-chain release failed: ${result.onChainWarning}`,
+          "error"
+        );
+      } else {
+        showToast("Receipt confirmed!");
+      }
       router.refresh();
     } catch (error) {
       showToast(getErrorMessage(error), "error");

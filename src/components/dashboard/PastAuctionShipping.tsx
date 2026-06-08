@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
@@ -8,6 +9,7 @@ import TrackingCopyButton from "@/components/ui/TrackingCopyButton";
 import { useToast } from "@/components/ui/Toast";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
+import { createEscrowProvider } from "@/lib/escrow";
 import { saveAuctionShippingTracking, SHIPPING_COURIERS } from "@/lib/logistics";
 
 export default function PastAuctionShipping({
@@ -18,6 +20,8 @@ export default function PastAuctionShipping({
   onUpdated?: (auction: Auction) => void;
 }) {
   const { publicKey } = useWallet();
+  const anchorWallet = useAnchorWallet();
+  const { connection } = useConnection();
   const { showToast } = useToast();
   const [auction, setAuction] = useState(initialAuction);
   const [showForm, setShowForm] = useState(false);
@@ -32,11 +36,16 @@ export default function PastAuctionShipping({
     if (!wallet || saving) return;
     setSaving(true);
     try {
+      const provider =
+        anchorWallet && connection
+          ? createEscrowProvider(connection, anchorWallet)
+          : undefined;
       const updated = await saveAuctionShippingTracking({
         auctionId: auction.id,
         sellerWallet: wallet,
         courier,
         trackingNumber,
+        onChain: provider ? { provider } : undefined,
       });
       setAuction(updated);
       setShowForm(false);

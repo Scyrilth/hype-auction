@@ -2,11 +2,28 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AddCollectionItemModal from "@/components/collections/AddCollectionItemModal";
 import CollectionItemCard from "@/components/collections/CollectionItemCard";
+import EditCollectionModal from "@/components/collections/EditCollectionModal";
+import SortableCollectionItemCard from "@/components/collections/SortableCollectionItemCard";
 import FollowButton from "@/components/shop/FollowButton";
 import BackButton from "@/components/ui/BackButton";
 import FiatValue from "@/components/ui/FiatValue";
@@ -15,6 +32,7 @@ import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import type {
+  Collection,
   CollectionComment,
   CollectionDetail,
   CollectionItem,
@@ -26,6 +44,7 @@ import {
   incrementCollectionViews,
   isCollectionPrivateToViewer,
   toggleCollectionLike,
+  updateItemOrder,
 } from "@/lib/collections";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { isFollowing } from "@/lib/follows";
@@ -55,6 +74,14 @@ export default function CollectionDetailView({
   const [viewsIncremented, setViewsIncremented] = useState(false);
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CollectionItem | null>(null);
+  const [editCollectionOpen, setEditCollectionOpen] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const loadCollection = useCallback(async () => {
     setLoading(true);
@@ -236,6 +263,51 @@ export default function CollectionDetailView({
 
   const hasEstimatedValues = totalEstimatedValue > 0;
 
+  const itemIds = useMemo(
+    () => collection?.items.map((item) => item.id) ?? [],
+    [collection?.items]
+  );
+
+  const handleCollectionUpdated = (updated: Collection) => {
+    setCollection((current) =>
+      current ? { ...current, ...updated } : current
+    );
+  };
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !collection || !wallet) return;
+
+      const oldIndex = collection.items.findIndex(
+        (item) => item.id === active.id
+      );
+      const newIndex = collection.items.findIndex((item) => item.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(collection.items, oldIndex, newIndex).map(
+        (item, index) => ({ ...item, display_order: index })
+      );
+
+      setCollection((current) =>
+        current ? { ...current, items: reordered } : current
+      );
+
+      try {
+        await updateItemOrder(
+          collectionId,
+          reordered.map((item) => item.id),
+          wallet
+        );
+      } catch (error) {
+        logSupabaseError("CollectionDetailView.reorder", error);
+        showToast(getErrorMessage(error), "error");
+        loadCollection();
+      }
+    },
+    [collection, collectionId, loadCollection, showToast, wallet]
+  );
+
   const handleComment = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!connected || !wallet) {
@@ -358,7 +430,19 @@ export default function CollectionDetailView({
       </div>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">{collection.name}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-bold text-white">{collection.name}</h1>
+          {isOwner && wallet && (
+            <button
+              type="button"
+              onClick={() => setEditCollectionOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#1a1835] px-3 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/40 hover:text-white"
+            >
+              <i className="ti ti-settings text-sm" />
+              Edit Collection
+            </button>
+          )}
+        </div>
         {collection.description && (
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted">
             {collection.description}
@@ -438,24 +522,44 @@ export default function CollectionDetailView({
         <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-12 text-center">
           <p className="text-sm text-muted">No items in this collection yet.</p>
         </div>
+      ) : isOwner && wallet ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={itemIds} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+              {collection.items.map((item) => (
+                <SortableCollectionItemCard
+                  key={item.id}
+                  item={item}
+                  collectionId={collectionId}
+                  wallet={wallet}
+                  onEdit={setEditingItem}
+                  onDeleted={handleItemDeleted}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
           {collection.items.map((item) => (
-            <CollectionItemCard
-              key={item.id}
-              item={item}
-              isOwner={isOwner}
-              collectionId={collectionId}
-              wallet={wallet}
-              onEdit={setEditingItem}
-              onDeleted={handleItemDeleted}
-            />
+            <CollectionItemCard key={item.id} item={item} />
           ))}
         </div>
       )}
 
       {isOwner && wallet && (
         <>
+          <EditCollectionModal
+            open={editCollectionOpen}
+            onClose={() => setEditCollectionOpen(false)}
+            collection={collection}
+            wallet={wallet}
+            onUpdated={handleCollectionUpdated}
+          />
           <AddCollectionItemModal
             open={addItemOpen}
             onClose={() => setAddItemOpen(false)}

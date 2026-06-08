@@ -1,3 +1,6 @@
+import type { AnchorProvider } from "@coral-xyz/anchor";
+
+import { confirmShippingOnChain } from "@/lib/escrow";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import type { Auction, ShippingStatus } from "@/lib/database.types";
 import {
@@ -77,16 +80,22 @@ async function notifyBuyerShipment({
   });
 }
 
+export interface ShippingOnChainParams {
+  provider: AnchorProvider;
+}
+
 export async function saveAuctionShippingTracking({
   auctionId,
   sellerWallet,
   courier,
   trackingNumber,
+  onChain,
 }: {
   auctionId: string;
   sellerWallet: string;
   courier: string;
   trackingNumber: string;
+  onChain?: ShippingOnChainParams;
 }): Promise<Auction> {
   const trimmedCourier = courier.trim();
   const trimmedTracking = trackingNumber.trim();
@@ -129,6 +138,17 @@ export async function saveAuctionShippingTracking({
     .single();
 
   if (error) throw error;
+
+  if (onChain) {
+    const onChainResult = await confirmShippingOnChain(
+      auctionId,
+      onChain.provider.wallet,
+      onChain.provider
+    );
+    if (!onChainResult.success) {
+      console.error("On-chain confirm_shipping failed:", onChainResult.error);
+    }
+  }
 
   if (winnerBid?.bidder_wallet) {
     await notifyBuyerShipment({

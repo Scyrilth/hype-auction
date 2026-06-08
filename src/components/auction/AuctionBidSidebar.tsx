@@ -18,6 +18,7 @@ import { getProfileSlug } from "@/lib/profile-links";
 import { placeBid } from "@/lib/bids";
 import type { Auction, User } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { getEscrowStatusLabel, getExplorerTxUrl } from "@/lib/escrow";
 import { formatSol, shortenAddress } from "@/lib/format";
 
 function getMinimumBid(auction: Auction) {
@@ -267,13 +268,34 @@ export default function AuctionBidSidebar({
       <AuctionSellerCard seller={seller} reviewCount={sellerReviewCount} />
 
       {isWinner && (
-        <MessageThreadButton
-          variant="seller"
-          auctionId={auction.id}
-          auctionTitle={auction.title}
-          sellerWallet={auction.seller_wallet}
-          className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
-        />
+        <div className="space-y-3">
+          {auction.escrow_state &&
+            auction.escrow_state !== "none" &&
+            getEscrowStatusLabel(auction.escrow_state) && (
+              <div className="rounded-xl border border-border bg-background/60 px-3 py-3">
+                <p className="text-sm font-medium text-white">
+                  {getEscrowStatusLabel(auction.escrow_state)}
+                </p>
+                {auction.escrow_tx_signature && (
+                  <a
+                    href={getExplorerTxUrl(auction.escrow_tx_signature)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-xs font-medium text-accent hover:text-purple-300"
+                  >
+                    View escrow transaction →
+                  </a>
+                )}
+              </div>
+            )}
+          <MessageThreadButton
+            variant="seller"
+            auctionId={auction.id}
+            auctionTitle={auction.title}
+            sellerWallet={auction.seller_wallet}
+            className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+          />
+        </div>
       )}
 
       <div className="min-h-[20rem]">

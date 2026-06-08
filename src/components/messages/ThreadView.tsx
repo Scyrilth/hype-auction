@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
@@ -24,6 +25,13 @@ import {
   type ThreadDetail,
 } from "@/lib/messages";
 import { supabase } from "@/lib/supabase";
+import {
+  checkWalletBalance,
+  createEscrowProvider,
+  getExplorerTxUrl,
+  initiatePayment,
+  PLATFORM_WALLET,
+} from "@/lib/escrow";
 import { shortenAddress } from "@/lib/format";
 
 function formatMessageTime(iso: string) {
@@ -132,12 +140,17 @@ function MessageBubble({
 export default function ThreadView({ threadId }: { threadId: string }) {
   const router = useRouter();
   const { publicKey, connected } = useWallet();
+  const anchorWallet = useAnchorWallet();
+  const { connection } = useConnection();
   const { showToast } = useToast();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [paymentTx, setPaymentTx] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const wallet = publicKey?.toBase58();
@@ -231,13 +244,91 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     if (!wallet || !isBuyer || confirming || thread?.confirmed_at) return;
     setConfirming(true);
     try {
-      await confirmReceipt(threadId, wallet);
-      showToast("Receipt confirmed.");
+      const provider =
+        anchorWallet && connection
+          ? createEscrowProvider(connection, anchorWallet)
+          : undefined;
+      const result = await confirmReceipt(
+        threadId,
+        wallet,
+        thread?.auction && provider
+          ? {
+              provider,
+              sellerWallet: thread.seller_wallet,
+              platformWallet: PLATFORM_WALLET,
+            }
+          : undefined
+      );
+      if (result.onChainSuccess) {
+        showToast("✅ Receipt confirmed on-chain");
+      } else if (result.onChainWarning) {
+        showToast(
+          `Receipt saved. On-chain release failed: ${result.onChainWarning}`,
+          "error"
+        );
+      } else {
+        showToast("Receipt confirmed.");
+      }
       await loadThread();
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
       setConfirming(false);
+    }
+  };
+
+  const handlePayNow = async () => {
+    if (
+      !wallet ||
+      !anchorWallet ||
+      !thread?.auction_id ||
+      !thread.auction ||
+      paying
+    ) {
+      return;
+    }
+
+    const bidAmount =
+      thread.auction.current_bid > 0
+        ? thread.auction.current_bid
+        : thread.auction.start_price;
+
+    setPaying(true);
+    setPaymentError(null);
+
+    try {
+      const hasBalance = await checkWalletBalance(wallet, bidAmount);
+      if (!hasBalance) {
+        setPaymentError(
+          `Insufficient SOL. You need at least ${(bidAmount + 0.01).toFixed(2)} SOL including fees.`
+        );
+        return;
+      }
+
+      const provider = createEscrowProvider(connection, anchorWallet);
+      const result = await initiatePayment(
+        thread.auction_id,
+        anchorWallet,
+        provider,
+        bidAmount,
+        0,
+        thread.seller_wallet,
+        PLATFORM_WALLET,
+        thread.auction.escrow_attempt_number || 1
+      );
+
+      if (!result.success) {
+        setPaymentError(result.error);
+        return;
+      }
+
+      setPaymentTx(result.txSignature);
+      showToast("✅ Payment confirmed! SOL locked in escrow.");
+      await loadThread();
+    } catch (error) {
+      setPaymentError(getErrorMessage(error));
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -259,6 +350,18 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const otherLabel =
     otherParty.username ??
     shortenAddress(otherParty.wallet_address, 6);
+
+  const escrowState = thread.auction?.escrow_state ?? "none";
+  const showPayNow =
+    isBuyer &&
+    Boolean(thread.auction_id) &&
+    Boolean(thread.auction) &&
+    (thread.auction?.status === "ended" ||
+      thread.auction?.status === "completed") &&
+    (escrowState === "none" || escrowState === "pending");
+  const paymentSecured = ["funded", "shipped", "complete", "disputed"].includes(
+    escrowState
+  );
 
   const groupedMessages = thread.messages.map((message, index) => {
     const prev = thread.messages[index - 1];
@@ -361,6 +464,49 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
       {!isArchived && (
         <div className="mt-3 shrink-0 space-y-3">
+          {showPayNow && (
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => void handlePayNow()}
+                disabled={paying}
+                className="w-full rounded-full bg-purple-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {paying ? "Processing payment..." : "Pay Now"}
+              </button>
+              {paymentError && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  <p>{paymentError}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handlePayNow()}
+                    className="mt-2 text-xs font-semibold text-white underline"
+                  >
+                    Retry payment
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {paymentSecured && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              ✅ Payment secured in escrow
+              {(paymentTx || thread.auction?.escrow_tx_signature) && (
+                <a
+                  href={getExplorerTxUrl(
+                    paymentTx ?? thread.auction!.escrow_tx_signature!
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block text-xs font-medium text-purple-300 hover:text-purple-200"
+                >
+                  View on Solana Explorer →
+                </a>
+              )}
+            </div>
+          )}
+
           {isBuyer && thread.auction_id && (
             <button
               type="button"

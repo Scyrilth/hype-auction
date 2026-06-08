@@ -1,4 +1,7 @@
+import type { AnchorProvider } from "@coral-xyz/anchor";
+
 import type { Auction } from "@/lib/database.types";
+import { confirmReceiptOnChain } from "@/lib/escrow";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import {
@@ -576,10 +579,23 @@ export async function markThreadMessagesRead(
   if (error) throw error;
 }
 
+export interface ConfirmReceiptOnChainParams {
+  provider: AnchorProvider;
+  sellerWallet: string;
+  platformWallet?: string;
+}
+
+export interface ConfirmReceiptResult {
+  onChainSuccess?: boolean;
+  onChainTxSignature?: string;
+  onChainWarning?: string;
+}
+
 export async function confirmReceipt(
   threadId: string,
-  buyerWallet: string
-): Promise<void> {
+  buyerWallet: string,
+  onChain?: ConfirmReceiptOnChainParams
+): Promise<ConfirmReceiptResult> {
   const archiveAt = new Date(
     Date.now() + 3 * 24 * 60 * 60 * 1000
   ).toISOString();
@@ -603,6 +619,8 @@ export async function confirmReceipt(
     buyerWallet
   );
 
+  let result: ConfirmReceiptResult = {};
+
   if (thread.auction_id) {
     const { error: auctionError } = await supabase
       .from("auctions")
@@ -614,7 +632,32 @@ export async function confirmReceipt(
       .neq("status", "completed");
 
     if (auctionError) throw auctionError;
+
+    if (onChain) {
+      const onChainResult = await confirmReceiptOnChain(
+        thread.auction_id as string,
+        onChain.provider.wallet,
+        onChain.provider,
+        onChain.sellerWallet,
+        onChain.platformWallet
+      );
+
+      if (onChainResult.success) {
+        result = {
+          onChainSuccess: true,
+          onChainTxSignature: onChainResult.txSignature,
+        };
+      } else {
+        console.error("On-chain release failed:", onChainResult.error);
+        result = {
+          onChainSuccess: false,
+          onChainWarning: onChainResult.error,
+        };
+      }
+    }
   }
+
+  return result;
 }
 
 export function getThreadThumbnail(

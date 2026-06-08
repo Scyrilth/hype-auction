@@ -1,4 +1,5 @@
 import type { Auction } from "@/lib/database.types";
+import { logSupabaseError } from "@/lib/errors";
 import {
   createAuctionThread,
   insertThreadSystemMessage,
@@ -182,41 +183,54 @@ export async function checkAndEndExpiredAuctions(): Promise<number> {
     .eq("status", "live")
     .lt("end_time", now);
 
-  if (fetchError) throw fetchError;
+  if (fetchError) {
+    logSupabaseError("checkAndEndExpiredAuctions", fetchError);
+    return 0;
+  }
   if (!expiredRows?.length) return 0;
 
   let endedCount = 0;
 
   for (const row of expiredRows) {
-    const { data: updated, error: updateError } = await supabase
-      .from("auctions")
-      .update({ status: "ended" })
-      .eq("id", row.id as string)
-      .eq("status", "live")
-      .select("*")
-      .maybeSingle();
+    try {
+      const { data: updated, error: updateError } = await supabase
+        .from("auctions")
+        .update({ status: "ended" })
+        .eq("id", row.id as string)
+        .eq("status", "live")
+        .select("*")
+        .maybeSingle();
 
-    if (updateError) throw updateError;
-    if (!updated) continue;
+      if (updateError) {
+        logSupabaseError("checkAndEndExpiredAuctions:update", updateError);
+        continue;
+      }
+      if (!updated) continue;
 
-    endedCount += 1;
-    const auction = parseAuctionRow(updated as Record<string, unknown>);
-    const winningBid = await getWinningBid(auction.id);
+      endedCount += 1;
+      const auction = parseAuctionRow(updated as Record<string, unknown>);
+      const winningBid = await getWinningBid(auction.id);
 
-    if (!winningBid) continue;
+      if (!winningBid) continue;
 
-    const { error: bidUpdateError } = await supabase
-      .from("auctions")
-      .update({ current_bid: winningBid.amount })
-      .eq("id", auction.id);
+      const { error: bidUpdateError } = await supabase
+        .from("auctions")
+        .update({ current_bid: winningBid.amount })
+        .eq("id", auction.id);
 
-    if (bidUpdateError) throw bidUpdateError;
+      if (bidUpdateError) {
+        logSupabaseError("checkAndEndExpiredAuctions:current_bid", bidUpdateError);
+        continue;
+      }
 
-    await createWinnerThread(
-      { ...auction, current_bid: winningBid.amount },
-      winningBid.bidder_wallet,
-      winningBid.amount
-    );
+      await createWinnerThread(
+        { ...auction, current_bid: winningBid.amount },
+        winningBid.bidder_wallet,
+        winningBid.amount
+      );
+    } catch (error) {
+      logSupabaseError("checkAndEndExpiredAuctions:auction", error);
+    }
   }
 
   return endedCount;

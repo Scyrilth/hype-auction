@@ -1,4 +1,9 @@
-import type { Auction, AuctionStatus, ShippingStatus } from "@/lib/database.types";
+import type {
+  Auction,
+  AuctionStatus,
+  EscrowState,
+  ShippingStatus,
+} from "@/lib/database.types";
 
 export function parseAuctionRow(row: Record<string, unknown>): Auction {
   const itemDetails = row.item_details;
@@ -33,5 +38,17 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     shippingStatus === "delivered"
       ? shippingStatus
       : "pending") as ShippingStatus,
+    escrow_pda: (row.escrow_pda as string | null) ?? null,
+    escrow_tx_signature: (row.escrow_tx_signature as string | null) ?? null,
+    escrow_funded: Boolean(row.escrow_funded),
+    escrow_funded_at: (row.escrow_funded_at as string | null) ?? null,
+    escrow_amount_lamports:
+      row.escrow_amount_lamports != null
+        ? Number(row.escrow_amount_lamports)
+        : null,
+    escrow_attempt_number: Number(row.escrow_attempt_number ?? 1),
+    escrow_state: ((row.escrow_state as string | null | undefined) ??
+      "none") as EscrowState,
+    escrow_expired_at: (row.escrow_expired_at as string | null) ?? null,
   };
 }

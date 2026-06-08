@@ -7,6 +7,17 @@ export type AuctionStatus =
 
 export type ShippingStatus = "pending" | "shipped" | "delivered";
 
+export type EscrowState =
+  | "none"
+  | "pending"
+  | "funded"
+  | "shipped"
+  | "complete"
+  | "disputed"
+  | "refunded"
+  | "cancelled"
+  | "expired";
+
 export interface User {
   wallet_address: string;
   username: string | null;
@@ -57,6 +68,14 @@ export interface Auction {
   tracking_number: string | null;
   tracking_uploaded_at: string | null;
   shipping_status: ShippingStatus;
+  escrow_pda: string | null;
+  escrow_tx_signature: string | null;
+  escrow_funded: boolean;
+  escrow_funded_at: string | null;
+  escrow_amount_lamports: number | null;
+  escrow_attempt_number: number;
+  escrow_state: EscrowState;
+  escrow_expired_at: string | null;
 }
 
 export interface Bid {
