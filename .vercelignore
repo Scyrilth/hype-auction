@@ -1,0 +1,6 @@
+node_modules
+.next
+target
+*.so
+*.d
+programs/hype-escrow/target
