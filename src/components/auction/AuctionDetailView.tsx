@@ -15,13 +15,15 @@ import {
 
 export default function AuctionDetailView({ data }: { data: AuctionDetailData }) {
   const { auction, seller, bids, similarAuctions } = data;
+  const title = auction.title?.trim() || "Untitled Auction";
+  const description = auction.description?.trim() ?? "";
+  const itemDetails = auction.item_details ?? {};
+  const endTime = auction.end_time ?? new Date().toISOString();
   const isLive =
     auction.status === "live" &&
-    new Date(auction.end_time).getTime() > Date.now();
-  const grading = getGradingFromItemDetails(auction.item_details);
-  const detailEntries = Object.entries(
-    filterCustomItemDetails(auction.item_details)
-  );
+    new Date(endTime).getTime() > Date.now();
+  const grading = getGradingFromItemDetails(itemDetails);
+  const detailEntries = Object.entries(filterCustomItemDetails(itemDetails));
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -31,7 +33,7 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
 
           <div>
             <h1 className="text-2xl font-bold text-white sm:text-3xl">
-              {auction.title}
+              {title}
             </h1>
 
             <div className="mt-3 flex flex-wrap gap-2">
@@ -55,13 +57,13 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
             </div>
           </div>
 
-          {auction.description && (
+          {description && (
             <section className="rounded-2xl border border-border bg-surface p-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
                 Description
               </h2>
               <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-300">
-                {auction.description}
+                {description}
               </p>
             </section>
           )}

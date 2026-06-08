@@ -153,14 +153,24 @@ export function buildGradingItemDetails(
   };
 }
 
-export function getGradingFromItemDetails(
-  details: Record<string, string>
-): GradingInfo | null {
-  const company = details.grading_company?.trim();
-  const gradeValue = details.grade?.trim();
-  const label = details.grade_label?.trim();
+function detailString(
+  details: Record<string, string>,
+  key: string
+): string {
+  const value = details[key];
+  return typeof value === "string" ? value.trim() : "";
+}
 
-  if (!company || !gradeValue || !label) return null;
+export function getGradingFromItemDetails(
+  details: Record<string, string> | null | undefined
+): GradingInfo | null {
+  const safeDetails = details ?? {};
+  const company = detailString(safeDetails, "grading_company");
+  const gradeValue = detailString(safeDetails, "grade");
+  const label =
+    detailString(safeDetails, "grade_label") || gradeValue || company;
+
+  if (!company || !gradeValue) return null;
 
   return { company, grade: gradeValue, label };
 }
@@ -174,11 +184,17 @@ export function isGradingDetailKey(key: string): boolean {
 }
 
 export function filterCustomItemDetails(
-  details: Record<string, string>
+  details: Record<string, string> | null | undefined
 ): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(details).filter(
-      ([key, value]) => !isGradingDetailKey(key) && key.trim() && value.trim()
-    )
+    Object.entries(details ?? {}).filter(([key, value]) => {
+      const normalized =
+        typeof value === "string"
+          ? value.trim()
+          : value == null
+            ? ""
+            : String(value).trim();
+      return !isGradingDetailKey(key) && key.trim() && normalized;
+    })
   );
 }

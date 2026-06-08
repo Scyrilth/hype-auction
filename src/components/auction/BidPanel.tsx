@@ -1,20 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
 
-import BidAddressPromptModal from "@/components/auction/BidAddressPromptModal";
 import CountdownTimer from "@/components/auction/CountdownTimer";
-import { useToast } from "@/components/ui/Toast";
-import { useBidAddressGate } from "@/hooks/useBidAddressGate";
-import { usePhantomConnect } from "@/hooks/usePhantomConnect";
-import { useSidebarUser } from "@/hooks/useSidebarUser";
-import { getProfileSlug } from "@/lib/profile-links";
+import { VIEW_AUCTION_BUTTON_CLASS } from "@/components/auction/AuctionCardLayout";
 import type { Auction } from "@/lib/database.types";
-import { placeBid } from "@/lib/bids";
-import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { formatSol, formatUsdSol, shortenAddress } from "@/lib/format";
+import { getEffectiveBid } from "@/lib/parse-auction";
 
 interface BidPanelProps {
   auction: Auction;
@@ -27,91 +20,17 @@ export default function BidPanel({
   bidCount: initialBidCount,
   topBidder: initialTopBidder,
 }: BidPanelProps) {
-  const router = useRouter();
-  const { showToast } = useToast();
-  const connectPhantom = usePhantomConnect();
-  const { publicKey, connected } = useWallet();
-  const { username } = useSidebarUser();
-  const wallet = publicKey?.toBase58() ?? null;
-  const {
-    modalOpen,
-    addresses,
-    loadingAddresses,
-    gateBid,
-    handleContinue,
-    closeModal,
-  } = useBidAddressGate(wallet);
-  const profilePath = wallet
-    ? `/profile/${getProfileSlug(username, wallet)}`
-    : "/profile";
-
   const [bidCount, setBidCount] = useState(initialBidCount);
   const [topBidder, setTopBidder] = useState(initialTopBidder);
-  const [currentBid, setCurrentBid] = useState(
-    auction.current_bid > 0 ? auction.current_bid : auction.start_price
-  );
-  const [isPlacingBid, setIsPlacingBid] = useState(false);
+  const [currentBid, setCurrentBid] = useState(getEffectiveBid(auction));
 
   useEffect(() => {
     setBidCount(initialBidCount);
     setTopBidder(initialTopBidder);
-    setCurrentBid(
-      auction.current_bid > 0 ? auction.current_bid : auction.start_price
-    );
-  }, [initialBidCount, initialTopBidder, auction.current_bid, auction.start_price]);
-
-  const nextBid = Math.round((currentBid + 0.1) * 100) / 100;
-
-  const executePlaceBid = async (amount: number) => {
-    if (!publicKey) return;
-
-    setIsPlacingBid(true);
-
-    try {
-      const walletAddress = publicKey.toBase58();
-
-      await placeBid({
-        auctionId: auction.id,
-        bidderWallet: walletAddress,
-        amount,
-      });
-
-      setCurrentBid(amount);
-      setBidCount((c) => c + 1);
-      setTopBidder(walletAddress);
-      showToast("Bid placed successfully!");
-      router.refresh();
-    } catch (error) {
-      logSupabaseError("BidPanel: handlePlaceBid", error);
-      showToast(getErrorMessage(error), "error");
-    } finally {
-      setIsPlacingBid(false);
-    }
-  };
-
-  const handlePlaceBid = async (amount: number) => {
-    if (!connected || !publicKey) {
-      try {
-        await connectPhantom();
-        showToast("Wallet connected! Click Place Bid again.");
-      } catch {
-        showToast("Connect your wallet to place a bid.", "error");
-      }
-      return;
-    }
-
-    await gateBid(() => executePlaceBid(amount));
-  };
+    setCurrentBid(getEffectiveBid(auction));
+  }, [initialBidCount, initialTopBidder, auction]);
 
   return (
-    <>
-    <BidAddressPromptModal
-      open={modalOpen}
-      addresses={addresses}
-      profilePath={profilePath}
-      onContinue={handleContinue}
-      onClose={closeModal}
-    />
     <div className="flex h-full w-full min-w-0 flex-col gap-4 rounded-2xl border border-border bg-surface p-4 sm:gap-5 sm:p-5">
       <div>
         <p className="text-xs font-medium uppercase tracking-wider text-muted">
@@ -149,25 +68,11 @@ export default function BidPanel({
         </div>
       </div>
 
-      <div className="mt-auto flex flex-col gap-2.5">
-        <button
-          type="button"
-          disabled={isPlacingBid || loadingAddresses}
-          onClick={() => void handlePlaceBid(nextBid)}
-          className="w-full rounded-full bg-accent py-2.5 text-xs font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 sm:py-3 sm:text-sm"
-        >
-          {isPlacingBid || loadingAddresses ? "Placing bid..." : `Place Bid ${formatSol(nextBid)}`}
-        </button>
-        <button
-          type="button"
-          disabled={isPlacingBid || loadingAddresses}
-          onClick={() => void handlePlaceBid(nextBid)}
-          className="w-full rounded-full border border-border py-2.5 text-xs font-medium text-zinc-300 transition-colors hover:border-accent hover:text-white disabled:cursor-not-allowed disabled:opacity-60 sm:py-3 sm:text-sm"
-        >
-          Quick Bid +0.10 SOL
-        </button>
+      <div className="mt-auto">
+        <Link href={`/auction/${auction.id}`} className={VIEW_AUCTION_BUTTON_CLASS}>
+          View Auction →
+        </Link>
       </div>
     </div>
-    </>
   );
 }

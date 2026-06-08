@@ -19,10 +19,11 @@ import { placeBid } from "@/lib/bids";
 import type { Auction, User } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { getEscrowStatusLabel, getExplorerTxUrl } from "@/lib/escrow";
+import { getEffectiveBid } from "@/lib/parse-auction";
 import { formatSol, shortenAddress } from "@/lib/format";
 
 function getMinimumBid(auction: Auction) {
-  const floor = Math.max(auction.current_bid, auction.start_price);
+  const floor = getEffectiveBid(auction);
   return Math.round((floor + 0.1) * 100) / 100;
 }
 
@@ -64,9 +65,7 @@ export default function AuctionBidSidebar({
   const [topBidderUsername, setTopBidderUsername] = useState(
     initialTopBidderUsername
   );
-  const [currentBid, setCurrentBid] = useState(
-    auction.current_bid > 0 ? auction.current_bid : auction.start_price
-  );
+  const [currentBid, setCurrentBid] = useState(getEffectiveBid(auction));
   const [bidInput, setBidInput] = useState("");
   const [isPlacingBid, setIsPlacingBid] = useState(false);
 
@@ -88,15 +87,12 @@ export default function AuctionBidSidebar({
     setBidCount(initialBidCount);
     setTopBidder(initialTopBidder);
     setTopBidderUsername(initialTopBidderUsername);
-    setCurrentBid(
-      auction.current_bid > 0 ? auction.current_bid : auction.start_price
-    );
+    setCurrentBid(getEffectiveBid(auction));
   }, [
     initialBidCount,
     initialTopBidder,
     initialTopBidderUsername,
-    auction.current_bid,
-    auction.start_price,
+    auction,
   ]);
 
   useEffect(() => {
@@ -114,7 +110,7 @@ export default function AuctionBidSidebar({
   const executePlaceBid = async (amount: number) => {
     if (!publicKey) return;
 
-    const floor = Math.max(currentBid, auction.start_price);
+    const floor = Math.max(currentBid, getEffectiveBid(auction));
     if (amount <= floor) {
       showToast("Bid must be higher than the current bid.", "error");
       return;
@@ -164,7 +160,7 @@ export default function AuctionBidSidebar({
     await gateBid(() => executePlaceBid(amount));
   };
 
-  const floor = Math.max(currentBid, auction.start_price);
+  const floor = Math.max(currentBid, getEffectiveBid(auction));
   const quickBids = [
     { label: "+0.1 SOL", amount: Math.round((floor + 0.1) * 100) / 100 },
     { label: "+0.5 SOL", amount: Math.round((floor + 0.5) * 100) / 100 },

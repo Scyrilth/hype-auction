@@ -55,6 +55,13 @@ export function pickAuctionImageFallback(auction: {
   return DEFAULT_PLACEHOLDER;
 }
 
+export function getAuctionPicsumUrl(seed: string): string {
+  const safeSeed = encodeURIComponent(
+    seed.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 32) || "auction"
+  );
+  return `https://picsum.photos/seed/${safeSeed}/800/600`;
+}
+
 export function resolveAuctionImageUrl(
   imageUrl: string | null | undefined,
   auction: { category: string | null; title: string }

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
@@ -8,6 +9,54 @@ export function hasAuctionImageUrl(
   imageUrl: string | null | undefined
 ): boolean {
   return Boolean(imageUrl?.trim());
+}
+
+export function AuctionCategoryImagePlaceholder({
+  category,
+  className = "",
+  textClassName = "text-xl",
+}: {
+  category?: string | null;
+  className?: string;
+  textClassName?: string;
+}) {
+  return (
+    <div
+      className={`flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/55 via-purple-950 to-[#120a24] px-4 ${className}`.trim()}
+      aria-hidden
+    >
+      <span
+        className={`text-center font-semibold leading-tight text-white ${textClassName}`.trim()}
+      >
+        {category?.trim() || "Auction"}
+      </span>
+    </div>
+  );
+}
+
+export const VIEW_AUCTION_BUTTON_CLASS =
+  "block w-full rounded-full bg-accent py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-accent-hover";
+
+export function ViewAuctionButton({
+  auctionId,
+  className = "",
+  asSpan = false,
+}: {
+  auctionId: string;
+  className?: string;
+  asSpan?: boolean;
+}) {
+  const classes = `${VIEW_AUCTION_BUTTON_CLASS} ${className}`.trim();
+
+  if (asSpan) {
+    return <span className={classes}>View Auction →</span>;
+  }
+
+  return (
+    <Link href={`/auction/${auctionId}`} className={classes}>
+      View Auction →
+    </Link>
+  );
 }
 
 export function AuctionCardImage({
@@ -24,16 +73,7 @@ export function AuctionCardImage({
   imageClassName?: string;
 }) {
   if (!hasAuctionImageUrl(imageUrl)) {
-    return (
-      <div
-        className="flex h-full w-full items-center justify-center bg-gradient-to-br from-accent/55 via-purple-950 to-[#120a24] px-4"
-        aria-hidden
-      >
-        <span className="text-center text-xl font-semibold leading-tight text-white">
-          {category?.trim() || "Auction"}
-        </span>
-      </div>
-    );
+    return <AuctionCategoryImagePlaceholder category={category} />;
   }
 
   const imageSrc = resolveAuctionImageUrl(imageUrl, auction);

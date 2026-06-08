@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import AuctionDetailError from "@/components/auction/AuctionDetailError";
 import AuctionDetailView from "@/components/auction/AuctionDetailView";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
@@ -16,11 +17,44 @@ export default async function AuctionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  await Promise.all([
-    checkAndEndExpiredAuctions(),
-    checkEndingSoonNotifications(),
-  ]);
-  const data = await getAuctionDetailData(id);
+
+  if (!id?.trim()) {
+    notFound();
+  }
+
+  try {
+    await Promise.all([
+      checkAndEndExpiredAuctions().catch((error) => {
+        console.error("checkAndEndExpiredAuctions", error);
+      }),
+      checkEndingSoonNotifications().catch((error) => {
+        console.error("checkEndingSoonNotifications", error);
+      }),
+    ]);
+  } catch (error) {
+    console.error("AuctionDetailPage:lifecycle", error);
+  }
+
+  let data;
+  try {
+    data = await getAuctionDetailData(id);
+  } catch (error) {
+    console.error("AuctionDetailPage:fetch", error);
+    return (
+      <div className="flex h-screen overflow-hidden bg-background">
+        <Sidebar />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopNav />
+
+          <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+            <BackButton className="mb-4" />
+            <AuctionDetailError />
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     notFound();

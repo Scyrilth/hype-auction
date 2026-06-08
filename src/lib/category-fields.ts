@@ -775,11 +775,20 @@ export function getItemDetailLabel(
 export function formatItemDetailValue(
   categoryLabel: string | null | undefined,
   key: string,
-  value: string
+  value: string | number | boolean | null | undefined
 ): string {
+  const normalized =
+    typeof value === "string"
+      ? value.trim()
+      : value == null
+        ? ""
+        : String(value).trim();
+
+  if (!normalized) return "—";
+
   const field = getCategoryFieldByKey(categoryLabel, key);
-  if (field?.type === "number" && field.unit && value.trim()) {
-    return `${value.trim()} ${field.unit}`;
+  if (field?.type === "number" && field.unit) {
+    return `${normalized} ${field.unit}`;
   }
-  return value;
+  return normalized;
 }

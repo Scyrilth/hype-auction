@@ -189,83 +189,102 @@ export async function getAuctionDetailData(
   id: string
 ): Promise<AuctionDetailData | null> {
   const auction = await getAuctionById(id);
-  if (!auction) return null;
+  if (!auction || !auction.id) return null;
 
-  const [sellerResponse, bidsResponse, similarAuctions, sellerReviewCount] =
-    await Promise.all([
-      supabase
+    const [sellerResponse, bidsResponse, similarAuctions, sellerReviewCount] =
+      await Promise.all([
+        supabase
+          .from("users")
+          .select("*")
+          .eq("wallet_address", auction.seller_wallet)
+          .maybeSingle(),
+        supabase
+          .from("bids")
+          .select("*")
+          .eq("auction_id", id)
+          .order("amount", { ascending: false }),
+        getSimilarAuctions(auction).catch(() => [] as Auction[]),
+        getVendorReviewCount(auction.seller_wallet).catch(() => 0),
+      ]);
+
+    if (sellerResponse.error) {
+      console.error("getAuctionDetailData:seller", sellerResponse.error);
+    }
+    if (bidsResponse.error) {
+      console.error("getAuctionDetailData:bids", bidsResponse.error);
+    }
+
+    const sellerPlaceholder = {
+      wallet_address: auction.seller_wallet,
+      username: null,
+      avatar_url: null,
+      reputation: 0,
+      created_at: new Date(0).toISOString(),
+      shop_name: "Unknown Seller",
+      banner_image: null,
+      bio: null,
+      shop_description: null,
+      social_twitter: null,
+      social_instagram: null,
+      is_vendor: false,
+      is_verified: false,
+      followers_count: 0,
+      total_sales: 0,
+      total_volume: 0,
+      average_rating: 0,
+      show_copy_wallet: true,
+      show_won_auctions: false,
+    } satisfies User;
+
+    let seller: User = sellerPlaceholder;
+    if (sellerResponse.data) {
+      try {
+        seller = parseUser(sellerResponse.data as Record<string, unknown>);
+      } catch (error) {
+        console.error("getAuctionDetailData:parseUser", error);
+      }
+    }
+
+    const bidderWallets = [
+      ...new Set(
+        (bidsResponse.data ?? []).map((row) => row.bidder_wallet as string)
+      ),
+    ];
+
+    let usernameByWallet = new Map<string, string | null>();
+    if (bidderWallets.length) {
+      const { data: bidders, error: biddersError } = await supabase
         .from("users")
-        .select("*")
-        .eq("wallet_address", auction.seller_wallet)
-        .maybeSingle(),
-      supabase
-        .from("bids")
-        .select("*")
-        .eq("auction_id", id)
-        .order("amount", { ascending: false }),
-      getSimilarAuctions(auction),
-      getVendorReviewCount(auction.seller_wallet),
-    ]);
+        .select("wallet_address, username")
+        .in("wallet_address", bidderWallets);
 
-  if (sellerResponse.error) throw sellerResponse.error;
-  if (bidsResponse.error) throw bidsResponse.error;
+      if (biddersError) {
+        console.error("getAuctionDetailData:bidders", biddersError);
+      } else {
+        usernameByWallet = new Map(
+          (bidders ?? []).map((row) => [
+            row.wallet_address as string,
+            (row.username as string | null) ?? null,
+          ])
+        );
+      }
+    }
 
-  const seller = sellerResponse.data
-    ? parseUser(sellerResponse.data as Record<string, unknown>)
-    : ({
-        wallet_address: auction.seller_wallet,
-        username: null,
-        avatar_url: null,
-        reputation: 0,
-        created_at: new Date(0).toISOString(),
-        shop_name: null,
-        banner_image: null,
-        bio: null,
-        shop_description: null,
-        social_twitter: null,
-        social_instagram: null,
-        is_vendor: false,
-        is_verified: false,
-        followers_count: 0,
-        total_sales: 0,
-        total_volume: 0,
-        average_rating: 0,
-        show_copy_wallet: true,
-        show_won_auctions: false,
-      } satisfies User);
+    const bids: BidWithBidder[] = (bidsResponse.data ?? [])
+      .map((row) => {
+        try {
+          const bid = parseBid(row as Record<string, unknown>);
+          return {
+            ...bid,
+            bidder_username: usernameByWallet.get(bid.bidder_wallet) ?? null,
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter((bid): bid is BidWithBidder => bid !== null);
 
-  const bidderWallets = [
-    ...new Set(
-      (bidsResponse.data ?? []).map((row) => row.bidder_wallet as string)
-    ),
-  ];
-
-  let usernameByWallet = new Map<string, string | null>();
-  if (bidderWallets.length) {
-    const { data: bidders, error: biddersError } = await supabase
-      .from("users")
-      .select("wallet_address, username")
-      .in("wallet_address", bidderWallets);
-
-    if (biddersError) throw biddersError;
-
-    usernameByWallet = new Map(
-      (bidders ?? []).map((row) => [
-        row.wallet_address as string,
-        (row.username as string | null) ?? null,
-      ])
-    );
-  }
-
-  const bids: BidWithBidder[] = (bidsResponse.data ?? []).map((row) => {
-    const bid = parseBid(row as Record<string, unknown>);
-    return {
-      ...bid,
-      bidder_username: usernameByWallet.get(bid.bidder_wallet) ?? null,
-    };
-  });
-
-  const topBid = bids[0] ?? null;
+    const topBid = bids[0] ?? null;
 
   return {
     auction,

@@ -5,18 +5,67 @@ import type {
   ShippingStatus,
 } from "@/lib/database.types";
 
+function safeNumber(value: unknown, fallback = 0): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+export function normalizeItemDetails(
+  raw: unknown
+): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+
+  const out: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!key.trim() || value == null) continue;
+
+    if (typeof value === "boolean") {
+      out[key] = value ? "Yes" : "No";
+      continue;
+    }
+
+    if (typeof value === "number") {
+      out[key] = String(value);
+      continue;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) out[key] = trimmed;
+      continue;
+    }
+
+    out[key] = String(value);
+  }
+
+  return out;
+}
+
+export function getEffectiveBid(auction: {
+  current_bid?: number | null;
+  start_price?: number | null;
+}): number {
+  const startPrice = safeNumber(auction.start_price);
+  const currentBid = safeNumber(auction.current_bid);
+  return currentBid > 0 ? currentBid : startPrice;
+}
+
 export function parseAuctionRow(row: Record<string, unknown>): Auction {
-  const itemDetails = row.item_details;
   const shippingStatus = row.shipping_status as string | null | undefined;
+  const startPrice = safeNumber(row.start_price);
+  const currentBid = safeNumber(row.current_bid);
 
   return {
-    id: row.id as string,
-    title: row.title as string,
-    description: (row.description as string | null) ?? null,
+    id: String(row.id ?? ""),
+    title: String(row.title ?? "").trim() || "Untitled Auction",
+    description: (row.description as string | null) ?? "",
     image_url: (row.image_url as string | null) ?? null,
-    seller_wallet: row.seller_wallet as string,
-    current_bid: Number(row.current_bid),
-    start_price: Number(row.start_price),
+    seller_wallet: String(row.seller_wallet ?? "unknown"),
+    current_bid: currentBid,
+    start_price: startPrice,
     end_time: row.end_time as string,
     status: row.status as AuctionStatus,
     category: (row.category as string | null) ?? null,
@@ -24,10 +73,7 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     additional_images: Array.isArray(row.additional_images)
       ? (row.additional_images as string[])
       : [],
-    item_details:
-      itemDetails && typeof itemDetails === "object" && !Array.isArray(itemDetails)
-        ? (itemDetails as Record<string, string>)
-        : {},
+    item_details: normalizeItemDetails(row.item_details),
     created_at: row.created_at as string,
     is_featured: Boolean(row.is_featured),
     reference_number: (row.reference_number as string | null) ?? null,

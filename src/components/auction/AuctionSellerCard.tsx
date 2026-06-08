@@ -3,7 +3,7 @@ import Link from "next/link";
 import StarRating from "@/components/shop/StarRating";
 import UserAvatar from "@/components/ui/UserAvatar";
 import type { User } from "@/lib/database.types";
-import { displaySocialHandle, shortenAddress } from "@/lib/format";
+import { displaySocialHandle } from "@/lib/format";
 
 function VerifiedBadge() {
   return (
@@ -27,13 +27,14 @@ export default function AuctionSellerCard({
   seller: User;
   reviewCount?: number;
 }) {
+  const walletAddress = seller.wallet_address?.trim() || "unknown";
   const displayName =
-    seller.shop_name ??
-    seller.username ??
-    shortenAddress(seller.wallet_address, 6);
-  const shopHref = seller.username
-    ? `/shop/${seller.username}`
-    : `/shop/${seller.wallet_address}`;
+    seller.shop_name?.trim() ||
+    seller.username?.replace(/^@+/, "").trim() ||
+    "Unknown Seller";
+  const shopSlug =
+    seller.username?.replace(/^@+/, "").trim() || walletAddress;
+  const shopHref = `/shop/${shopSlug}`;
 
   return (
     <Link
@@ -46,7 +47,7 @@ export default function AuctionSellerCard({
 
       <div className="mt-3 flex items-center gap-3">
         <UserAvatar
-          walletAddress={seller.wallet_address}
+          walletAddress={walletAddress}
           avatarUrl={seller.avatar_url}
           alt={displayName}
           size="md"
@@ -74,7 +75,7 @@ export default function AuctionSellerCard({
             Sales
           </p>
           <p className="mt-0.5 text-sm font-semibold text-white">
-            {seller.total_sales}
+            {seller.total_sales ?? 0}
           </p>
         </div>
         <div className="rounded-lg bg-background/60 px-2 py-2">
@@ -82,7 +83,7 @@ export default function AuctionSellerCard({
             Rating
           </p>
           <div className="mt-0.5 flex flex-col items-center gap-0.5">
-            <StarRating rating={seller.average_rating} size="sm" />
+            <StarRating rating={seller.average_rating ?? 0} size="sm" />
             {reviewCount > 0 && (
               <p className="text-[10px] text-muted">
                 {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
@@ -95,7 +96,7 @@ export default function AuctionSellerCard({
             Followers
           </p>
           <p className="mt-0.5 text-sm font-semibold text-white">
-            {seller.followers_count}
+            {seller.followers_count ?? 0}
           </p>
         </div>
       </div>
