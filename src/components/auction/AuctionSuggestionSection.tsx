@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import BrowseAuctionCard from "@/components/browse/BrowseAuctionCard";
 import {
@@ -35,11 +36,14 @@ export default function AuctionSuggestionSection({
       </div>
 
       <div className="-mx-1 w-full min-w-0 max-w-full overflow-x-hidden px-1 pb-2">
-        <div className="horizontal-scroll-row flex gap-3 overflow-x-auto sm:gap-4">
+        <div
+          className="carousel-row-scroll flex gap-3 overflow-x-auto sm:gap-4"
+          style={{ "--carousel-columns": 5 } as CSSProperties}
+        >
           {auctions.map((auction) => (
             <div
               key={auction.id}
-              className="horizontal-scroll-item w-[220px] min-w-0 shrink-0"
+              className="horizontal-scroll-item min-w-0 shrink-0"
             >
               <div className="w-full">
                 <BrowseAuctionCard

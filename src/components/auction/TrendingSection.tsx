@@ -1,6 +1,8 @@
 "use client";
 
-import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
+import InfiniteCarouselRow, {
+  CAROUSEL_VISIBLE_COLUMNS,
+} from "@/components/auction/InfiniteCarouselRow";
 import { TrendingUpIcon } from "@/components/icons";
 import type { AuctionWithBidCount24h } from "@/lib/auctions";
 import type { AuctionLabelMaps } from "@/lib/auction-labels";
@@ -27,6 +29,7 @@ export default function TrendingSection({
           variant="trending"
           items={items}
           labelMaps={labelMaps}
+          visibleCount={CAROUSEL_VISIBLE_COLUMNS}
         />
       </div>
     </section>

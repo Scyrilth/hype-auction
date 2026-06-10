@@ -1,6 +1,8 @@
 "use client";
 
-import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
+import InfiniteCarouselRow, {
+  CAROUSEL_VISIBLE_COLUMNS,
+} from "@/components/auction/InfiniteCarouselRow";
 import BrowseSortPill from "@/components/browse/BrowseSortPill";
 import type { BrowseAuctionItem } from "@/lib/browse";
 import type { AuctionLabelMaps } from "@/lib/auction-labels";
@@ -47,6 +49,7 @@ export default function BrowseSection({
             variant="trending"
             items={trendingItems}
             labelMaps={labelMaps}
+            visibleCount={CAROUSEL_VISIBLE_COLUMNS}
           />
         ) : (
           auctions && (
@@ -54,6 +57,7 @@ export default function BrowseSection({
               variant="browse"
               items={auctions}
               labelMaps={labelMaps}
+              visibleCount={CAROUSEL_VISIBLE_COLUMNS}
             />
           )
         )

@@ -89,6 +89,7 @@ body {
 
 /* Arrow-driven carousels — smooth scroll without snap (keeps row edges aligned) */
 .carousel-row-scroll {
+  --carousel-columns: 5;
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -96,6 +97,20 @@ body {
 
 .carousel-row-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* 5-column carousel width — matches Live Auctions row (gap-3 = 4 × 0.75rem) */
+.carousel-row-scroll > .horizontal-scroll-item {
+  width: calc((100% - 3rem) / var(--carousel-columns));
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  /* sm:gap-4 = 4 × 1rem */
+  .carousel-row-scroll > .horizontal-scroll-item {
+    width: calc((100% - 4rem) / var(--carousel-columns));
+  }
 }
 
 .homepage-carousel-track {

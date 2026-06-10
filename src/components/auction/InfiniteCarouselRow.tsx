@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import LiveAuctionCard from "@/components/auction/LiveAuctionCard";
 import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
@@ -14,7 +14,9 @@ import {
 import type { Auction } from "@/lib/database.types";
 
 const SCROLL_EDGE_THRESHOLD = 4;
-const CAROUSEL_CARD_WIDTH_CLASS = "w-[220px]";
+
+/** Visible columns per carousel row — matches Live Auctions ROW_SIZE */
+export const CAROUSEL_VISIBLE_COLUMNS = 5;
 
 const carouselArrowClass =
   "absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm transition-all duration-150 ease-in-out hover:scale-110 hover:border-white/35 hover:bg-white/25";
@@ -103,7 +105,7 @@ function renderCarouselItem(
 }
 
 export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
-  const { variant, items } = props;
+  const { variant, items, visibleCount = CAROUSEL_VISIBLE_COLUMNS } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemCount = items.length;
   const [hasOverflow, setHasOverflow] = useState(false);
@@ -166,11 +168,16 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
       <div
         ref={scrollRef}
         className="carousel-row-scroll flex w-full min-w-0 items-stretch gap-3 overflow-x-auto sm:gap-4"
+        style={
+          {
+            "--carousel-columns": visibleCount,
+          } as CSSProperties
+        }
       >
         {items.map((item) => (
           <div
             key={getItemKey(variant, item)}
-            className={`horizontal-scroll-item ${CAROUSEL_CARD_WIDTH_CLASS} min-w-0 shrink-0`}
+            className="horizontal-scroll-item min-w-0 shrink-0"
           >
             <div className="flex h-full w-full">
               {renderCarouselItem(props, item, reserveLabelSpace)}

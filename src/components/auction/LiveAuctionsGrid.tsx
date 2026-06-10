@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import InfiniteCarouselRow from "@/components/auction/InfiniteCarouselRow";
+import InfiniteCarouselRow, {
+  CAROUSEL_VISIBLE_COLUMNS,
+} from "@/components/auction/InfiniteCarouselRow";
 import { FilterIcon } from "@/components/icons";
 import type { AuctionLabelMaps } from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
 
 type SortOption = "ending-soon" | "newest" | "highest-bid" | "lowest-bid";
 
-const ROW_SIZE = 5;
+const ROW_SIZE = CAROUSEL_VISIBLE_COLUMNS;
 
 const SORT_OPTIONS: { id: SortOption; label: string }[] = [
   { id: "ending-soon", label: "Ending Soon" },
@@ -208,6 +210,7 @@ export default function LiveAuctionsGrid({
               variant="live"
               items={row}
               labelMaps={labelMaps}
+              visibleCount={ROW_SIZE}
             />
           ))}
         </div>
