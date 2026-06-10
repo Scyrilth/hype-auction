@@ -509,6 +509,113 @@ export async function confirmReceiptOnChain(
   }
 }
 
+export async function resolveDisputeOnChain(
+  auctionId: string,
+  wallet: EscrowWallet,
+  provider: AnchorProvider,
+  sellerWallet: string,
+  buyerWallet: string,
+  releaseToSeller: boolean,
+  platformWallet: string = PLATFORM_WALLET
+): Promise<EscrowTxResult> {
+  try {
+    const auctionIdArg = auctionIdToBytes(auctionId);
+    const [escrowPda] = getEscrowPDA(auctionId);
+    const program = getProgram(provider);
+
+    const txSignature = (await program.methods
+      .resolve_dispute(auctionIdArg, releaseToSeller)
+      .accounts({
+        platform_wallet: wallet.publicKey,
+        buyer: new PublicKey(buyerWallet),
+        seller: new PublicKey(sellerWallet),
+        escrow: escrowPda,
+      })
+      .rpc()) as TransactionSignature;
+
+    const nextState = releaseToSeller ? "complete" : "refunded";
+    const { error } = await supabase
+      .from("auctions")
+      .update({ escrow_state: nextState })
+      .eq("id", auctionId);
+
+    if (error) {
+      console.error("Supabase resolve dispute update failed:", error);
+    }
+
+    return { success: true, txSignature };
+  } catch (error) {
+    console.error("resolveDisputeOnChain failed:", error);
+    return { success: false, error: formatAnchorError(error) };
+  }
+}
+
+export async function autoRefundOnChain(
+  auctionId: string,
+  buyerWallet: string,
+  provider: AnchorProvider
+): Promise<EscrowTxResult> {
+  try {
+    const auctionIdArg = auctionIdToBytes(auctionId);
+    const [escrowPda] = getEscrowPDA(auctionId);
+    const program = getProgram(provider);
+
+    const txSignature = (await program.methods
+      .auto_refund(auctionIdArg)
+      .accounts({
+        buyer: new PublicKey(buyerWallet),
+        escrow: escrowPda,
+      })
+      .rpc()) as TransactionSignature;
+
+    const { error } = await supabase
+      .from("auctions")
+      .update({ escrow_state: "refunded" })
+      .eq("id", auctionId);
+
+    if (error) {
+      console.error("Supabase auto refund update failed:", error);
+    }
+
+    return { success: true, txSignature };
+  } catch (error) {
+    console.error("autoRefundOnChain failed:", error);
+    return { success: false, error: formatAnchorError(error) };
+  }
+}
+
+/** Admin release to seller — updates DB; on-chain only when disputed (resolve_dispute). */
+export async function adminReleaseToSeller(
+  auctionId: string,
+  escrowState: string,
+  wallet: EscrowWallet,
+  provider: AnchorProvider,
+  sellerWallet: string,
+  buyerWallet: string
+): Promise<EscrowTxResult> {
+  if (escrowState === "disputed") {
+    return resolveDisputeOnChain(
+      auctionId,
+      wallet,
+      provider,
+      sellerWallet,
+      buyerWallet,
+      true
+    );
+  }
+
+  const { error } = await supabase
+    .from("auctions")
+    .update({ escrow_state: "released" })
+    .eq("id", auctionId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, txSignature: "admin-db-release" };
+}
+
 export async function confirmShippingOnChain(
   auctionId: string,
   wallet: EscrowWallet,

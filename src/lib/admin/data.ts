@@ -1,0 +1,639 @@
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
+
+import type { Auction, EscrowState } from "@/lib/database.types";
+import { getEffectiveBid } from "@/lib/parse-auction";
+import { parseAuctionRow } from "@/lib/parse-auction";
+import { supabase } from "@/lib/supabase";
+
+import { isRealAuction, passesDummyFilter } from "./filters";
+import type {
+  AdminCategoryGmv,
+  AdminCategoryRow,
+  AdminGmvMonth,
+  AdminOverviewStats,
+  AdminStatusCount,
+  AdminUsersMonth,
+  AdminVendorRow,
+  BuyerStrikeRow,
+  DisputeRow,
+  EscrowMonitorRow,
+  EscrowSummaryPill,
+  FlaggedOrder,
+  RecentUserRow,
+  AdminUserProfile,
+} from "./types";
+
+function auctionAmountSol(auction: Auction): number {
+  if (auction.escrow_amount_lamports && auction.escrow_amount_lamports > 0) {
+    return auction.escrow_amount_lamports / LAMPORTS_PER_SOL;
+  }
+  return getEffectiveBid(auction);
+}
+
+function daysBetween(from: string, to = new Date()): number {
+  const ms = to.getTime() - new Date(from).getTime();
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+}
+
+async function fetchFundedAuctions(showDummyData: boolean): Promise<Auction[]> {
+  const { data, error } = await supabase
+    .from("auctions")
+    .select("*")
+    .eq("escrow_funded", true);
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row) => parseAuctionRow(row as Record<string, unknown>))
+    .filter((a) => passesDummyFilter(a, showDummyData));
+}
+
+async function getTopBidders(auctionIds: string[]): Promise<Map<string, string>> {
+  if (!auctionIds.length) return new Map();
+
+  const { data, error } = await supabase
+    .from("bids")
+    .select("auction_id, bidder_wallet, amount")
+    .in("auction_id", auctionIds)
+    .order("amount", { ascending: false });
+
+  if (error) throw error;
+
+  const map = new Map<string, string>();
+  for (const row of data ?? []) {
+    const id = row.auction_id as string;
+    if (!map.has(id)) map.set(id, row.bidder_wallet as string);
+  }
+  return map;
+}
+
+async function getThreadIdsByAuction(
+  auctionIds: string[]
+): Promise<Map<string, string>> {
+  if (!auctionIds.length) return new Map();
+
+  const { data, error } = await supabase
+    .from("message_threads")
+    .select("id, auction_id")
+    .in("auction_id", auctionIds);
+
+  if (error) throw error;
+
+  const map = new Map<string, string>();
+  for (const row of data ?? []) {
+    if (row.auction_id) map.set(row.auction_id as string, row.id as string);
+  }
+  return map;
+}
+
+export async function fetchAdminOverview(
+  showDummyData: boolean,
+  solUsdRate: number
+): Promise<{
+  stats: AdminOverviewStats;
+  gmvByMonth: AdminGmvMonth[];
+  usersByMonth: AdminUsersMonth[];
+  categoryGmv: AdminCategoryGmv[];
+  statusCounts: AdminStatusCount[];
+  topVendors: AdminVendorRow[];
+  topCategories: AdminCategoryRow[];
+}> {
+  const [auctionsRes, usersRes, liveRes] = await Promise.all([
+    supabase.from("auctions").select("*"),
+    supabase.from("users").select("wallet_address, created_at"),
+    supabase
+      .from("auctions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "live"),
+  ]);
+
+  if (auctionsRes.error) throw auctionsRes.error;
+  if (usersRes.error) throw usersRes.error;
+  if (liveRes.error) throw liveRes.error;
+
+  const auctions = (auctionsRes.data ?? [])
+    .map((row) => parseAuctionRow(row as Record<string, unknown>))
+    .filter((a) => passesDummyFilter(a, showDummyData));
+
+  const released = auctions.filter((a) =>
+    ["released", "complete"].includes(a.escrow_state)
+  );
+  const disputed = auctions.filter((a) => a.escrow_state === "disputed");
+  const completed = auctions.filter((a) =>
+    ["released", "complete", "refunded", "disputed"].includes(a.escrow_state)
+  );
+
+  const totalGmvSol = released.reduce((s, a) => s + auctionAmountSol(a), 0);
+
+  const now = new Date();
+  const gmvByMonth: AdminGmvMonth[] = [];
+  const usersByMonth: AdminUsersMonth[] = [];
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = d.toLocaleDateString(undefined, {
+      month: "short",
+      year: "2-digit",
+    });
+    const month = d.getMonth();
+    const year = d.getFullYear();
+
+    const monthGmv = released
+      .filter((a) => {
+        const date = new Date(
+          a.payment_completed_at ?? a.escrow_funded_at ?? a.end_time
+        );
+        return date.getMonth() === month && date.getFullYear() === year;
+      })
+      .reduce((s, a) => s + auctionAmountSol(a), 0);
+
+    gmvByMonth.push({ label, valueSol: monthGmv });
+
+    const monthUsers = (usersRes.data ?? []).filter((u) => {
+      const date = new Date(u.created_at as string);
+      return date.getMonth() === month && date.getFullYear() === year;
+    }).length;
+
+    usersByMonth.push({ label, count: monthUsers });
+  }
+
+  const categoryTotals = new Map<string, number>();
+  for (const a of released) {
+    const cat = a.category?.trim() || "Uncategorized";
+    categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + auctionAmountSol(a));
+  }
+  const categoryGrand = [...categoryTotals.values()].reduce((s, v) => s + v, 0);
+  const categoryGmv: AdminCategoryGmv[] = [...categoryTotals.entries()]
+    .map(([category, valueSol]) => ({
+      category,
+      valueSol,
+      percent: categoryGrand > 0 ? (valueSol / categoryGrand) * 100 : 0,
+    }))
+    .sort((a, b) => b.valueSol - a.valueSol);
+
+  const statusMap: Record<string, number> = {
+    released: 0,
+    funded: 0,
+    refunded: 0,
+    disputed: 0,
+  };
+  for (const a of auctions) {
+    if (["released", "complete"].includes(a.escrow_state)) {
+      statusMap.released += 1;
+    } else if (["funded", "shipped", "pending"].includes(a.escrow_state)) {
+      statusMap.funded += 1;
+    } else if (a.escrow_state === "refunded") {
+      statusMap.refunded += 1;
+    } else if (a.escrow_state === "disputed") {
+      statusMap.disputed += 1;
+    }
+  }
+
+  const vendorStats = new Map<
+    string,
+    { sales: number; volume: number; disputes: number }
+  >();
+  for (const a of auctions) {
+    if (!a.seller_wallet) continue;
+    const entry = vendorStats.get(a.seller_wallet) ?? {
+      sales: 0,
+      volume: 0,
+      disputes: 0,
+    };
+    if (["released", "complete"].includes(a.escrow_state)) {
+      entry.sales += 1;
+      entry.volume += auctionAmountSol(a);
+    }
+    if (a.escrow_state === "disputed") entry.disputes += 1;
+    vendorStats.set(a.seller_wallet, entry);
+  }
+
+  const vendorWallets = [...vendorStats.keys()];
+  const { data: vendorUsers } = vendorWallets.length
+    ? await supabase
+        .from("users")
+        .select("wallet_address, username")
+        .in("wallet_address", vendorWallets)
+    : { data: [] };
+
+  const usernameByWallet = new Map(
+    (vendorUsers ?? []).map((u) => [
+      u.wallet_address as string,
+      u.username as string | null,
+    ])
+  );
+
+  const topVendors: AdminVendorRow[] = [...vendorStats.entries()]
+    .map(([wallet, stats]) => ({
+      wallet,
+      username: usernameByWallet.get(wallet) ?? null,
+      salesCount: stats.sales,
+      volumeSol: stats.volume,
+      avgSaleSol: stats.sales > 0 ? stats.volume / stats.sales : 0,
+      disputeRate:
+        stats.sales + stats.disputes > 0
+          ? (stats.disputes / (stats.sales + stats.disputes)) * 100
+          : 0,
+    }))
+    .sort((a, b) => b.volumeSol - a.volumeSol)
+    .slice(0, 10);
+
+  const categoryRows = new Map<
+    string,
+    { listings: number; volume: number; sales: number }
+  >();
+  for (const a of auctions) {
+    const cat = a.category?.trim() || "Uncategorized";
+    const entry = categoryRows.get(cat) ?? { listings: 0, volume: 0, sales: 0 };
+    entry.listings += 1;
+    if (["released", "complete"].includes(a.escrow_state)) {
+      entry.volume += auctionAmountSol(a);
+      entry.sales += 1;
+    }
+    categoryRows.set(cat, entry);
+  }
+
+  const topCategories: AdminCategoryRow[] = [...categoryRows.entries()]
+    .map(([category, stats]) => ({
+      category,
+      listingCount: stats.listings,
+      volumeSol: stats.volume,
+      avgSaleSol: stats.sales > 0 ? stats.volume / stats.sales : 0,
+    }))
+    .sort((a, b) => b.volumeSol - a.volumeSol);
+
+  void solUsdRate;
+
+  return {
+    stats: {
+      totalGmvSol,
+      activeListings: liveRes.count ?? 0,
+      totalUsers: usersRes.data?.length ?? 0,
+      disputeRate:
+        completed.length > 0 ? (disputed.length / completed.length) * 100 : 0,
+    },
+    gmvByMonth,
+    usersByMonth,
+    categoryGmv,
+    statusCounts: Object.entries(statusMap).map(([status, count]) => ({
+      status,
+      count,
+    })),
+    topVendors,
+    topCategories,
+  };
+}
+
+export async function fetchFlaggedOrders(
+  showDummyData: boolean
+): Promise<FlaggedOrder[]> {
+  const auctions = await fetchFundedAuctions(showDummyData);
+  const ids = auctions.map((a) => a.id);
+  const topBidders = await getTopBidders(ids);
+
+  const flagged: FlaggedOrder[] = [];
+
+  for (const auction of auctions) {
+    if (auction.tracking_number?.trim()) continue;
+    if (!["funded", "shipped", "pending"].includes(auction.escrow_state)) {
+      continue;
+    }
+
+    const paymentDate =
+      auction.payment_completed_at ??
+      auction.escrow_funded_at ??
+      auction.end_time;
+    const daysSince = daysBetween(paymentDate);
+    if (daysSince < 7) continue;
+
+    const isInternational =
+      (auction.international_shipping_usd ?? 0) >
+      (auction.domestic_shipping_usd ?? 0);
+    const graceDays = isInternational ? 14 : 5;
+    const graceExpires = new Date(paymentDate);
+    graceExpires.setDate(graceExpires.getDate() + 7 + graceDays);
+
+    flagged.push({
+      auctionId: auction.id,
+      reference: auction.reference_number,
+      itemTitle: auction.title,
+      sellerWallet: auction.seller_wallet,
+      buyerWallet: topBidders.get(auction.id) ?? "Unknown",
+      paymentDate,
+      daysSincePayment: daysSince,
+      estDeliveryDate: null,
+      graceLabel: isInternational ? "International +14d" : "Domestic +5d",
+      graceExpiresAt: graceExpires.toISOString(),
+      amountSol: auctionAmountSol(auction),
+      isInternational,
+      escrowState: auction.escrow_state,
+    });
+  }
+
+  return flagged;
+}
+
+export async function fetchDisputes(
+  showDummyData: boolean,
+  resolved: boolean,
+  solUsdRate: number
+): Promise<DisputeRow[]> {
+  const { data, error } = await supabase
+    .from("auctions")
+    .select("*")
+    .in(
+      "escrow_state",
+      resolved
+        ? ["complete", "refunded", "released"]
+        : ["disputed"]
+    );
+
+  if (error) throw error;
+
+  let auctions = (data ?? [])
+    .map((row) => parseAuctionRow(row as Record<string, unknown>))
+    .filter((a) => passesDummyFilter(a, showDummyData));
+
+  if (resolved) {
+    auctions = auctions.filter((a) =>
+      ["complete", "refunded", "released"].includes(a.escrow_state)
+    );
+  } else {
+    auctions = auctions.filter((a) => a.escrow_state === "disputed");
+  }
+
+  const ids = auctions.map((a) => a.id);
+  const [topBidders, threads, sellers] = await Promise.all([
+    getTopBidders(ids),
+    getThreadIdsByAuction(ids),
+    supabase
+      .from("users")
+      .select("wallet_address, username")
+      .in(
+        "wallet_address",
+        [...new Set(auctions.map((a) => a.seller_wallet))]
+      ),
+  ]);
+
+  const sellerNames = new Map(
+    (sellers.data ?? []).map((u) => [
+      u.wallet_address as string,
+      u.username as string | null,
+    ])
+  );
+
+  return auctions.map((auction) => {
+    const openedAt =
+      auction.escrow_funded_at ?? auction.payment_completed_at ?? auction.end_time;
+    const amountSol = auctionAmountSol(auction);
+
+    return {
+      auctionId: auction.id,
+      reference: auction.reference_number,
+      itemTitle: auction.title,
+      sellerWallet: auction.seller_wallet,
+      buyerWallet: topBidders.get(auction.id) ?? "Unknown",
+      sellerUsername: sellerNames.get(auction.seller_wallet) ?? null,
+      openedAt,
+      daysOpen: daysBetween(openedAt),
+      amountSol,
+      usdApprox: amountSol * solUsdRate,
+      description: auction.description,
+      imageUrl: auction.image_url,
+      additionalImages: auction.additional_images,
+      threadId: threads.get(auction.id) ?? null,
+      resolved,
+      outcome:
+        resolved && auction.escrow_state === "refunded"
+          ? "buyer"
+          : resolved
+            ? "seller"
+            : null,
+    };
+  });
+}
+
+export async function fetchEscrowMonitor(
+  showDummyData: boolean
+): Promise<{ rows: EscrowMonitorRow[]; pills: EscrowSummaryPill[] }> {
+  const auctions = await fetchFundedAuctions(showDummyData);
+  const ids = auctions.map((a) => a.id);
+  const [topBidders, threads] = await Promise.all([
+    getTopBidders(ids),
+    getThreadIdsByAuction(ids),
+  ]);
+
+  const rows: EscrowMonitorRow[] = auctions.map((auction) => {
+    const stateSince =
+      auction.payment_completed_at ??
+      auction.escrow_funded_at ??
+      auction.end_time;
+    const hasTracking = Boolean(auction.tracking_number?.trim());
+    const daysSince = daysBetween(stateSince);
+    const isFlagged =
+      !hasTracking &&
+      daysSince >= 7 &&
+      ["funded", "shipped", "pending"].includes(auction.escrow_state);
+
+    let trackingStatus = "Not uploaded";
+    if (hasTracking) trackingStatus = `${auction.tracking_courier ?? "Courier"}: ${auction.tracking_number}`;
+    else if (auction.shipping_status === "delivered") trackingStatus = "Delivered";
+
+    return {
+      auctionId: auction.id,
+      reference: auction.reference_number,
+      itemTitle: auction.title,
+      sellerWallet: auction.seller_wallet,
+      buyerWallet: topBidders.get(auction.id) ?? "Unknown",
+      amountSol: auctionAmountSol(auction),
+      paymentDate: auction.payment_completed_at ?? auction.escrow_funded_at,
+      escrowState: auction.escrow_state,
+      daysInState: daysSince,
+      trackingStatus,
+      threadId: threads.get(auction.id) ?? null,
+      isDummy: !isRealAuction(auction),
+      isFlagged,
+    };
+  });
+
+  const pillDefs: { key: string; label: string; states: EscrowState[] }[] = [
+    { key: "funded", label: "Funded", states: ["funded", "pending"] },
+    { key: "shipped", label: "Shipped", states: ["shipped"] },
+    { key: "disputed", label: "Disputed", states: ["disputed"] },
+    { key: "flagged", label: "Flagged", states: [] },
+    { key: "released", label: "Released", states: ["released", "complete"] },
+    { key: "refunded", label: "Refunded", states: ["refunded"] },
+  ];
+
+  const pills: EscrowSummaryPill[] = pillDefs.map(({ key, label, states }) => {
+    const matching =
+      key === "flagged"
+        ? rows.filter((r) => r.isFlagged)
+        : rows.filter((r) => states.includes(r.escrowState));
+    return {
+      key,
+      label,
+      count: matching.length,
+      totalSol: matching.reduce((s, r) => s + r.amountSol, 0),
+    };
+  });
+
+  return { rows, pills };
+}
+
+function deriveUserStatus(strikes: BuyerStrikeRow[]): AdminUserProfile["status"] {
+  if (!strikes.length) return "active";
+  const now = Date.now();
+  const active = strikes.filter(
+    (s) => !s.expires_at || new Date(s.expires_at).getTime() > now
+  );
+  if (!active.length) return "active";
+  if (active.some((s) => s.reason === "ban")) return "banned";
+  if (active.some((s) => s.reason === "suspension_7d")) return "suspended";
+  if (active.some((s) => s.reason === "cooldown_24h")) return "warned";
+  if (active.some((s) => s.reason === "warning")) return "warned";
+  return "warned";
+}
+
+export async function fetchRecentUsers(): Promise<RecentUserRow[]> {
+  const { data: users, error } = await supabase
+    .from("users")
+    .select("wallet_address, username, avatar_url, created_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+
+  const wallets = (users ?? []).map((u) => u.wallet_address as string);
+  const { data: strikes } = wallets.length
+    ? await supabase
+        .from("buyer_strikes")
+        .select("*")
+        .in("wallet_address", wallets)
+    : { data: [] };
+
+  const strikesByWallet = new Map<string, BuyerStrikeRow[]>();
+  for (const row of strikes ?? []) {
+    const wallet = row.wallet_address as string;
+    const list = strikesByWallet.get(wallet) ?? [];
+    list.push(row as BuyerStrikeRow);
+    strikesByWallet.set(wallet, list);
+  }
+
+  return (users ?? []).map((u) => {
+    const wallet = u.wallet_address as string;
+    const userStrikes = strikesByWallet.get(wallet) ?? [];
+    return {
+      wallet,
+      username: (u.username as string | null) ?? null,
+      avatarUrl: (u.avatar_url as string | null) ?? null,
+      createdAt: u.created_at as string,
+      strikeCount: userStrikes.length,
+      status: deriveUserStatus(userStrikes),
+    };
+  });
+}
+
+export async function searchAdminUser(
+  query: string
+): Promise<AdminUserProfile | null> {
+  const trimmed = query.trim().replace(/^@+/, "");
+  if (!trimmed) return null;
+
+  let userRow = null;
+
+  const byWallet = await supabase
+    .from("users")
+    .select("*")
+    .eq("wallet_address", trimmed)
+    .maybeSingle();
+
+  if (byWallet.data) userRow = byWallet.data;
+  else {
+    const byUsername = await supabase
+      .from("users")
+      .select("*")
+      .ilike("username", trimmed)
+      .maybeSingle();
+    if (byUsername.data) userRow = byUsername.data;
+  }
+
+  if (!userRow) return null;
+
+  const wallet = userRow.wallet_address as string;
+
+  const [listings, sales, bids, reviews, strikes] = await Promise.all([
+    supabase
+      .from("auctions")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_wallet", wallet),
+    supabase
+      .from("auctions")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_wallet", wallet)
+      .in("escrow_state", ["released", "complete"]),
+    supabase
+      .from("bids")
+      .select("id", { count: "exact", head: true })
+      .eq("bidder_wallet", wallet),
+    supabase
+      .from("reviews")
+      .select("id", { count: "exact", head: true })
+      .or(`vendor_wallet.eq.${wallet},reviewer_wallet.eq.${wallet}`),
+    supabase.from("buyer_strikes").select("*").eq("wallet_address", wallet),
+  ]);
+
+  const strikeRows = (strikes.data ?? []) as BuyerStrikeRow[];
+
+  return {
+    wallet_address: wallet,
+    username: (userRow.username as string | null) ?? null,
+    avatar_url: (userRow.avatar_url as string | null) ?? null,
+    reputation: Number(userRow.reputation ?? 0),
+    created_at: userRow.created_at as string,
+    shop_name: (userRow.shop_name as string | null) ?? null,
+    banner_image: (userRow.banner_image as string | null) ?? null,
+    bio: (userRow.bio as string | null) ?? null,
+    shop_description: (userRow.shop_description as string | null) ?? null,
+    social_twitter: (userRow.social_twitter as string | null) ?? null,
+    social_instagram: (userRow.social_instagram as string | null) ?? null,
+    is_vendor: Boolean(userRow.is_vendor),
+    is_verified: Boolean(userRow.is_verified),
+    followers_count: Number(userRow.followers_count ?? 0),
+    total_sales: Number(userRow.total_sales ?? 0),
+    total_volume: Number(userRow.total_volume ?? 0),
+    average_rating: Number(userRow.average_rating ?? 0),
+    show_copy_wallet: Boolean(userRow.show_copy_wallet ?? true),
+    show_won_auctions: Boolean(userRow.show_won_auctions ?? true),
+    country: (userRow.country as string | null) ?? null,
+    ships_internationally: Boolean(userRow.ships_internationally),
+    listingsCount: listings.count ?? 0,
+    salesCount: sales.count ?? 0,
+    purchasesCount: bids.count ?? 0,
+    reviewsCount: reviews.count ?? 0,
+    strikeCount: strikeRows.length,
+    status: deriveUserStatus(strikeRows),
+  };
+}
+
+export async function fetchUserStrikes(wallet: string): Promise<BuyerStrikeRow[]> {
+  const { data, error } = await supabase
+    .from("buyer_strikes")
+    .select("*")
+    .eq("wallet_address", wallet)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []) as BuyerStrikeRow[];
+}
+
+export async function fetchAdminThreadMessages(threadId: string) {
+  const { data, error } = await supabase
+    .from("direct_messages")
+    .select("*")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}

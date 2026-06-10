@@ -14,6 +14,7 @@ import {
   StarFilledIcon,
   StoreIcon,
 } from "@/components/icons";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
 import { getProfileSlug } from "@/lib/profile-links";
 
@@ -39,25 +40,32 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
   const pathname = usePathname();
   const currentPath = activePath ?? pathname;
   const { connected, wallet, username, isVendor, loading } = useSidebarUser();
+  const { isAdmin } = useIsAdmin();
   const showBecomeVendorCard = connected && !loading && !isVendor;
 
   const shopSlug = wallet ? getProfileSlug(username, wallet) : null;
   const shopSettingsHref = shopSlug ? `/shop/${shopSlug}` : "/dashboard/settings";
 
-  const shopSubItems = useMemo(
-    () => [
+  const shopSubItems = useMemo(() => {
+    const items = [
       { href: "/dashboard", label: "Dashboard", icon: DashboardLayoutIcon },
       { href: shopSettingsHref, label: "Shop Settings", icon: SettingsIcon },
       { href: "/dashboard/create", label: "Create Listing", icon: StoreIcon },
-      { href: "/transactions", label: "Transactions", icon: null },
-    ],
-    [shopSettingsHref]
-  );
+      { href: "/transactions", label: "Transactions", icon: null as null },
+    ];
+    if (isAdmin) {
+      items.push({ href: "/admin", label: "Admin", icon: null });
+    }
+    return items;
+  }, [shopSettingsHref, isAdmin]);
 
   const isShopRoute =
     currentPath.startsWith("/dashboard") ||
     currentPath.startsWith("/transactions") ||
+    currentPath.startsWith("/admin") ||
     (shopSlug !== null && currentPath === shopSettingsHref);
+
+  const showMyShop = connected && (isVendor || isAdmin);
 
   const [shopOpen, setShopOpen] = useState(false);
 
@@ -103,7 +111,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
           <span>Home</span>
         </Link>
 
-        {connected && isVendor && (
+        {showMyShop && (
           <div>
             <button
               type="button"

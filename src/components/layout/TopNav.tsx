@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import AdminViewSwitcher from "@/components/admin/AdminViewSwitcher";
 import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
 import WalletNav from "@/components/WalletNav";
 import NotificationTray from "@/components/notifications/NotificationTray";
 import SearchSuggestionsDropdown from "@/components/search/SearchSuggestionsDropdown";
 import { SearchIcon } from "@/components/icons";
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
@@ -33,7 +35,9 @@ export default function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { connected } = useWallet();
+  const { isAdmin } = useIsAdmin();
   const { wallet, username, avatarUrl } = useSidebarUser();
+  const isAdminRoute = pathname.startsWith("/admin");
   const { count: unreadMessages } = useUnreadMessageCount();
   const { notifications, unreadCount, refresh } = useNotifications();
   const [query, setQuery] = useState("");
@@ -144,6 +148,8 @@ export default function TopNav() {
       </nav>
 
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        {isAdmin && <AdminViewSwitcher />}
+
         <WalletNav />
 
         {connected && wallet && (
@@ -203,9 +209,16 @@ export default function TopNav() {
               size="xs"
               className="h-9 w-9 border-2 border-accent"
             />
-            <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-sm font-semibold uppercase tracking-widest text-transparent">
-              {username?.replace(/^@+/, "").trim().toUpperCase() ||
-                shortenAddress(wallet).toUpperCase()}
+            <span className="flex items-center gap-2">
+              {isAdminRoute && (
+                <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-purple-300">
+                  ADMIN
+                </span>
+              )}
+              <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-sm font-semibold uppercase tracking-widest text-transparent">
+                {username?.replace(/^@+/, "").trim().toUpperCase() ||
+                  shortenAddress(wallet).toUpperCase()}
+              </span>
             </span>
           </Link>
         )}
