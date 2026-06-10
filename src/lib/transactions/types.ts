@@ -36,6 +36,15 @@ export interface TransactionAmounts {
   netSol: number;
   totalSol: number;
   usdApprox: number;
+  usdRateUsed: number;
+  usesHistoricalRate: boolean;
+}
+
+export interface TransactionRateInfo {
+  solUsdRateAtPayment: number | null;
+  paymentCompletedAt: string | null;
+  usdRateUsed: number;
+  usesHistoricalRate: boolean;
 }
 
 export interface SellerTransactionRow {
@@ -50,6 +59,8 @@ export interface SellerTransactionRow {
   displayStatus: SellerDisplayStatus;
   txSignature: string | null;
   category: string | null;
+  solUsdRateAtPayment: number | null;
+  paymentCompletedAt: string | null;
 }
 
 export interface BuyerTransactionRow {
@@ -64,6 +75,8 @@ export interface BuyerTransactionRow {
   displayStatus: BuyerDisplayStatus;
   txSignature: string | null;
   category: string | null;
+  solUsdRateAtPayment: number | null;
+  paymentCompletedAt: string | null;
 }
 
 export type TransactionRow = SellerTransactionRow | BuyerTransactionRow;

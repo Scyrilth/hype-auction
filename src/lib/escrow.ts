@@ -8,6 +8,7 @@ import {
   type VersionedTransaction,
 } from "@solana/web3.js";
 
+import { fetchSolUsdRate } from "@/lib/sol-price";
 import { supabase } from "@/lib/supabase";
 
 const PROGRAM_ID = new PublicKey(
@@ -432,19 +433,27 @@ export async function initiatePayment(
       .rpc()) as TransactionSignature;
 
     const totalLamports = amountLamports + shippingLamports;
-    const now = new Date().toISOString();
+    const paymentCompletedAt = new Date().toISOString();
+    const solUsdRate = await fetchSolUsdRate();
+
+    const escrowUpdate: Record<string, unknown> = {
+      escrow_pda: escrowPda.toBase58(),
+      escrow_tx_signature: depositSig,
+      escrow_funded: true,
+      escrow_state: "funded",
+      escrow_funded_at: paymentCompletedAt,
+      escrow_amount_lamports: totalLamports,
+      escrow_attempt_number: attemptNumber,
+      payment_completed_at: paymentCompletedAt,
+    };
+
+    if (solUsdRate !== null) {
+      escrowUpdate.sol_usd_rate_at_payment = solUsdRate;
+    }
 
     const { error } = await supabase
       .from("auctions")
-      .update({
-        escrow_pda: escrowPda.toBase58(),
-        escrow_tx_signature: depositSig,
-        escrow_funded: true,
-        escrow_state: "funded",
-        escrow_funded_at: now,
-        escrow_amount_lamports: totalLamports,
-        escrow_attempt_number: attemptNumber,
-      })
+      .update(escrowUpdate)
       .eq("id", auctionId);
 
     if (error) {

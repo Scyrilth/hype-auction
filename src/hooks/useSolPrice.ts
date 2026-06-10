@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { fetchSolUsdRate } from "@/lib/sol-price";
+
 const REFRESH_MS = 60_000;
 
 let cachedPrice: number | null = null;
@@ -16,45 +18,9 @@ function notifyListeners() {
   }
 }
 
-async function fetchFromBinance(): Promise<number | null> {
-  try {
-    const response = await fetch(
-      "https://api.binance.com/api/v3/ticker/price?symbol=SOLUSDT"
-    );
-    if (!response.ok) return null;
-
-    const data = (await response.json()) as { price?: string };
-    const price = parseFloat(data.price ?? "");
-    return Number.isFinite(price) ? price : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchFromCoinGecko(): Promise<number | null> {
-  try {
-    const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd"
-    );
-    if (!response.ok) return null;
-
-    const data = (await response.json()) as { solana?: { usd?: number } };
-    const price = data.solana?.usd;
-    return typeof price === "number" && Number.isFinite(price) ? price : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchSolPrice(): Promise<number | null> {
-  const binancePrice = await fetchFromBinance();
-  if (binancePrice !== null) return binancePrice;
-  return fetchFromCoinGecko();
-}
-
 async function refreshPrice() {
   if (!fetchPromise) {
-    fetchPromise = fetchSolPrice().finally(() => {
+    fetchPromise = fetchSolUsdRate().finally(() => {
       fetchPromise = null;
     });
   }

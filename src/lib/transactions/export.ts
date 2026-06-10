@@ -27,6 +27,10 @@ function escapeCsv(value: string): string {
   return value;
 }
 
+function formatRowDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString();
+}
+
 export function exportSellerCsv(
   rows: SellerTransactionRow[],
   filename = "hype-auction-seller-transactions.csv"
@@ -41,6 +45,7 @@ export function exportSellerCsv(
     "Fee (SOL)",
     "Net (SOL)",
     "USD",
+    "SOL/USD Rate",
     "Status",
     "Explorer",
   ];
@@ -58,6 +63,9 @@ export function exportSellerCsv(
         formatSolExport(row.amounts.feeSol),
         formatSolExport(row.amounts.netSol),
         formatUsdExport(row.amounts.usdApprox),
+        row.solUsdRateAtPayment != null
+          ? formatUsdExport(row.solUsdRateAtPayment)
+          : "current",
         SELLER_STATUS_LABELS[row.displayStatus],
         row.txSignature ? getExplorerTxUrl(row.txSignature) : "",
       ]
@@ -82,6 +90,7 @@ export function exportBuyerCsv(
     "Shipping (SOL)",
     "Total (SOL)",
     "USD",
+    "SOL/USD Rate",
     "Status",
     "Explorer",
   ];
@@ -98,6 +107,9 @@ export function exportBuyerCsv(
         formatSolExport(row.amounts.shippingSol),
         formatSolExport(row.amounts.totalSol),
         formatUsdExport(row.amounts.usdApprox),
+        row.solUsdRateAtPayment != null
+          ? formatUsdExport(row.solUsdRateAtPayment)
+          : "current",
         BUYER_STATUS_LABELS[row.displayStatus],
         row.txSignature ? getExplorerTxUrl(row.txSignature) : "",
       ]
@@ -124,11 +136,13 @@ export function exportTransactionsPdf({
   range,
   summary,
   rows,
+  currentSolUsdRate,
 }: {
   role: TransactionRole;
   range: DateRange;
   summary: SellerSummary | BuyerSummary;
   rows: SellerTransactionRow[] | BuyerTransactionRow[];
+  currentSolUsdRate: number;
 }) {
   const doc = new jsPDF({ orientation: "landscape" });
   const isSeller = role === "selling";
@@ -142,9 +156,14 @@ export function exportTransactionsPdf({
     14,
     26
   );
+  doc.text(
+    `Current SOL/USD rate: $${formatUsdExport(currentSolUsdRate)}. Historical transaction values use rate stored at payment time where available.`,
+    14,
+    32
+  );
   doc.setTextColor(0);
 
-  let y = 34;
+  let y = 40;
   doc.setFontSize(11);
 
   if (isSeller) {
@@ -190,7 +209,7 @@ export function exportTransactionsPdf({
         row.reference ?? "—",
         row.itemTitle,
         row.buyerWallet.slice(0, 8) + "…",
-        new Date(row.date).toLocaleDateString(),
+        formatRowDate(row.date),
         formatSolExport(row.amounts.itemSol),
         formatSolExport(row.amounts.shippingSol),
         formatSolExport(row.amounts.feeSol),
@@ -243,7 +262,7 @@ export function exportTransactionsPdf({
         row.reference ?? "—",
         row.itemTitle,
         row.sellerWallet.slice(0, 8) + "…",
-        new Date(row.date).toLocaleDateString(),
+        formatRowDate(row.date),
         formatSolExport(row.amounts.itemSol),
         formatSolExport(row.amounts.shippingSol),
         formatSolExport(row.amounts.totalSol),
@@ -254,6 +273,18 @@ export function exportTransactionsPdf({
       headStyles: { fillColor: [59, 130, 246] },
     });
   }
+
+  const finalY =
+    (doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable
+      ?.finalY ?? y + 20;
+
+  doc.setFontSize(8);
+  doc.setTextColor(100);
+  doc.text(
+    `* Historical rates used where available. Current rate: $${formatUsdExport(currentSolUsdRate)} used for transactions without stored rate.`,
+    14,
+    finalY + 8
+  );
 
   doc.save(
     `hype-auction-${isSeller ? "seller" : "buyer"}-transactions.pdf`

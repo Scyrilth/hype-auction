@@ -14,6 +14,9 @@ import type {
   TransactionsData,
 } from "./types";
 
+const AUCTION_TX_COLUMNS =
+  "id, title, reference_number, seller_wallet, current_bid, start_price, end_time, created_at, status, category, escrow_state, escrow_tx_signature, escrow_amount_lamports, domestic_shipping_usd, international_shipping_usd, sol_usd_rate_at_payment, payment_completed_at";
+
 async function getTopBidderByAuction(
   auctionIds: string[]
 ): Promise<Map<string, string>> {
@@ -37,15 +40,19 @@ async function getTopBidderByAuction(
   return winners;
 }
 
-/** Use end_time or created_at for date-range filtering (per product spec). */
+/** Prefer payment_completed_at, then end_time, then created_at. */
 export function getTransactionDate(auction: Auction): string {
-  return auction.end_time ?? auction.created_at;
+  return (
+    auction.payment_completed_at ??
+    auction.end_time ??
+    auction.created_at
+  );
 }
 
 function buildSellerRow(
   auction: Auction,
   buyerWallet: string,
-  solUsdRate: number
+  currentRateFallback: number
 ): SellerTransactionRow | null {
   if (!isTransactionEscrowState(auction.escrow_state)) return null;
 
@@ -59,17 +66,19 @@ function buildSellerRow(
     itemTitle: auction.title,
     buyerWallet,
     date: getTransactionDate(auction),
-    amounts: computeTransactionAmounts(auction, solUsdRate),
+    amounts: computeTransactionAmounts(auction, currentRateFallback),
     escrowState: auction.escrow_state,
     displayStatus,
     txSignature: auction.escrow_tx_signature,
     category: auction.category,
+    solUsdRateAtPayment: auction.sol_usd_rate_at_payment,
+    paymentCompletedAt: auction.payment_completed_at,
   };
 }
 
 function buildBuyerRow(
   auction: Auction,
-  solUsdRate: number
+  currentRateFallback: number
 ): BuyerTransactionRow | null {
   if (!isTransactionEscrowState(auction.escrow_state)) return null;
 
@@ -83,17 +92,19 @@ function buildBuyerRow(
     itemTitle: auction.title,
     sellerWallet: auction.seller_wallet,
     date: getTransactionDate(auction),
-    amounts: computeTransactionAmounts(auction, solUsdRate),
+    amounts: computeTransactionAmounts(auction, currentRateFallback),
     escrowState: auction.escrow_state,
     displayStatus,
     txSignature: auction.escrow_tx_signature,
     category: auction.category,
+    solUsdRateAtPayment: auction.sol_usd_rate_at_payment,
+    paymentCompletedAt: auction.payment_completed_at,
   };
 }
 
 export async function fetchTransactionsData(
   wallet: string,
-  solUsdRate: number
+  currentRateFallback: number
 ): Promise<TransactionsData> {
   const normalizedWallet = wallet.trim();
 
@@ -101,7 +112,7 @@ export async function fetchTransactionsData(
     await Promise.all([
       supabase
         .from("auctions")
-        .select("*")
+        .select(AUCTION_TX_COLUMNS)
         .eq("seller_wallet", normalizedWallet)
         .eq("status", "ended")
         .order("end_time", { ascending: false }),
@@ -133,7 +144,7 @@ export async function fetchTransactionsData(
   if (buyerAuctionIds.length) {
     const { data, error } = await supabase
       .from("auctions")
-      .select("*")
+      .select(AUCTION_TX_COLUMNS)
       .in("id", buyerAuctionIds)
       .eq("status", "ended");
 
@@ -154,14 +165,14 @@ export async function fetchTransactionsData(
   const sellerRows: SellerTransactionRow[] = [];
   for (const auction of sellerAuctions) {
     const buyerWallet = topBidders.get(auction.id) ?? "Unknown";
-    const row = buildSellerRow(auction, buyerWallet, solUsdRate);
+    const row = buildSellerRow(auction, buyerWallet, currentRateFallback);
     if (row) sellerRows.push(row);
   }
 
   const buyerRows: BuyerTransactionRow[] = [];
   for (const auction of buyerAuctions) {
     if (topBidders.get(auction.id) !== normalizedWallet) continue;
-    const row = buildBuyerRow(auction, solUsdRate);
+    const row = buildBuyerRow(auction, currentRateFallback);
     if (row) buyerRows.push(row);
   }
 

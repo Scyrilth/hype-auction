@@ -226,6 +226,7 @@ export default function TransactionsView() {
       range,
       summary: role === "selling" ? sellerSummary : buyerSummary,
       rows: role === "selling" ? filteredSellerRows : filteredBuyerRows,
+      currentSolUsdRate: rate,
     });
   };
 
@@ -276,8 +277,8 @@ export default function TransactionsView() {
       <DateRangeSelector range={range} onChange={setRange} />
 
       <p className="text-xs text-muted">
-        USD values use the current Binance SOL rate. Historical rates at
-        transaction time are used when available; otherwise current rate applies.
+        Current SOL/USD rate: ${rate.toFixed(2)}. Historical transaction values
+        use the rate stored at payment time where available.
       </p>
 
       <SummaryCards

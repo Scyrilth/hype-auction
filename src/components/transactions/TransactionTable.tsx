@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import PortalInfoTooltip from "@/components/ui/PortalInfoTooltip";
 import { useToast } from "@/components/ui/Toast";
 import { getExplorerTxUrl } from "@/lib/escrow";
 import { shortenAddress } from "@/lib/format";
@@ -22,6 +23,56 @@ import {
 } from "@/lib/transactions";
 
 const PAGE_SIZE = 20;
+
+const USD_COLUMN_TOOLTIP =
+  "USD values use the SOL rate at time of payment where available, otherwise current rate";
+
+function UsdColumnHeader({
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+}: {
+  sortKey: string;
+  activeKey: string;
+  direction: SortDirection;
+  onSort: (key: string) => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <SortHeader
+        label="~USD"
+        sortKey={sortKey}
+        activeKey={activeKey}
+        direction={direction}
+        onSort={onSort}
+      />
+      <PortalInfoTooltip text={USD_COLUMN_TOOLTIP} multiline />
+    </span>
+  );
+}
+
+function UsdCell({
+  row,
+}: {
+  row: SellerTransactionRow | BuyerTransactionRow;
+}) {
+  return (
+    <div>
+      <p>~${row.amounts.usdApprox.toFixed(2)}</p>
+      {row.solUsdRateAtPayment != null ? (
+        <p className="mt-0.5 text-[10px] text-muted">
+          Rate: ${row.solUsdRateAtPayment.toFixed(2)}
+          {row.paymentCompletedAt
+            ? ` on ${new Date(row.paymentCompletedAt).toLocaleDateString()}`
+            : ""}
+        </p>
+      ) : (
+        <p className="mt-0.5 text-[10px] text-muted/60">Rate: ~current</p>
+      )}
+    </div>
+  );
+}
 
 function SortHeader({
   label,
@@ -291,7 +342,7 @@ export default function TransactionTable({
                         <SortHeader label="Net" sortKey="netSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
                       </th>
                       <th className="px-3 py-3">
-                        <SortHeader label="~USD" sortKey="usdApprox" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
+                        <UsdColumnHeader sortKey="usdApprox" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
                       </th>
                       <th className="px-3 py-3">
                         <SortHeader label="Status" sortKey="displayStatus" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
@@ -324,7 +375,7 @@ export default function TransactionTable({
                         <SortHeader label="Total" sortKey="totalSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
                       </th>
                       <th className="px-3 py-3">
-                        <SortHeader label="~USD" sortKey="usdApprox" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
+                        <UsdColumnHeader sortKey="usdApprox" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
                       </th>
                       <th className="px-3 py-3">
                         <SortHeader label="Status" sortKey="displayStatus" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
@@ -373,8 +424,8 @@ export default function TransactionTable({
                         <td className="px-3 py-2.5 font-mono text-xs text-emerald-300">
                           {row.amounts.netSol.toFixed(4)}
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-muted">
-                          ~${row.amounts.usdApprox.toFixed(2)}
+                        <td className="px-3 py-2.5 text-xs">
+                          <UsdCell row={row} />
                         </td>
                         <td className="px-3 py-2.5">
                           <span
@@ -420,8 +471,8 @@ export default function TransactionTable({
                         <td className="px-3 py-2.5 font-mono text-xs text-blue-300">
                           {row.amounts.totalSol.toFixed(4)}
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-muted">
-                          ~${row.amounts.usdApprox.toFixed(2)}
+                        <td className="px-3 py-2.5 text-xs">
+                          <UsdCell row={row} />
                         </td>
                         <td className="px-3 py-2.5">
                           <span

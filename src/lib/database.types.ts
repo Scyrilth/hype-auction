@@ -79,6 +79,8 @@ export interface Auction {
   escrow_attempt_number: number;
   escrow_state: EscrowState;
   escrow_expired_at: string | null;
+  sol_usd_rate_at_payment: number | null;
+  payment_completed_at: string | null;
   domestic_shipping_usd: number;
   international_shipping_usd: number;
   is_dummy: boolean;
