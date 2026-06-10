@@ -70,3 +70,37 @@ export async function getSimilarAuctionsForDetail(
 
   return candidates.slice(0, limit);
 }
+
+export async function getTrendingListings(
+  excludeId: string,
+  limit = LIVE_AUCTION_LIMIT
+): Promise<Auction[]> {
+  const now = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("auctions")
+    .select("*")
+    .eq("status", liveAuctionFilters(now).status)
+    .gt("end_time", now)
+    .neq("id", excludeId)
+    .order("created_at", { ascending: false })
+    .limit(48);
+
+  if (error) throw error;
+
+  const candidates = (data ?? []).map((row) =>
+    parseAuctionRow(row as Record<string, unknown>)
+  );
+
+  if (!candidates.length) return [];
+
+  const bidCounts = await getBidCountsForAuctions(candidates.map((item) => item.id));
+
+  candidates.sort(
+    (a, b) =>
+      (bidCounts.get(b.id) ?? 0) - (bidCounts.get(a.id) ?? 0) ||
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  return candidates.slice(0, limit);
+}

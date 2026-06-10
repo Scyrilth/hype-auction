@@ -7,9 +7,16 @@ import { getBidCountsForAuctions } from "@/lib/auctions";
 import {
   getMoreFromSellerAuctions,
   getSimilarAuctionsForDetail,
+  getTrendingListings,
 } from "@/lib/auction-suggestions";
 import type { AuctionLabelMaps } from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
+
+type SecondarySection = {
+  title: string;
+  viewAllHref: string;
+  auctions: Auction[];
+};
 
 export default function AuctionDetailSuggestions({
   auctionId,
@@ -23,7 +30,9 @@ export default function AuctionDetailSuggestions({
   shopSlug: string;
 }) {
   const [moreFromSeller, setMoreFromSeller] = useState<Auction[]>([]);
-  const [similarItems, setSimilarItems] = useState<Auction[]>([]);
+  const [secondarySection, setSecondarySection] = useState<SecondarySection | null>(
+    null
+  );
   const [labelMaps, setLabelMaps] = useState<AuctionLabelMaps | undefined>();
   const [loaded, setLoaded] = useState(false);
 
@@ -32,25 +41,47 @@ export default function AuctionDetailSuggestions({
 
     async function loadSuggestions() {
       try {
-        const [sellerAuctions, similarAuctions] = await Promise.all([
-          getMoreFromSellerAuctions(sellerWallet, auctionId),
-          category
-            ? getSimilarAuctionsForDetail({
-                id: auctionId,
-                category,
-                seller_wallet: sellerWallet,
-              })
-            : Promise.resolve([] as Auction[]),
-        ]);
+        const sellerAuctions = await getMoreFromSellerAuctions(
+          sellerWallet,
+          auctionId
+        );
+
+        let similarAuctions: Auction[] = [];
+        if (category) {
+          similarAuctions = await getSimilarAuctionsForDetail({
+            id: auctionId,
+            category,
+            seller_wallet: sellerWallet,
+          });
+        }
+
+        let secondary: SecondarySection | null = null;
+
+        if (similarAuctions.length > 0) {
+          secondary = {
+            title: "Similar items",
+            viewAllHref: `/browse?category=${encodeURIComponent(category!)}`,
+            auctions: similarAuctions,
+          };
+        } else {
+          const trendingAuctions = await getTrendingListings(auctionId);
+          if (trendingAuctions.length > 0) {
+            secondary = {
+              title: "Trending items",
+              viewAllHref: "/browse",
+              auctions: trendingAuctions,
+            };
+          }
+        }
 
         if (cancelled) return;
 
         setMoreFromSeller(sellerAuctions);
-        setSimilarItems(similarAuctions);
+        setSecondarySection(secondary);
 
         const auctionIds = [
           ...sellerAuctions.map((auction) => auction.id),
-          ...similarAuctions.map((auction) => auction.id),
+          ...(secondary?.auctions.map((auction) => auction.id) ?? []),
         ];
 
         if (auctionIds.length > 0) {
@@ -78,11 +109,7 @@ export default function AuctionDetailSuggestions({
   }, [auctionId, sellerWallet, category]);
 
   if (!loaded) return null;
-  if (!moreFromSeller.length && !similarItems.length) return null;
-
-  const similarViewAllHref = category
-    ? `/browse?category=${encodeURIComponent(category)}`
-    : undefined;
+  if (!moreFromSeller.length && !secondarySection) return null;
 
   return (
     <div className="space-y-8">
@@ -92,12 +119,14 @@ export default function AuctionDetailSuggestions({
         auctions={moreFromSeller}
         labelMaps={labelMaps}
       />
-      <AuctionSuggestionSection
-        title="Similar items"
-        viewAllHref={similarViewAllHref}
-        auctions={similarItems}
-        labelMaps={labelMaps}
-      />
+      {secondarySection ? (
+        <AuctionSuggestionSection
+          title={secondarySection.title}
+          viewAllHref={secondarySection.viewAllHref}
+          auctions={secondarySection.auctions}
+          labelMaps={labelMaps}
+        />
+      ) : null}
     </div>
   );
 }
