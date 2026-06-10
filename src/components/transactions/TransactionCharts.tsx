@@ -34,7 +34,12 @@ const STATUS_COLORS = {
   Completed: "#34d399",
 };
 
-const BAR_CHART_CURSOR = { fill: "rgba(255,255,255,0.05)" };
+const BAR_ACTIVE_BAR = {
+  stroke: "rgba(139, 92, 246, 0.8)",
+  strokeWidth: 2,
+  fill: "rgba(139, 92, 246, 0.9)",
+  radius: 4,
+};
 
 function ChartShell({
   title,
@@ -178,12 +183,18 @@ export default function TransactionCharts({
             <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 10 }} />
             <YAxis tick={{ fill: "#71717a", fontSize: 10 }} />
             <Tooltip
-              cursor={BAR_CHART_CURSOR}
+              cursor={false}
               content={
                 <ValueTooltip currency={currency} solPrice={solPrice} />
               }
             />
-            <Bar dataKey="displayValue" fill={accent} radius={[4, 4, 0, 0]} animationDuration={600} />
+            <Bar
+              dataKey="displayValue"
+              fill={accent}
+              radius={[4, 4, 0, 0]}
+              activeBar={BAR_ACTIVE_BAR}
+              animationDuration={600}
+            />
           </BarChart>
         </ResponsiveContainer>
       </ChartShell>
@@ -251,7 +262,7 @@ export default function TransactionCharts({
               tick={{ fill: "#71717a", fontSize: 10 }}
             />
             <Tooltip
-              cursor={BAR_CHART_CURSOR}
+              cursor={false}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const item = payload[0]?.payload as {
@@ -268,7 +279,12 @@ export default function TransactionCharts({
                 );
               }}
             />
-            <Bar dataKey="count" radius={[0, 4, 4, 0]} animationDuration={600}>
+            <Bar
+              dataKey="count"
+              radius={[0, 4, 4, 0]}
+              activeBar={BAR_ACTIVE_BAR}
+              animationDuration={600}
+            >
               {statusData.map((entry) => (
                 <Cell
                   key={entry.name}
