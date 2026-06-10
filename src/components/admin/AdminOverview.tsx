@@ -84,6 +84,7 @@ export default function AdminOverview() {
         categoryGmv={data.categoryGmv}
         statusCounts={data.statusCounts}
         solUsdRate={rate}
+        showDummyData={showDummyData}
       />
 
       <div className="grid gap-6 lg:grid-cols-2">

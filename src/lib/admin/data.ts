@@ -30,22 +30,42 @@ function auctionAmountSol(auction: Auction): number {
   return getEffectiveBid(auction);
 }
 
-function daysBetween(from: string, to = new Date()): number {
-  const ms = to.getTime() - new Date(from).getTime();
-  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+function auctionCurrentBidSol(auction: Auction): number {
+  const bid = Number(auction.current_bid);
+  return Number.isFinite(bid) ? bid : 0;
 }
 
-async function fetchFundedAuctions(showDummyData: boolean): Promise<Auction[]> {
+function dedupeAuctionsById(auctions: Auction[]): Auction[] {
+  const byId = new Map<string, Auction>();
+  for (const auction of auctions) {
+    if (!byId.has(auction.id)) {
+      byId.set(auction.id, auction);
+    }
+  }
+  return [...byId.values()];
+}
+
+async function fetchEndedEscrowAuctions(
+  showDummyData: boolean
+): Promise<Auction[]> {
   const { data, error } = await supabase
     .from("auctions")
     .select("*")
-    .eq("escrow_funded", true);
+    .eq("status", "ended")
+    .not("escrow_state", "is", null)
+    .neq("escrow_state", "");
 
   if (error) throw error;
 
   return (data ?? [])
     .map((row) => parseAuctionRow(row as Record<string, unknown>))
+    .filter((a) => Boolean(a.escrow_state?.trim()) && a.escrow_state !== "none")
     .filter((a) => passesDummyFilter(a, showDummyData));
+}
+
+function daysBetween(from: string, to = new Date()): number {
+  const ms = to.getTime() - new Date(from).getTime();
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }
 
 async function getTopBidders(auctionIds: string[]): Promise<Map<string, string>> {
@@ -287,25 +307,31 @@ export async function fetchAdminOverview(
 export async function fetchFlaggedOrders(
   showDummyData: boolean
 ): Promise<FlaggedOrder[]> {
-  const auctions = await fetchFundedAuctions(showDummyData);
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const { data, error } = await supabase
+    .from("auctions")
+    .select("*")
+    .eq("status", "ended")
+    .eq("escrow_state", "funded")
+    .or("tracking_number.is.null,tracking_number.eq.")
+    .lt("payment_completed_at", sevenDaysAgo.toISOString());
+
+  if (error) throw error;
+
+  const auctions = dedupeAuctionsById(
+    (data ?? [])
+      .map((row) => parseAuctionRow(row as Record<string, unknown>))
+      .filter((a) => passesDummyFilter(a, showDummyData))
+  );
+
   const ids = auctions.map((a) => a.id);
   const topBidders = await getTopBidders(ids);
 
-  const flagged: FlaggedOrder[] = [];
-
-  for (const auction of auctions) {
-    if (auction.tracking_number?.trim()) continue;
-    if (!["funded", "shipped", "pending"].includes(auction.escrow_state)) {
-      continue;
-    }
-
-    const paymentDate =
-      auction.payment_completed_at ??
-      auction.escrow_funded_at ??
-      auction.end_time;
+  return auctions.map((auction) => {
+    const paymentDate = auction.payment_completed_at as string;
     const daysSince = daysBetween(paymentDate);
-    if (daysSince < 7) continue;
-
     const isInternational =
       (auction.international_shipping_usd ?? 0) >
       (auction.domestic_shipping_usd ?? 0);
@@ -313,7 +339,7 @@ export async function fetchFlaggedOrders(
     const graceExpires = new Date(paymentDate);
     graceExpires.setDate(graceExpires.getDate() + 7 + graceDays);
 
-    flagged.push({
+    return {
       auctionId: auction.id,
       reference: auction.reference_number,
       itemTitle: auction.title,
@@ -324,13 +350,11 @@ export async function fetchFlaggedOrders(
       estDeliveryDate: null,
       graceLabel: isInternational ? "International +14d" : "Domestic +5d",
       graceExpiresAt: graceExpires.toISOString(),
-      amountSol: auctionAmountSol(auction),
+      amountSol: auctionCurrentBidSol(auction),
       isInternational,
       escrowState: auction.escrow_state,
-    });
-  }
-
-  return flagged;
+    };
+  });
 }
 
 export async function fetchDisputes(
@@ -350,9 +374,11 @@ export async function fetchDisputes(
 
   if (error) throw error;
 
-  let auctions = (data ?? [])
-    .map((row) => parseAuctionRow(row as Record<string, unknown>))
-    .filter((a) => passesDummyFilter(a, showDummyData));
+  let auctions = dedupeAuctionsById(
+    (data ?? [])
+      .map((row) => parseAuctionRow(row as Record<string, unknown>))
+      .filter((a) => passesDummyFilter(a, showDummyData))
+  );
 
   if (resolved) {
     auctions = auctions.filter((a) =>
@@ -416,7 +442,7 @@ export async function fetchDisputes(
 export async function fetchEscrowMonitor(
   showDummyData: boolean
 ): Promise<{ rows: EscrowMonitorRow[]; pills: EscrowSummaryPill[] }> {
-  const auctions = await fetchFundedAuctions(showDummyData);
+  const auctions = await fetchEndedEscrowAuctions(showDummyData);
   const ids = auctions.map((a) => a.id);
   const [topBidders, threads] = await Promise.all([
     getTopBidders(ids),
@@ -430,10 +456,12 @@ export async function fetchEscrowMonitor(
       auction.end_time;
     const hasTracking = Boolean(auction.tracking_number?.trim());
     const daysSince = daysBetween(stateSince);
+    const paymentDate = auction.payment_completed_at;
     const isFlagged =
+      auction.escrow_state === "funded" &&
       !hasTracking &&
-      daysSince >= 7 &&
-      ["funded", "shipped", "pending"].includes(auction.escrow_state);
+      paymentDate != null &&
+      daysBetween(paymentDate) >= 7;
 
     let trackingStatus = "Not uploaded";
     if (hasTracking) trackingStatus = `${auction.tracking_courier ?? "Courier"}: ${auction.tracking_number}`;
@@ -445,7 +473,7 @@ export async function fetchEscrowMonitor(
       itemTitle: auction.title,
       sellerWallet: auction.seller_wallet,
       buyerWallet: topBidders.get(auction.id) ?? "Unknown",
-      amountSol: auctionAmountSol(auction),
+      amountSol: auctionCurrentBidSol(auction),
       paymentDate: auction.payment_completed_at ?? auction.escrow_funded_at,
       escrowState: auction.escrow_state,
       daysInState: daysSince,
