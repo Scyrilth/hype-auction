@@ -45,56 +45,13 @@ function dedupeAuctionsById(auctions: Auction[]): Auction[] {
   return [...byId.values()];
 }
 
-function disputeListingKey(auction: Auction): string {
-  return `${auction.title.trim().toLowerCase()}::${auction.seller_wallet}`;
-}
-
-/** Lower priority value = preferred when deduping title+seller disputes. */
-function disputeAuctionPriority(auction: Auction): number {
+function isLegacyDummyRolexDispute(auction: Auction): boolean {
   const sig = auction.escrow_tx_signature ?? "";
-  if (
-    !auction.is_dummy &&
-    !sig.startsWith("dummy_tx_") &&
-    !sig.startsWith("admin_dummy_")
-  ) {
-    return 0;
-  }
-  if (sig.startsWith("admin_dummy_")) return 1;
-  if (auction.is_dummy && !sig.startsWith("dummy_tx_")) return 2;
-  if (sig.startsWith("dummy_tx_")) return 3;
-  return 2;
-}
-
-function dedupeDisputeAuctions(auctions: Auction[]): Auction[] {
-  const byListing = new Map<string, Auction>();
-
-  for (const auction of dedupeAuctionsById(auctions)) {
-    const key = disputeListingKey(auction);
-    const existing = byListing.get(key);
-
-    if (!existing) {
-      byListing.set(key, auction);
-      continue;
-    }
-
-    const existingPriority = disputeAuctionPriority(existing);
-    const candidatePriority = disputeAuctionPriority(auction);
-
-    if (candidatePriority < existingPriority) {
-      byListing.set(key, auction);
-      continue;
-    }
-
-    if (
-      candidatePriority === existingPriority &&
-      new Date(auction.created_at).getTime() >
-        new Date(existing.created_at).getTime()
-    ) {
-      byListing.set(key, auction);
-    }
-  }
-
-  return [...byListing.values()];
+  return (
+    auction.escrow_state === "disputed" &&
+    sig.startsWith("dummy_tx_009") &&
+    auction.title.toLowerCase().includes("rolex")
+  );
 }
 
 async function fetchEndedEscrowAuctions(
@@ -426,10 +383,11 @@ export async function fetchDisputes(
 
   if (error) throw error;
 
-  let auctions = dedupeDisputeAuctions(
+  let auctions = dedupeAuctionsById(
     (data ?? [])
       .map((row) => parseAuctionRow(row as Record<string, unknown>))
       .filter((a) => passesDummyFilter(a, showDummyData))
+      .filter((a) => !isLegacyDummyRolexDispute(a))
   );
 
   if (resolved) {
