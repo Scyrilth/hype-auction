@@ -3,6 +3,7 @@
 import {
   Bar,
   BarChart,
+  CartesianGrid,
   Cell,
   Legend,
   Line,
@@ -21,15 +22,9 @@ import type {
   AdminStatusCount,
   AdminUsersMonth,
 } from "@/lib/admin/types";
+import { BAR_CHART_DATA_ATTR } from "@/lib/recharts-bar";
 
 const COLORS = ["#7c3aed", "#a78bfa", "#4ade80", "#fbbf24", "#ef4444", "#3b82f6"];
-
-const BAR_ACTIVE_BAR = {
-  stroke: "rgba(139, 92, 246, 0.8)",
-  strokeWidth: 2,
-  fill: "rgba(139, 92, 246, 0.9)",
-  radius: 4,
-};
 
 function ChartShell({
   title,
@@ -86,34 +81,43 @@ export default function AdminOverviewCharts({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <ChartShell title="GMV over time" empty={!gmvHasData} emptyMessage={emptyHint}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={gmvByMonth}>
-            <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 10 }} />
-            <YAxis tick={{ fill: "#71717a", fontSize: 10 }} />
-            <Tooltip
-              cursor={false}
-              content={({ active, payload, label }) =>
-                active && payload?.[0] ? (
-                  <div className="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-xs shadow-lg">
-                    <p className="font-medium text-white">{label}</p>
-                    <p className="text-purple-300">
-                      {(payload[0].value as number).toFixed(4)} SOL
-                    </p>
-                    <p className="text-muted">
-                      ~${((payload[0].value as number) * solUsdRate).toFixed(2)}
-                    </p>
-                  </div>
-                ) : null
-              }
-            />
-            <Bar
-              dataKey="valueSol"
-              fill="#7c3aed"
-              radius={[4, 4, 0, 0]}
-              activeBar={BAR_ACTIVE_BAR}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="h-full w-full" {...{ [BAR_CHART_DATA_ATTR]: true }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={gmvByMonth}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
+              <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 10 }} />
+              <YAxis tick={{ fill: "#71717a", fontSize: 10 }} />
+              <Tooltip
+                cursor={false}
+                content={({ active, payload, label }) =>
+                  active && payload?.[0] ? (
+                    <div className="rounded-lg border border-border bg-surface-elevated px-3 py-2 text-xs shadow-lg">
+                      <p className="font-medium text-white">{label}</p>
+                      <p className="text-purple-300">
+                        {(payload[0].value as number).toFixed(4)} SOL
+                      </p>
+                      <p className="text-muted">
+                        ~${((payload[0].value as number) * solUsdRate).toFixed(2)}
+                      </p>
+                    </div>
+                  ) : null
+                }
+              />
+              <Bar
+                dataKey="valueSol"
+                fill="#7c3aed"
+                radius={[4, 4, 0, 0]}
+                activeBar={{
+                  stroke: "rgba(139, 92, 246, 0.8)",
+                  strokeWidth: 2,
+                  fill: "rgba(139, 92, 246, 0.9)",
+                  radius: 4,
+                }}
+                animationDuration={600}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </ChartShell>
 
       <ChartShell title="New users">

@@ -22,6 +22,7 @@ import type {
   TimeSeriesPoint,
   TransactionRole,
 } from "@/lib/transactions";
+import { BAR_ACTIVE_BAR, BAR_CHART_DATA_ATTR } from "@/lib/recharts-bar";
 
 const SELLER_COLORS = ["#7c3aed", "#a78bfa", "#c4b5fd", "#6d28d9"];
 const BUYER_COLORS = ["#3b82f6", "#60a5fa", "#93c5fd", "#2563eb"];
@@ -32,13 +33,6 @@ const STATUS_COLORS = {
   Refunded: "#fbbf24",
   Disputed: "#ef4444",
   Completed: "#34d399",
-};
-
-const BAR_ACTIVE_BAR = {
-  stroke: "rgba(139, 92, 246, 0.8)",
-  strokeWidth: 2,
-  fill: "rgba(139, 92, 246, 0.9)",
-  radius: 4,
 };
 
 function ChartShell({
@@ -182,8 +176,9 @@ export default function TransactionCharts({
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <ChartShell title={earningsLabel} empty={earningsData.length === 0} pdfChartId="earnings">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={earningsData}>
+        <div className="h-full w-full" {...{ [BAR_CHART_DATA_ATTR]: true }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={earningsData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
             <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 10 }} />
             <YAxis tick={{ fill: "#71717a", fontSize: 10 }} />
@@ -201,7 +196,8 @@ export default function TransactionCharts({
               animationDuration={600}
             />
           </BarChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        </div>
       </ChartShell>
 
       <ChartShell title={volumeLabel} empty={volumeData.length === 0} pdfChartId="volume">
@@ -256,8 +252,9 @@ export default function TransactionCharts({
       </ChartShell>
 
       <ChartShell title={statusLabel} empty={statusData.length === 0} pdfChartId="status">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={statusData} layout="vertical">
+        <div className="h-full w-full" {...{ [BAR_CHART_DATA_ATTR]: true }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={statusData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
             <XAxis type="number" tick={{ fill: "#71717a", fontSize: 10 }} />
             <YAxis
@@ -301,7 +298,8 @@ export default function TransactionCharts({
               ))}
             </Bar>
           </BarChart>
-        </ResponsiveContainer>
+          </ResponsiveContainer>
+        </div>
       </ChartShell>
     </div>
   );

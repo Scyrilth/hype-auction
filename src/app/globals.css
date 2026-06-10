@@ -218,3 +218,9 @@ body {
     grid-template-columns: repeat(5, 1fr);
   }
 }
+
+/* Recharts bar charts: suppress full-height tooltip cursor band */
+[data-bar-chart] .recharts-tooltip-cursor {
+  fill: transparent !important;
+  stroke: transparent !important;
+}
