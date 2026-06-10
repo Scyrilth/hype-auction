@@ -22,7 +22,6 @@ export interface AuctionDetailData {
   bidCount: number;
   topBidder: string | null;
   topBidderUsername: string | null;
-  similarAuctions: Auction[];
   sellerReviewCount: number;
 }
 
@@ -128,84 +127,25 @@ export async function getBidCountsForAuctions(
   return counts;
 }
 
-async function getSimilarAuctions(
-  auction: Auction,
-  limit = 4
-): Promise<Auction[]> {
-  const picked = new Map<string, Auction>();
-
-  if (auction.category) {
-    const { data, error } = await supabase
-      .from("auctions")
-      .select("*")
-      .eq("category", auction.category)
-      .neq("id", auction.id)
-      .in("status", ["live", "ended"])
-      .order("created_at", { ascending: false })
-      .limit(limit);
-
-    if (error) throw error;
-
-    for (const row of data ?? []) {
-      const parsed = parseAuctionRow(row as Record<string, unknown>);
-      picked.set(parsed.id, parsed);
-    }
-  }
-
-  if (picked.size < limit) {
-    const excludeIds = new Set([auction.id, ...picked.keys()]);
-    const { data, error } = await supabase
-      .from("auctions")
-      .select("*")
-      .in("status", ["live", "ended"])
-      .order("created_at", { ascending: false })
-      .limit(30);
-
-    if (error) throw error;
-
-    const candidates = (data ?? [])
-      .map((row) => parseAuctionRow(row as Record<string, unknown>))
-      .filter((item) => !excludeIds.has(item.id));
-    const bidCounts = await getBidCountsForAuctions(
-      candidates.map((item) => item.id)
-    );
-
-    candidates.sort(
-      (a, b) =>
-        (bidCounts.get(b.id) ?? 0) - (bidCounts.get(a.id) ?? 0) ||
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
-
-    for (const candidate of candidates) {
-      if (picked.size >= limit) break;
-      picked.set(candidate.id, candidate);
-    }
-  }
-
-  return [...picked.values()].slice(0, limit);
-}
-
 export async function getAuctionDetailData(
   id: string
 ): Promise<AuctionDetailData | null> {
   const auction = await getAuctionById(id);
   if (!auction || !auction.id) return null;
 
-    const [sellerResponse, bidsResponse, similarAuctions, sellerReviewCount] =
-      await Promise.all([
-        supabase
-          .from("users")
-          .select("*")
-          .eq("wallet_address", auction.seller_wallet)
-          .maybeSingle(),
-        supabase
-          .from("bids")
-          .select("*")
-          .eq("auction_id", id)
-          .order("amount", { ascending: false }),
-        getSimilarAuctions(auction).catch(() => [] as Auction[]),
-        getVendorReviewCount(auction.seller_wallet).catch(() => 0),
-      ]);
+    const [sellerResponse, bidsResponse, sellerReviewCount] = await Promise.all([
+      supabase
+        .from("users")
+        .select("*")
+        .eq("wallet_address", auction.seller_wallet)
+        .maybeSingle(),
+      supabase
+        .from("bids")
+        .select("*")
+        .eq("auction_id", id)
+        .order("amount", { ascending: false }),
+      getVendorReviewCount(auction.seller_wallet).catch(() => 0),
+    ]);
 
     if (sellerResponse.error) {
       console.error("getAuctionDetailData:seller", sellerResponse.error);
@@ -295,7 +235,6 @@ export async function getAuctionDetailData(
     bidCount: bids.length,
     topBidder: topBid?.bidder_wallet ?? null,
     topBidderUsername: topBid?.bidder_username ?? null,
-    similarAuctions,
     sellerReviewCount,
   };
 }

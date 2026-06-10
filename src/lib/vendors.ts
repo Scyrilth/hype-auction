@@ -124,6 +124,7 @@ export interface VendorShopData {
   reviews: ReviewWithReviewer[];
   stats: VendorShopStats;
   labelMaps: AuctionLabelMaps;
+  suggestedVendors: VendorDirectoryEntry[];
 }
 
 export async function getVendorShopData(slug: string): Promise<VendorShopData | null> {
@@ -137,6 +138,11 @@ export async function getVendorShopData(slug: string): Promise<VendorShopData | 
     getVendorPastAuctions(vendorWallet),
     getVendorReviews(vendorWallet),
   ]);
+
+  const suggestedVendors = await getSuggestedVendorsForShop(vendorWallet, [
+    ...liveAuctions,
+    ...pastAuctions,
+  ]).catch(() => [] as VendorDirectoryEntry[]);
 
   console.log("[getVendorShopData] reviews loaded", {
     slug,
@@ -170,6 +176,7 @@ export async function getVendorShopData(slug: string): Promise<VendorShopData | 
     reviews,
     stats: buildVendorStats(vendor, pastAuctions, reviews),
     labelMaps,
+    suggestedVendors,
   };
 }
 
@@ -315,6 +322,135 @@ export interface VendorDirectoryEntry {
 
 function getShopSlug(vendor: User): string {
   return vendor.username ?? vendor.wallet_address;
+}
+
+function topListingCategories(
+  listings: Pick<Auction, "category">[],
+  maxCategories = 3
+): string[] {
+  const counts = new Map<string, number>();
+
+  for (const listing of listings) {
+    const category = listing.category?.trim();
+    if (!category) continue;
+    counts.set(category, (counts.get(category) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxCategories)
+    .map(([category]) => category);
+}
+
+export async function getSuggestedVendorsForShop(
+  vendorWallet: string,
+  listings: Pick<Auction, "category" | "title" | "status" | "end_time">[]
+): Promise<VendorDirectoryEntry[]> {
+  const topCategories = topListingCategories(listings);
+  if (!topCategories.length) return [];
+
+  const now = new Date().toISOString();
+
+  const { data: matchingAuctions, error: auctionsError } = await supabase
+    .from("auctions")
+    .select("seller_wallet, category, status, end_time, title")
+    .in("category", topCategories)
+    .eq("status", "live")
+    .gt("end_time", now)
+    .neq("seller_wallet", vendorWallet);
+
+  if (auctionsError) throw auctionsError;
+  if (!matchingAuctions?.length) return [];
+
+  const wallets = [
+    ...new Set(
+      matchingAuctions.map((row) => row.seller_wallet as string).filter(Boolean)
+    ),
+  ];
+
+  if (!wallets.length) return [];
+
+  const [{ data: vendorRows, error: vendorsError }, { data: reviews, error: reviewsError }] =
+    await Promise.all([
+      supabase.from("users").select("*").in("wallet_address", wallets),
+      supabase
+        .from("reviews")
+        .select("vendor_wallet, rating, is_flagged")
+        .in("vendor_wallet", wallets)
+        .eq("is_flagged", false),
+    ]);
+
+  if (vendorsError) throw vendorsError;
+  if (reviewsError) throw reviewsError;
+  if (!vendorRows?.length) return [];
+
+  const ratingsByVendor = new Map<string, number[]>();
+  for (const review of reviews ?? []) {
+    const wallet = review.vendor_wallet as string;
+    const list = ratingsByVendor.get(wallet) ?? [];
+    list.push(Number(review.rating));
+    ratingsByVendor.set(wallet, list);
+  }
+
+  const salesByVendor = new Map<string, number>();
+  const categoriesByVendor = new Map<string, Set<string>>();
+  const titlesByVendor = new Map<string, Set<string>>();
+  const liveVendors = new Set<string>();
+
+  for (const auction of matchingAuctions) {
+    const wallet = auction.seller_wallet as string;
+    const category = auction.category as string | null;
+    const title = auction.title as string | null;
+    const status = auction.status as string;
+    const endTime = auction.end_time as string;
+
+    if (status === "ended") {
+      salesByVendor.set(wallet, (salesByVendor.get(wallet) ?? 0) + 1);
+    }
+
+    if (status === "live" && endTime > now) {
+      liveVendors.add(wallet);
+    }
+
+    if (category) {
+      const set = categoriesByVendor.get(wallet) ?? new Set<string>();
+      set.add(category);
+      categoriesByVendor.set(wallet, set);
+    }
+
+    if (title) {
+      const set = titlesByVendor.get(wallet) ?? new Set<string>();
+      set.add(title);
+      titlesByVendor.set(wallet, set);
+    }
+  }
+
+  const entries: VendorDirectoryEntry[] = vendorRows.map((row) => {
+    const vendor = parseUser(row as Record<string, unknown>);
+    const wallet = vendor.wallet_address;
+    const ratings = ratingsByVendor.get(wallet) ?? [];
+    const averageRating =
+      ratings.length > 0
+        ? Math.round(
+            (ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length) *
+              10
+          ) / 10
+        : Math.max(vendor.average_rating, vendor.reputation, 0);
+
+    return {
+      vendor,
+      averageRating,
+      totalSales: salesByVendor.get(wallet) ?? 0,
+      categories: [...(categoriesByVendor.get(wallet) ?? [])],
+      auctionTitles: [...(titlesByVendor.get(wallet) ?? [])],
+      isLive: liveVendors.has(wallet),
+      shopSlug: getShopSlug(vendor),
+    };
+  });
+
+  return entries
+    .sort((a, b) => b.vendor.followers_count - a.vendor.followers_count)
+    .slice(0, 4);
 }
 
 export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {

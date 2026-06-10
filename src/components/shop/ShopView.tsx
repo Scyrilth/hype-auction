@@ -5,6 +5,7 @@ import { useState } from "react";
 import ShopAuctionGrid from "@/components/shop/ShopAuctionGrid";
 import ShopHeader from "@/components/shop/ShopHeader";
 import ShopReviewsList from "@/components/shop/ShopReviewsList";
+import SuggestedVendorsSection from "@/components/shop/SuggestedVendorsSection";
 import type { VendorShopData } from "@/lib/vendors";
 
 type ShopTab = "live" | "past" | "reviews";
@@ -83,6 +84,8 @@ export default function ShopView({
           vendorWallet={shop.vendor.wallet_address}
         />
       )}
+
+      <SuggestedVendorsSection vendors={shop.suggestedVendors} />
     </div>
   );
 }

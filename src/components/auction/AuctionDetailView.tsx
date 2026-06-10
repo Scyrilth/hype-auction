@@ -1,6 +1,6 @@
 import AuctionBidHistory from "@/components/auction/AuctionBidHistory";
 import AuctionBidSidebar from "@/components/auction/AuctionBidSidebar";
-import AuctionCard from "@/components/auction/AuctionCard";
+import AuctionDetailSuggestions from "@/components/auction/AuctionDetailSuggestions";
 import AuctionImageGallery from "@/components/auction/AuctionImageGallery";
 import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import type { AuctionDetailData } from "@/lib/auctions";
@@ -14,7 +14,8 @@ import {
 } from "@/lib/grading";
 
 export default function AuctionDetailView({ data }: { data: AuctionDetailData }) {
-  const { auction, seller, bids, similarAuctions } = data;
+  const { auction, seller, bids } = data;
+  const shopSlug = seller.username?.trim() || auction.seller_wallet;
   const title = auction.title?.trim() || "Untitled Auction";
   const description = auction.description?.trim() ?? "";
   const itemDetails = auction.item_details ?? {};
@@ -106,18 +107,12 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
         </div>
       </div>
 
-      {similarAuctions.length > 0 && (
-        <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Similar Items
-          </h2>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {similarAuctions.map((item) => (
-              <AuctionCard key={item.id} auction={item} />
-            ))}
-          </div>
-        </section>
-      )}
+      <AuctionDetailSuggestions
+        auctionId={auction.id}
+        sellerWallet={auction.seller_wallet}
+        category={auction.category}
+        shopSlug={shopSlug}
+      />
     </div>
   );
 }
