@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import LiveAuctionCard from "@/components/auction/LiveAuctionCard";
 import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
@@ -12,6 +12,11 @@ import {
   type AuctionLabelMaps,
 } from "@/lib/auction-labels";
 import type { Auction } from "@/lib/database.types";
+
+const SCROLL_EDGE_THRESHOLD = 4;
+
+const carouselArrowClass =
+  "z-10 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-sm backdrop-blur-sm transition-all duration-150 ease-in-out hover:scale-110 hover:border-white/35 hover:bg-white/25";
 
 type InfiniteCarouselRowProps = {
   labelMaps?: AuctionLabelMaps;
@@ -97,6 +102,20 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
   const { variant, items } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemCount = items.length;
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const maxScrollLeft = container.scrollWidth - container.clientWidth;
+    setCanScrollLeft(container.scrollLeft > SCROLL_EDGE_THRESHOLD);
+    setCanScrollRight(
+      maxScrollLeft > SCROLL_EDGE_THRESHOLD &&
+        container.scrollLeft < maxScrollLeft - SCROLL_EDGE_THRESHOLD
+    );
+  }, []);
 
   const scrollByOneCard = useCallback((direction: "left" | "right") => {
     const container = scrollRef.current;
@@ -111,20 +130,35 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
 
   useEffect(() => {
     const container = scrollRef.current;
-    if (container) container.scrollLeft = 0;
-  }, [itemCount]);
+    if (!container) return;
+
+    container.scrollLeft = 0;
+    updateScrollState();
+
+    container.addEventListener("scroll", updateScrollState, { passive: true });
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollState();
+    });
+    resizeObserver.observe(container);
+
+    return () => {
+      container.removeEventListener("scroll", updateScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [itemCount, updateScrollState]);
 
   if (itemCount === 0) return null;
 
-  const showArrows = itemCount > 1;
+  const showArrowControls = itemCount > 1;
 
   return (
     <div className="flex items-center gap-2">
-      {showArrows ? (
+      {showArrowControls && canScrollLeft ? (
         <button
           type="button"
           onClick={() => scrollByOneCard("left")}
-          className="z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+          className={carouselArrowClass}
           aria-label="Scroll left"
         >
           <ChevronLeftIcon className="h-4 w-4" />
@@ -147,11 +181,11 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
         ))}
       </div>
 
-      {showArrows ? (
+      {showArrowControls && canScrollRight ? (
         <button
           type="button"
           onClick={() => scrollByOneCard("right")}
-          className="z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+          className={carouselArrowClass}
           aria-label="Scroll right"
         >
           <ChevronRightIcon className="h-4 w-4" />
