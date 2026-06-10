@@ -46,26 +46,23 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
   const shopSlug = wallet ? getProfileSlug(username, wallet) : null;
   const shopSettingsHref = shopSlug ? `/shop/${shopSlug}` : "/dashboard/settings";
 
-  const shopSubItems = useMemo(() => {
-    const items = [
+  const shopSubItems = useMemo(
+    () => [
       { href: "/dashboard", label: "Dashboard", icon: DashboardLayoutIcon },
       { href: shopSettingsHref, label: "Shop Settings", icon: SettingsIcon },
       { href: "/dashboard/create", label: "Create Listing", icon: StoreIcon },
       { href: "/transactions", label: "Transactions", icon: null as null },
-    ];
-    if (isAdmin) {
-      items.push({ href: "/admin", label: "Admin", icon: null });
-    }
-    return items;
-  }, [shopSettingsHref, isAdmin]);
+    ],
+    [shopSettingsHref]
+  );
 
   const isShopRoute =
     currentPath.startsWith("/dashboard") ||
     currentPath.startsWith("/transactions") ||
-    currentPath.startsWith("/admin") ||
     (shopSlug !== null && currentPath === shopSettingsHref);
 
-  const showMyShop = connected && (isVendor || isAdmin);
+  const showMyShop = connected && isVendor;
+  const isAdminActive = currentPath.startsWith("/admin");
 
   const [shopOpen, setShopOpen] = useState(false);
 
@@ -159,6 +156,22 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
             <i className="ti ti-stack-2 h-4 w-4 shrink-0 text-base leading-none" />
             <span>My Collections</span>
           </Link>
+        )}
+
+        {isAdmin && (
+          <div className="mt-auto border-t border-border/80 pt-3">
+            <Link
+              href="/admin"
+              className={`flex items-center gap-3 rounded-lg border px-2 py-2.5 text-sm transition-colors ${
+                isAdminActive
+                  ? "border-accent/40 bg-accent/10 font-medium text-purple-200"
+                  : "border-purple-900/50 text-zinc-400 hover:border-accent/30 hover:bg-purple-950/30 hover:text-purple-200"
+              }`}
+            >
+              <i className="ti ti-shield h-4 w-4 shrink-0 text-base leading-none" />
+              <span>Admin Panel</span>
+            </Link>
+          </div>
         )}
       </nav>
 

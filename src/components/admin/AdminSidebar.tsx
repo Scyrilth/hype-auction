@@ -16,10 +16,11 @@ export default function AdminSidebar() {
   const { activeTab, setActiveTab } = useAdminContext();
 
   return (
-    <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-surface p-4 md:flex">
-      <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-purple-300">
-        Admin
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-surface px-4 py-5 md:flex lg:w-64 lg:px-5">
+      <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-purple-300">
+        Platform
       </p>
+      <p className="mb-5 text-[11px] text-muted">Administration</p>
       <nav className="flex flex-col gap-1">
         {TABS.map((tab) => (
           <button
