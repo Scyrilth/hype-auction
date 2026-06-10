@@ -70,6 +70,23 @@ body {
   border-radius: 16px !important;
 }
 
+/* Horizontal carousel rows — smooth snap scrolling (Netflix/Spotify-style) */
+.horizontal-scroll-row {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.horizontal-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal-scroll-item {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
 /* Custom scrollbar for chat and auction grids */
 .auction-scroll::-webkit-scrollbar,
 .chat-scroll::-webkit-scrollbar {

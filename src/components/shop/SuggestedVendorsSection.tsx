@@ -14,11 +14,11 @@ export default function SuggestedVendorsSection({
         You might also like
       </h2>
 
-      <div className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 snap-x snap-mandatory">
+      <div className="horizontal-scroll-row -mx-1 flex gap-4 overflow-x-auto px-1 pb-2">
         {vendors.map((entry) => (
           <div
             key={entry.vendor.wallet_address}
-            className="w-[17.5rem] shrink-0 snap-start sm:w-[20rem]"
+            className="horizontal-scroll-item w-[17.5rem] sm:w-[20rem]"
           >
             <VendorCard entry={entry} />
           </div>

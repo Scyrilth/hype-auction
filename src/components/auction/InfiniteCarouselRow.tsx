@@ -121,7 +121,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
       )}
 
       <div
-        className="grid min-w-0 flex-1 justify-items-start gap-3 overflow-x-auto sm:gap-4"
+        className="horizontal-scroll-row grid min-w-0 flex-1 justify-items-start gap-3 overflow-x-auto sm:gap-4"
         style={{
           gridTemplateColumns: `repeat(${visibleCount}, minmax(0, 1fr))`,
         }}
@@ -129,7 +129,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
         {visibleItems.map((item, slotIndex) => (
           <div
             key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
-            className="w-full min-w-0 overflow-hidden transition-opacity duration-300"
+            className="horizontal-scroll-item w-full min-w-0 overflow-hidden transition-opacity duration-300"
           >
             {renderCarouselItem(props, item)}
           </div>

@@ -57,13 +57,13 @@ export default function AuctionImageGallery({
       </div>
 
       {hasImage && images.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="horizontal-scroll-row flex gap-2 overflow-x-auto pb-1">
           {images.map((url, index) => (
             <button
               key={`${url}-${index}`}
               type="button"
               onClick={() => setActiveIndex(index)}
-              className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border bg-surface-elevated transition-colors sm:h-20 sm:w-20 ${
+              className={`horizontal-scroll-item relative h-16 w-16 overflow-hidden rounded-lg border bg-surface-elevated transition-colors sm:h-20 sm:w-20 ${
                 index === activeIndex
                   ? "border-accent ring-2 ring-accent/40"
                   : "border-border hover:border-accent/50"

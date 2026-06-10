@@ -34,11 +34,11 @@ export default function AuctionSuggestionSection({
         ) : null}
       </div>
 
-      <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 snap-x snap-mandatory sm:gap-4">
+      <div className="horizontal-scroll-row -mx-1 flex gap-3 overflow-x-auto px-1 pb-2 sm:gap-4">
         {auctions.map((auction) => (
           <div
             key={auction.id}
-            className="w-[11.5rem] shrink-0 snap-start sm:w-[14rem]"
+            className="horizontal-scroll-item w-[11.5rem] sm:w-[14rem]"
           >
             <BrowseAuctionCard
               auction={auction}
