@@ -149,24 +149,28 @@ export async function getSellerDashboardData(
 ): Promise<SellerDashboardData> {
   const wallet = sellerWallet.trim();
 
-  console.log("[getSellerDashboardData] start", { wallet });
-
   let profile: User | null = null;
   try {
     const rawProfile = await supabase
       .from("users")
-      .select("*")
+      .select("shop_name")
       .eq("wallet_address", wallet)
       .maybeSingle();
 
-    console.log(
-      "[getSellerDashboardData] raw profile from Supabase",
-      rawProfile.data,
-      rawProfile.error
-    );
-
     profile = await getVendorSettings(wallet);
-    console.log("[getSellerDashboardData] profile parsed", profile);
+
+    if (
+      profile &&
+      !profile.shop_name?.trim() &&
+      rawProfile.data &&
+      typeof rawProfile.data.shop_name === "string" &&
+      rawProfile.data.shop_name.trim()
+    ) {
+      profile = {
+        ...profile,
+        shop_name: rawProfile.data.shop_name.trim(),
+      };
+    }
   } catch (error) {
     console.error("[getSellerDashboardData] profile query failed", error);
     throw error;
@@ -176,7 +180,6 @@ export async function getSellerDashboardData(
     try {
       await upsertUser(wallet);
       profile = await getVendorSettings(wallet);
-      console.log("[getSellerDashboardData] profile after upsert", profile);
     } catch (error) {
       console.error("[getSellerDashboardData] profile upsert/fetch failed", error);
       throw error;
@@ -189,25 +192,16 @@ export async function getSellerDashboardData(
     .eq("seller_wallet", wallet)
     .order("created_at", { ascending: false });
 
-  console.log("[getSellerDashboardData] auctions response", auctionsResponse);
-
   const bidsResponse = await supabase
     .from("bids")
     .select("id, auction_id, bidder_wallet, amount, created_at")
     .order("created_at", { ascending: false })
     .limit(200);
 
-  console.log("[getSellerDashboardData] bids response", bidsResponse);
-
   const [followRows, reviews] = await Promise.all([
     loadRecentFollows(wallet),
     loadSellerReviews(wallet),
   ]);
-
-  console.log("[getSellerDashboardData] follows/reviews", {
-    followCount: followRows.length,
-    reviewCount: reviews.length,
-  });
 
   if (auctionsResponse.error) throw auctionsResponse.error;
   if (bidsResponse.error) throw bidsResponse.error;
@@ -299,13 +293,6 @@ export async function getSellerDashboardData(
     reviews,
     activity: activity.slice(0, 20),
   };
-
-  console.log("[getSellerDashboardData] success", {
-    shopSlug,
-    totalListings: stats.totalListings,
-    activeAuctions: stats.activeAuctions,
-    shopName: profile?.shop_name ?? null,
-  });
 
   return result;
 }

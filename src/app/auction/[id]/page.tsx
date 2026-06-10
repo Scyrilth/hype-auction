@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import AuctionDetailError from "@/components/auction/AuctionDetailError";
+import AuctionDetailScrollReset from "@/components/auction/AuctionDetailScrollReset";
 import AuctionDetailView from "@/components/auction/AuctionDetailView";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
@@ -68,6 +69,7 @@ export default async function AuctionDetailPage({
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-5">
+          <AuctionDetailScrollReset auctionId={id} />
           <BackButton className="mb-4" />
           <AuctionDetailView data={data} />
         </main>

@@ -14,6 +14,10 @@ import ImageUpload from "@/components/ui/ImageUpload";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
 import type { Auction } from "@/lib/database.types";
+import {
+  FREE_SHIPPING_WARNING,
+  isDummySellerWallet,
+} from "@/lib/auction-shipping";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
   buildGradingItemDetails,
@@ -22,7 +26,6 @@ import {
   type GradingCompany,
 } from "@/lib/grading";
 import { getImageExtension } from "@/lib/storage";
-import { isDummySellerWallet } from "@/lib/auction-shipping";
 import {
   AUCTION_CATEGORIES,
   AUCTION_CONDITIONS,
@@ -34,8 +37,21 @@ import { getVendorSettings } from "@/lib/vendors";
 const inputClass =
   "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent";
 
+const inputErrorClass =
+  "w-full rounded-xl border border-live-red/60 bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted outline-none focus:border-live-red focus:ring-1 focus:ring-live-red/40";
+
 const labelClass =
   "mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted";
+
+type FieldErrors = {
+  title?: string;
+  category?: string;
+  condition?: string;
+  imageUrl?: string;
+  domesticShippingUsd?: string;
+  internationalShippingUsd?: string;
+  startPrice?: string;
+};
 
 const initialForm: ListingFormState = {
   title: "",
@@ -52,13 +68,21 @@ const initialForm: ListingFormState = {
   itemDetails: [],
   domesticShippingUsd: "",
   internationalShippingUsd: "",
+  freeDomesticShipping: false,
+  freeInternationalShipping: false,
 };
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-1 text-xs text-live-red">{message}</p>;
+}
 
 export default function CreateListingForm() {
   const router = useRouter();
   const { publicKey } = useWallet();
   const { showToast } = useToast();
   const [form, setForm] = useState<ListingFormState>(initialForm);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [publishedAuction, setPublishedAuction] = useState<Auction | null>(
     null
@@ -93,6 +117,7 @@ export default function CreateListingForm() {
     value: ListingFormState[K]
   ) => {
     setForm((current) => ({ ...current, [key]: value }));
+    setFieldErrors((current) => ({ ...current, [key]: undefined }));
   };
 
   const updateAdditionalImage = (index: number, value: string) => {
@@ -103,39 +128,68 @@ export default function CreateListingForm() {
     });
   };
 
+  const validateForm = (): FieldErrors => {
+    const errors: FieldErrors = {};
+
+    if (!form.title.trim()) {
+      errors.title = "Title is required.";
+    }
+
+    if (!form.category.trim()) {
+      errors.category = "Category is required.";
+    }
+
+    if (!form.condition.trim()) {
+      errors.condition = "Condition is required.";
+    }
+
+    if (!form.imageUrl.trim()) {
+      errors.imageUrl = "Please add at least one image.";
+    }
+
+    if (!form.freeDomesticShipping) {
+      const domesticShipping = parseFloat(form.domesticShippingUsd);
+      if (
+        form.domesticShippingUsd.trim() === "" ||
+        isNaN(domesticShipping) ||
+        domesticShipping < 0
+      ) {
+        errors.domesticShippingUsd = "Enter a valid domestic shipping price.";
+      }
+    }
+
+    const price = parseFloat(form.startPrice);
+    if (!form.startPrice.trim() || isNaN(price) || price <= 0) {
+      errors.startPrice = "Enter a valid starting bid.";
+    }
+
+    return errors;
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!publicKey) return;
 
-    const price = parseFloat(form.startPrice);
-    const domesticShipping = parseFloat(form.domesticShippingUsd);
-    const internationalShipping = parseFloat(form.internationalShippingUsd);
-
-    if (!form.title.trim() || isNaN(price) || price <= 0) {
-      showToast("Enter a valid title and starting bid.", "error");
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
-    if (
-      isNaN(domesticShipping) ||
-      domesticShipping < 0 ||
-      form.domesticShippingUsd.trim() === ""
-    ) {
-      showToast("Enter a valid domestic shipping price.", "error");
-      return;
-    }
-
-    if (
-      shipsInternationally &&
-      (isNaN(internationalShipping) ||
-        internationalShipping < 0 ||
-        form.internationalShippingUsd.trim() === "")
-    ) {
-      showToast("Enter a valid international shipping price.", "error");
-      return;
-    }
-
+    setFieldErrors({});
     setIsSubmitting(true);
+
+    const price = parseFloat(form.startPrice);
+    const domesticShipping = form.freeDomesticShipping
+      ? 0
+      : parseFloat(form.domesticShippingUsd);
+    const internationalShipping = shipsInternationally
+      ? form.freeInternationalShipping
+        ? 0
+        : form.internationalShippingUsd.trim() === ""
+          ? 0
+          : parseFloat(form.internationalShippingUsd) || 0
+      : 0;
 
     try {
       const itemDetails = Object.fromEntries(
@@ -169,9 +223,7 @@ export default function CreateListingForm() {
         additionalImages: form.additionalImages,
         itemDetails,
         domesticShippingUsd: domesticShipping,
-        internationalShippingUsd: shipsInternationally
-          ? internationalShipping
-          : 0,
+        internationalShippingUsd: internationalShipping,
       });
 
       setPublishedAuction(auction);
@@ -259,21 +311,22 @@ export default function CreateListingForm() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <form
           onSubmit={handleSubmit}
+          noValidate
           className="rounded-2xl border border-border bg-surface p-6"
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label htmlFor="title" className={labelClass}>
-                Title
+                Title <span className="text-live-red">*</span>
               </label>
               <input
                 id="title"
-                required
                 value={form.title}
                 onChange={(e) => updateForm("title", e.target.value)}
                 placeholder="e.g. 1999 Pokemon Pikachu Holo #58"
-                className={inputClass}
+                className={fieldErrors.title ? inputErrorClass : inputClass}
               />
+              <FieldError message={fieldErrors.title} />
             </div>
 
             <div className="sm:col-span-2">
@@ -285,20 +338,20 @@ export default function CreateListingForm() {
                 rows={6}
                 value={form.description}
                 onChange={(e) => updateForm("description", e.target.value)}
-                placeholder="Describe the item, authenticity, shipping, and any notable details..."
+                placeholder="Describe the item, its condition, authenticity, and any notable details."
                 className={`${inputClass} resize-y min-h-[140px]`}
               />
             </div>
 
             <div>
               <label htmlFor="category" className={labelClass}>
-                Category
+                Category <span className="text-live-red">*</span>
               </label>
               <select
                 id="category"
                 value={form.category}
                 onChange={(e) => updateForm("category", e.target.value)}
-                className={inputClass}
+                className={fieldErrors.category ? inputErrorClass : inputClass}
               >
                 {AUCTION_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -306,17 +359,18 @@ export default function CreateListingForm() {
                   </option>
                 ))}
               </select>
+              <FieldError message={fieldErrors.category} />
             </div>
 
             <div>
               <label htmlFor="condition" className={labelClass}>
-                Condition
+                Condition <span className="text-live-red">*</span>
               </label>
               <select
                 id="condition"
                 value={form.condition}
                 onChange={(e) => updateForm("condition", e.target.value)}
-                className={inputClass}
+                className={fieldErrors.condition ? inputErrorClass : inputClass}
               >
                 {AUCTION_CONDITIONS.map((condition) => (
                   <option key={condition} value={condition}>
@@ -324,6 +378,7 @@ export default function CreateListingForm() {
                   </option>
                 ))}
               </select>
+              <FieldError message={fieldErrors.condition} />
             </div>
 
             <div className="sm:col-span-2">
@@ -386,61 +441,133 @@ export default function CreateListingForm() {
               )}
             </div>
 
-            <div>
-              <label htmlFor="domesticShippingUsd" className={labelClass}>
-                Domestic shipping (USD) <span className="text-live-red">*</span>
+            <div className="sm:col-span-2">
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={form.freeDomesticShipping}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm((current) => ({
+                      ...current,
+                      freeDomesticShipping: checked,
+                      domesticShippingUsd: checked ? "0" : "",
+                    }));
+                    setFieldErrors((current) => ({
+                      ...current,
+                      domesticShippingUsd: undefined,
+                    }));
+                  }}
+                  className="h-4 w-4 rounded border-border bg-background accent-accent"
+                />
+                <span className="text-sm text-zinc-300">Free shipping</span>
               </label>
-              <input
-                id="domesticShippingUsd"
-                type="number"
-                required
-                min="0"
-                step="0.01"
-                value={form.domesticShippingUsd}
-                onChange={(e) =>
-                  updateForm("domesticShippingUsd", e.target.value)
-                }
-                placeholder="e.g. 5.00"
-                className={inputClass}
-              />
+              {form.freeDomesticShipping && (
+                <p className="mt-2 text-xs leading-relaxed text-amber-400/90">
+                  {FREE_SHIPPING_WARNING}
+                </p>
+              )}
+              {!form.freeDomesticShipping && (
+                <div className="mt-3">
+                  <label htmlFor="domesticShippingUsd" className={labelClass}>
+                    Domestic shipping (USD){" "}
+                    <span className="text-live-red">*</span>
+                  </label>
+                  <input
+                    id="domesticShippingUsd"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.domesticShippingUsd}
+                    onChange={(e) =>
+                      updateForm("domesticShippingUsd", e.target.value)
+                    }
+                    placeholder="e.g. 5.00"
+                    className={
+                      fieldErrors.domesticShippingUsd
+                        ? inputErrorClass
+                        : inputClass
+                    }
+                  />
+                  <FieldError message={fieldErrors.domesticShippingUsd} />
+                </div>
+              )}
             </div>
 
             {shipsInternationally && (
-              <div>
-                <label htmlFor="internationalShippingUsd" className={labelClass}>
-                  International shipping (USD)
+              <div className="sm:col-span-2">
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={form.freeInternationalShipping}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((current) => ({
+                        ...current,
+                        freeInternationalShipping: checked,
+                        internationalShippingUsd: checked ? "0" : "",
+                      }));
+                      setFieldErrors((current) => ({
+                        ...current,
+                        internationalShippingUsd: undefined,
+                      }));
+                    }}
+                    className="h-4 w-4 rounded border-border bg-background accent-accent"
+                  />
+                  <span className="text-sm text-zinc-300">
+                    Free international shipping
+                  </span>
                 </label>
-                <input
-                  id="internationalShippingUsd"
-                  type="number"
-                  required
-                  min="0"
-                  step="0.01"
-                  value={form.internationalShippingUsd}
-                  onChange={(e) =>
-                    updateForm("internationalShippingUsd", e.target.value)
-                  }
-                  placeholder="e.g. 20.00"
-                  className={inputClass}
-                />
+                {form.freeInternationalShipping && (
+                  <p className="mt-2 text-xs leading-relaxed text-amber-400/90">
+                    {FREE_SHIPPING_WARNING}
+                  </p>
+                )}
+                {!form.freeInternationalShipping && (
+                  <div className="mt-3">
+                    <label
+                      htmlFor="internationalShippingUsd"
+                      className={labelClass}
+                    >
+                      International shipping (USD)
+                    </label>
+                    <input
+                      id="internationalShippingUsd"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.internationalShippingUsd}
+                      onChange={(e) =>
+                        updateForm("internationalShippingUsd", e.target.value)
+                      }
+                      placeholder="e.g. 20.00"
+                      className={
+                        fieldErrors.internationalShippingUsd
+                          ? inputErrorClass
+                          : inputClass
+                      }
+                    />
+                    <FieldError message={fieldErrors.internationalShippingUsd} />
+                  </div>
+                )}
               </div>
             )}
 
             <div>
               <label htmlFor="startPrice" className={labelClass}>
-                Starting bid (SOL)
+                Starting bid (SOL) <span className="text-live-red">*</span>
               </label>
               <input
                 id="startPrice"
                 type="number"
-                required
                 min="0.01"
                 step="0.01"
                 value={form.startPrice}
                 onChange={(e) => updateForm("startPrice", e.target.value)}
                 placeholder="1.00"
-                className={inputClass}
+                className={fieldErrors.startPrice ? inputErrorClass : inputClass}
               />
+              <FieldError message={fieldErrors.startPrice} />
             </div>
 
             <div>
@@ -474,6 +601,7 @@ export default function CreateListingForm() {
                   `${wallet}/${Date.now()}-main.${getImageExtension(file)}`
                 }
               />
+              <FieldError message={fieldErrors.imageUrl} />
             </div>
 
             <div className="sm:col-span-2">

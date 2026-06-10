@@ -22,8 +22,6 @@ export default function DashboardProfileSummary({
   walletAddress: string;
   stats: SellerDashboardStats;
 }) {
-  console.log("DashboardProfileSummary profile:", profile);
-
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
 

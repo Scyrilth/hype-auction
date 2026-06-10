@@ -40,6 +40,8 @@ export type ListingFormState = {
   additionalImages: string[];
   domesticShippingUsd: string;
   internationalShippingUsd: string;
+  freeDomesticShipping: boolean;
+  freeInternationalShipping: boolean;
   itemDetails: ItemDetailRow[];
 };
 

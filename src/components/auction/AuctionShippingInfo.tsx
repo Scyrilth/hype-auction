@@ -6,10 +6,10 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import {
   canShipToBuyer,
   formatShippingUsd,
+  getPublicShipsToLabel,
   isShippingExemptAuction,
   resolveShippingUsd,
 } from "@/lib/auction-shipping";
-import { getCountryName } from "@/lib/countries";
 import type { Auction, User } from "@/lib/database.types";
 import { getDefaultShippingAddress } from "@/lib/shipping";
 
@@ -29,7 +29,11 @@ export default function AuctionShippingInfo({
   const sellerCountry = seller.country;
   const shipsInternationally = seller.ships_internationally ?? false;
   const isExempt = isShippingExemptAuction(auction);
-  const sellerCountryName = getCountryName(sellerCountry);
+  const shipsToLabel = getPublicShipsToLabel(
+    sellerCountry,
+    shipsInternationally,
+    isExempt
+  );
 
   useEffect(() => {
     if (!publicKey) {
@@ -55,10 +59,6 @@ export default function AuctionShippingInfo({
     };
   }, [publicKey]);
 
-  const shipsToLabel = shipsInternationally
-    ? "Worldwide"
-    : `${sellerCountryName} only`;
-
   const shippingUsd = resolveShippingUsd({
     domesticShippingUsd: auction.domestic_shipping_usd,
     internationalShippingUsd: auction.international_shipping_usd,
@@ -82,6 +82,16 @@ export default function AuctionShippingInfo({
     onShippingBlockedChange?.(shippingBlocked);
   }, [onShippingBlockedChange, shippingBlocked]);
 
+  const shippingCostLabel = loadingAddress
+    ? "Checking address..."
+    : !buyerCountry
+      ? "Shipping cost calculated at checkout"
+      : shippingBlocked
+        ? "Not available to your country"
+        : shippingUsd == null
+          ? "Shipping cost calculated at checkout"
+          : `Shipping: ${formatShippingUsd(shippingUsd)}`;
+
   return (
     <section className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
@@ -89,27 +99,15 @@ export default function AuctionShippingInfo({
       </h2>
 
       <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex flex-wrap justify-between gap-2">
-          <dt className="text-muted">Ships from</dt>
-          <dd className="font-medium text-white">{sellerCountryName}</dd>
-        </div>
-        <div className="flex flex-wrap justify-between gap-2">
-          <dt className="text-muted">Ships to</dt>
-          <dd className="font-medium text-white">{shipsToLabel}</dd>
-        </div>
+        {shipsToLabel && (
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">Ships to</dt>
+            <dd className="font-medium text-white">{shipsToLabel}</dd>
+          </div>
+        )}
         <div className="flex flex-wrap justify-between gap-2">
           <dt className="text-muted">Shipping cost</dt>
-          <dd className="font-medium text-white">
-            {loadingAddress
-              ? "Checking address..."
-              : !buyerCountry
-                ? "Shipping cost calculated at checkout"
-                : shippingBlocked
-                  ? "Not available to your country"
-                  : shippingUsd == null
-                    ? "Shipping cost calculated at checkout"
-                    : `Shipping: ${formatShippingUsd(shippingUsd)}`}
-          </dd>
+          <dd className="font-medium text-white">{shippingCostLabel}</dd>
         </div>
       </dl>
 

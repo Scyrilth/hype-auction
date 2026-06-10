@@ -63,3 +63,27 @@ export function formatShippingUsd(amount: number): string {
   if (amount <= 0) return "Free";
   return `$${amount.toFixed(2)}`;
 }
+
+/** Public-facing ships-to label. Never exposes seller country. */
+export function getPublicShipsToLabel(
+  sellerCountry: string | null | undefined,
+  shipsInternationally: boolean | null | undefined,
+  isExempt = false
+): string | null {
+  if (isExempt && !sellerCountry?.trim()) {
+    return null;
+  }
+
+  if (!sellerCountry?.trim()) {
+    return null;
+  }
+
+  if (shipsInternationally) {
+    return "Worldwide";
+  }
+
+  return "Domestic only";
+}
+
+export const FREE_SHIPPING_WARNING =
+  "Free shipping means you cover the cost. Make sure your starting bid is high enough to cover your shipping and item costs — auctions can end at the starting price.";

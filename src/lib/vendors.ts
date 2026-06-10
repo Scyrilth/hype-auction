@@ -220,12 +220,12 @@ export async function updateVendorSettings(
 }
 
 const USER_BASE_COLUMNS =
-  "wallet_address, username, avatar_url, reputation, created_at";
+  "wallet_address, username, avatar_url, reputation, created_at, shop_name";
 
 const USER_IDENTITY_COLUMNS = `${USER_BASE_COLUMNS}, shop_name`;
 
 const USER_VENDOR_COLUMNS =
-  "banner_image, bio, shop_description, social_twitter, social_instagram, is_vendor, is_verified, followers_count, total_sales, average_rating";
+  "banner_image, bio, shop_description, social_twitter, social_instagram, is_vendor, is_verified, followers_count, total_sales, total_volume, average_rating, show_copy_wallet, show_won_auctions, country, ships_internationally";
 
 const USER_PROFILE_COLUMNS = `${USER_IDENTITY_COLUMNS}, ${USER_VENDOR_COLUMNS}`;
 
