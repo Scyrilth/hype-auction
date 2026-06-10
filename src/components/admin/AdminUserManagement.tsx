@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
@@ -114,7 +115,7 @@ export default function AdminUserManagement() {
         <button
           type="button"
           onClick={() => void runSearch()}
-          className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white"
+          className={adminActionButtonClass.search}
         >
           Search
         </button>
@@ -162,15 +163,17 @@ export default function AdminUserManagement() {
                 key={action}
                 type="button"
                 onClick={() => setPendingAction(action)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                className={
                   action === "ban"
-                    ? "bg-red-600/20 text-red-300"
+                    ? adminActionButtonClass.ban
                     : action === "lift"
-                      ? "border border-border text-zinc-300"
+                      ? adminActionButtonClass.lift
                       : action === "warning"
-                        ? "bg-amber-500/20 text-amber-300"
-                        : "bg-accent/20 text-purple-200"
-                }`}
+                        ? adminActionButtonClass.warning
+                        : action === "cooldown_24h"
+                          ? adminActionButtonClass.cooldown
+                          : adminActionButtonClass.suspension
+                }
               >
                 {actionLabels[action]}
               </button>

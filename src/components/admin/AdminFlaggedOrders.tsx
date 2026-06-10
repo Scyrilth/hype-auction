@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
@@ -158,14 +159,14 @@ export default function AdminFlaggedOrders() {
                     <button
                       type="button"
                       onClick={() => setDialog({ type: "release", row })}
-                      className="rounded-full bg-emerald-600/20 px-2 py-1 text-emerald-300"
+                      className={adminActionButtonClass.release}
                     >
                       Release
                     </button>
                     <button
                       type="button"
                       onClick={() => setDialog({ type: "refund", row })}
-                      className="rounded-full bg-amber-500/20 px-2 py-1 text-amber-300"
+                      className={adminActionButtonClass.refund}
                     >
                       Refund
                     </button>

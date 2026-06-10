@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
@@ -158,7 +159,7 @@ export default function AdminDisputes() {
                     type="button"
                     title="Release SOL to seller wallet"
                     onClick={() => setDialog({ row, sellerWins: true })}
-                    className="cursor-pointer rounded-full bg-emerald-600/20 px-3 py-1 text-emerald-300 transition-all duration-150 ease-in-out hover:scale-[1.02] hover:bg-emerald-500/35"
+                    className={adminActionButtonClass.sellerWins}
                   >
                     Seller wins
                   </button>
@@ -166,7 +167,7 @@ export default function AdminDisputes() {
                     type="button"
                     title="Refund SOL to buyer wallet"
                     onClick={() => setDialog({ row, sellerWins: false })}
-                    className="cursor-pointer rounded-full bg-blue-600/20 px-3 py-1 text-blue-300 transition-all duration-150 ease-in-out hover:scale-[1.02] hover:bg-blue-500/35"
+                    className={adminActionButtonClass.buyerWins}
                   >
                     Buyer wins
                   </button>
