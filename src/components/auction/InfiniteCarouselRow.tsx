@@ -14,9 +14,10 @@ import {
 import type { Auction } from "@/lib/database.types";
 
 const SCROLL_EDGE_THRESHOLD = 4;
+const CAROUSEL_CARD_WIDTH_CLASS = "w-[220px]";
 
 const carouselArrowClass =
-  "z-10 flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/10 text-white shadow-sm backdrop-blur-sm transition-all duration-150 ease-in-out hover:scale-110 hover:border-white/35 hover:bg-white/25";
+  "absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm transition-all duration-150 ease-in-out hover:scale-110 hover:border-white/35 hover:bg-white/25";
 
 type InfiniteCarouselRowProps = {
   labelMaps?: AuctionLabelMaps;
@@ -102,6 +103,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
   const { variant, items } = props;
   const scrollRef = useRef<HTMLDivElement>(null);
   const itemCount = items.length;
+  const [hasOverflow, setHasOverflow] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
@@ -110,10 +112,12 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
     if (!container) return;
 
     const maxScrollLeft = container.scrollWidth - container.clientWidth;
-    setCanScrollLeft(container.scrollLeft > SCROLL_EDGE_THRESHOLD);
+    const overflow = maxScrollLeft > SCROLL_EDGE_THRESHOLD;
+
+    setHasOverflow(overflow);
+    setCanScrollLeft(overflow && container.scrollLeft > SCROLL_EDGE_THRESHOLD);
     setCanScrollRight(
-      maxScrollLeft > SCROLL_EDGE_THRESHOLD &&
-        container.scrollLeft < maxScrollLeft - SCROLL_EDGE_THRESHOLD
+      overflow && container.scrollLeft < maxScrollLeft - SCROLL_EDGE_THRESHOLD
     );
   }, []);
 
@@ -150,49 +154,46 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
 
   if (itemCount === 0) return null;
 
-  const showArrowControls = itemCount > 1;
+  const showLeftArrow = hasOverflow && canScrollLeft;
+  const showRightArrow = hasOverflow && canScrollRight;
 
   return (
-    <div className="flex items-center gap-2">
-      {showArrowControls && canScrollLeft ? (
-        <button
-          type="button"
-          onClick={() => scrollByOneCard("left")}
-          className={carouselArrowClass}
-          aria-label="Scroll left"
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </button>
-      ) : (
-        <span className="w-9 shrink-0" aria-hidden />
-      )}
-
+    <div className="relative w-full min-w-0 max-w-full overflow-x-hidden">
       <div
         ref={scrollRef}
-        className="horizontal-scroll-row flex min-w-0 flex-1 gap-3 overflow-x-auto sm:gap-4"
+        className="horizontal-scroll-row flex min-w-0 gap-3 overflow-x-auto sm:gap-4"
       >
         {items.map((item) => (
           <div
             key={getItemKey(variant, item)}
-            className="horizontal-scroll-item w-[11.5rem] sm:w-[14rem]"
+            className={`horizontal-scroll-item ${CAROUSEL_CARD_WIDTH_CLASS} min-w-0 shrink-0`}
           >
-            {renderCarouselItem(props, item)}
+            <div className="w-full">{renderCarouselItem(props, item)}</div>
           </div>
         ))}
       </div>
 
-      {showArrowControls && canScrollRight ? (
+      {showLeftArrow ? (
+        <button
+          type="button"
+          onClick={() => scrollByOneCard("left")}
+          className={`${carouselArrowClass} left-1`}
+          aria-label="Scroll left"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+        </button>
+      ) : null}
+
+      {showRightArrow ? (
         <button
           type="button"
           onClick={() => scrollByOneCard("right")}
-          className={carouselArrowClass}
+          className={`${carouselArrowClass} right-1`}
           aria-label="Scroll right"
         >
           <ChevronRightIcon className="h-4 w-4" />
         </button>
-      ) : (
-        <span className="w-9 shrink-0" aria-hidden />
-      )}
+      ) : null}
     </div>
   );
 }

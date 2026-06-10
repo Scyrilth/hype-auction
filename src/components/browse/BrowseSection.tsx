@@ -32,7 +32,7 @@ export default function BrowseSection({
       : (auctions?.length ?? 0) > 0;
 
   return (
-    <section className="space-y-4">
+    <section className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-white">
           {title}{" "}

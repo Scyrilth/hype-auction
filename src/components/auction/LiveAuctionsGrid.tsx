@@ -130,7 +130,7 @@ export default function LiveAuctionsGrid({
   if (auctions.length === 0) return null;
 
   return (
-    <section id="live-auctions" className="mt-8 scroll-mt-6">
+    <section id="live-auctions" className="mt-8 min-w-0 scroll-mt-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="flex items-baseline text-2xl font-bold text-white">
           Live Auctions

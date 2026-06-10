@@ -34,18 +34,22 @@ export default function AuctionSuggestionSection({
         ) : null}
       </div>
 
-      <div className="horizontal-scroll-row -mx-1 flex gap-3 overflow-x-auto px-1 pb-2 sm:gap-4">
-        {auctions.map((auction) => (
-          <div
-            key={auction.id}
-            className="horizontal-scroll-item w-[11.5rem] sm:w-[14rem]"
-          >
-            <BrowseAuctionCard
-              auction={auction}
-              {...getAuctionCardLabelProps(auction.id, labelMaps)}
-            />
-          </div>
-        ))}
+      <div className="-mx-1 w-full min-w-0 max-w-full overflow-x-hidden px-1 pb-2">
+        <div className="horizontal-scroll-row flex gap-3 overflow-x-auto sm:gap-4">
+          {auctions.map((auction) => (
+            <div
+              key={auction.id}
+              className="horizontal-scroll-item w-[220px] min-w-0 shrink-0"
+            >
+              <div className="w-full">
+                <BrowseAuctionCard
+                  auction={auction}
+                  {...getAuctionCardLabelProps(auction.id, labelMaps)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
