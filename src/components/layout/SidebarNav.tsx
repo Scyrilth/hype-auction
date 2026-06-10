@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
 import {
   ChevronDownIcon,
   DashboardLayoutIcon,
   HomeIcon,
-  LightningIcon,
   SettingsIcon,
   SolanaLogo,
   StarFilledIcon,
@@ -94,15 +94,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
   return (
     <aside className="hidden h-full w-[13%] min-w-44 max-w-56 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 md:flex lg:px-5 lg:py-6">
       <div className="mb-6">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white shadow-[0_0_16px_rgba(124,58,237,0.45)]">
-            <LightningIcon className="h-4 w-4" />
-          </div>
-          <span className="bg-gradient-to-r from-white via-purple-200 to-accent bg-clip-text text-sm font-bold tracking-wide text-transparent">
-            HYPE AUCTION
-          </span>
-        </div>
-        <p className="mt-1.5 text-xs text-muted">Live Auctions. On Solana.</p>
+        <HypeAuctionLogo className="h-9 w-full max-w-[9.5rem]" showTagline />
       </div>
 
       <nav className="mb-4 flex flex-1 flex-col gap-1 border-b border-border pb-4">

@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LIVEAUCTION — Live Auctions on Solana",
+  title: "Hype Auction — Live Auctions on Solana",
   description: "Live-streamed crypto auctions with on-chain escrow",
 };
 

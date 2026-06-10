@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
 import WalletNav from "@/components/WalletNav";
 import NotificationTray from "@/components/notifications/NotificationTray";
 import SearchSuggestionsDropdown from "@/components/search/SearchSuggestionsDropdown";
@@ -88,6 +89,8 @@ export default function TopNav() {
 
   return (
     <header className="flex h-12 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-surface px-3 sm:h-14 sm:gap-4 sm:px-4 lg:gap-6 lg:px-5">
+      <HypeAuctionLogo className="h-8 w-auto shrink-0 md:hidden" />
+
       <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[40%] lg:max-w-xl">
         <SearchSuggestionsDropdown
           value={query}
