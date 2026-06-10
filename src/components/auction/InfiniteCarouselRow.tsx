@@ -58,7 +58,8 @@ function getScrollStep(container: HTMLElement): number {
 
 function renderCarouselItem(
   props: InfiniteCarouselRowProps,
-  item: Auction | AuctionWithBidCount24h
+  item: Auction | AuctionWithBidCount24h,
+  reserveLabelSpace: boolean
 ) {
   const { variant, labelMaps } = props;
 
@@ -76,6 +77,7 @@ function renderCarouselItem(
         bidCount24h={trendingItem.bidCount24h}
         bidCount={labelProps.bidCount}
         isTopFeaturedByBids={labelProps.isTopFeaturedByBids}
+        reserveLabelSpace={reserveLabelSpace}
       />
     );
   }
@@ -86,6 +88,7 @@ function renderCarouselItem(
       <BrowseAuctionCard
         auction={auction}
         {...getAuctionCardLabelProps(auction.id, labelMaps)}
+        reserveLabelSpace={reserveLabelSpace}
       />
     );
   }
@@ -106,6 +109,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
   const [hasOverflow, setHasOverflow] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const reserveLabelSpace = variant !== "live";
 
   const updateScrollState = useCallback(() => {
     const container = scrollRef.current;
@@ -158,17 +162,19 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
   const showRightArrow = hasOverflow && canScrollRight;
 
   return (
-    <div className="relative w-full min-w-0 max-w-full overflow-x-hidden">
+    <div className="homepage-carousel-track relative w-full min-w-0 max-w-full">
       <div
         ref={scrollRef}
-        className="horizontal-scroll-row flex min-w-0 gap-3 overflow-x-auto sm:gap-4"
+        className="carousel-row-scroll flex w-full min-w-0 items-stretch gap-3 overflow-x-auto sm:gap-4"
       >
         {items.map((item) => (
           <div
             key={getItemKey(variant, item)}
             className={`horizontal-scroll-item ${CAROUSEL_CARD_WIDTH_CLASS} min-w-0 shrink-0`}
           >
-            <div className="w-full">{renderCarouselItem(props, item)}</div>
+            <div className="flex h-full w-full">
+              {renderCarouselItem(props, item, reserveLabelSpace)}
+            </div>
           </div>
         ))}
       </div>

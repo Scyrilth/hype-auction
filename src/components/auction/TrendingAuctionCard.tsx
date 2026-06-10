@@ -19,11 +19,13 @@ export default function TrendingAuctionCard({
   bidCount24h,
   bidCount,
   isTopFeaturedByBids,
+  reserveLabelSpace = false,
 }: {
   auction: Auction;
   bidCount24h: number;
   bidCount?: number;
   isTopFeaturedByBids?: boolean;
+  reserveLabelSpace?: boolean;
 }) {
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
@@ -69,6 +71,7 @@ export default function TrendingAuctionCard({
               bidCount={bidCount}
               bidCount24h={bidCount24h}
               isTopFeaturedByBids={isTopFeaturedByBids}
+              reserveLabelSpace={reserveLabelSpace}
               className="mt-2"
             />
           </>

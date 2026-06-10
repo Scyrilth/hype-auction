@@ -87,6 +87,24 @@ body {
   flex-shrink: 0;
 }
 
+/* Arrow-driven carousels — smooth scroll without snap (keeps row edges aligned) */
+.carousel-row-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.carousel-row-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.homepage-carousel-track {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 /* Custom scrollbar for chat and auction grids */
 .auction-scroll::-webkit-scrollbar,
 .chat-scroll::-webkit-scrollbar {

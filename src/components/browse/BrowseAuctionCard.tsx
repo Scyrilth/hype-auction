@@ -20,11 +20,13 @@ export default function BrowseAuctionCard({
   bidCount,
   bidCount24h,
   isTopFeaturedByBids,
+  reserveLabelSpace = false,
 }: {
   auction: Auction;
   bidCount?: number;
   bidCount24h?: number;
   isTopFeaturedByBids?: boolean;
+  reserveLabelSpace?: boolean;
 }) {
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
@@ -70,6 +72,7 @@ export default function BrowseAuctionCard({
               bidCount={bidCount}
               bidCount24h={bidCount24h}
               isTopFeaturedByBids={isTopFeaturedByBids}
+              reserveLabelSpace={reserveLabelSpace}
               className="mt-2"
             />
           </>

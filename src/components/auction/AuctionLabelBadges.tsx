@@ -11,7 +11,11 @@ export default function AuctionLabelBadges({
   bidCount24h,
   isTopFeaturedByBids,
   className = "",
-}: AuctionLabelInput & { className?: string }) {
+  reserveLabelSpace = false,
+}: AuctionLabelInput & {
+  className?: string;
+  reserveLabelSpace?: boolean;
+}) {
   const labels = getAuctionLabels(
     createAuctionLabelInput(auction, {
       bidCount,
@@ -20,11 +24,11 @@ export default function AuctionLabelBadges({
     })
   );
 
-  if (labels.length === 0) return null;
+  if (labels.length === 0 && !reserveLabelSpace) return null;
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-1 ${className}`.trim()}
+      className={`flex min-h-[28px] flex-wrap items-center gap-1 ${className}`.trim()}
     >
       {labels.map((labelId) => {
         const badge = AUCTION_LABEL_DISPLAY[labelId];

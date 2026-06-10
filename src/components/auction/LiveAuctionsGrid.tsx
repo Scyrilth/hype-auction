@@ -130,7 +130,7 @@ export default function LiveAuctionsGrid({
   if (auctions.length === 0) return null;
 
   return (
-    <section id="live-auctions" className="mt-8 min-w-0 scroll-mt-6">
+    <section id="live-auctions" className="mt-8 w-full min-w-0 scroll-mt-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="flex items-baseline text-2xl font-bold text-white">
           Live Auctions
@@ -201,7 +201,7 @@ export default function LiveAuctionsGrid({
       </div>
 
       {filteredAuctions.length > 0 ? (
-        <div className="space-y-4">
+        <div className="homepage-carousel-track w-full min-w-0 max-w-full space-y-4">
           {carouselRows.map((row, rowIndex) => (
             <InfiniteCarouselRow
               key={`live-row-${rowIndex}-${row.map((auction) => auction.id).join("-")}`}

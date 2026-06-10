@@ -45,6 +45,7 @@ export default function AuctionSuggestionSection({
                 <BrowseAuctionCard
                   auction={auction}
                   {...getAuctionCardLabelProps(auction.id, labelMaps)}
+                  reserveLabelSpace
                 />
               </div>
             </div>
