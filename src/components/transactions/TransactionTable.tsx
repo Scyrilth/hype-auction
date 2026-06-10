@@ -233,12 +233,14 @@ export default function TransactionTable({
   buyerRows,
   onExportCsv,
   onExportPdf,
+  pdfGenerating = false,
 }: {
   role: TransactionRole;
   sellerRows: SellerTransactionRow[];
   buyerRows: BuyerTransactionRow[];
   onExportCsv: () => void;
-  onExportPdf: () => void;
+  onExportPdf: () => void | Promise<void>;
+  pdfGenerating?: boolean;
 }) {
   const [sellerSortKey, setSellerSortKey] = useState<SellerSortKey>("date");
   const [buyerSortKey, setBuyerSortKey] = useState<BuyerSortKey>("date");
@@ -297,10 +299,11 @@ export default function TransactionTable({
           </button>
           <button
             type="button"
-            onClick={onExportPdf}
-            className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+            onClick={() => void onExportPdf()}
+            disabled={pdfGenerating}
+            className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Export PDF
+            {pdfGenerating ? "Generating PDF..." : "Export PDF"}
           </button>
         </div>
       </div>

@@ -45,13 +45,18 @@ function ChartShell({
   title,
   children,
   empty,
+  pdfChartId,
 }: {
   title: string;
   children: React.ReactNode;
   empty?: boolean;
+  pdfChartId?: string;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface/60 p-4">
+    <div
+      className="rounded-xl border border-border bg-surface/60 p-4"
+      {...(pdfChartId ? { "data-pdf-chart": pdfChartId } : {})}
+    >
       <h3 className="mb-3 text-sm font-medium text-white">{title}</h3>
       {empty ? (
         <div className="flex h-48 items-center justify-center text-sm text-muted">
@@ -176,7 +181,7 @@ export default function TransactionCharts({
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <ChartShell title={earningsLabel} empty={earningsData.length === 0}>
+      <ChartShell title={earningsLabel} empty={earningsData.length === 0} pdfChartId="earnings">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={earningsData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
@@ -199,7 +204,7 @@ export default function TransactionCharts({
         </ResponsiveContainer>
       </ChartShell>
 
-      <ChartShell title={volumeLabel} empty={volumeData.length === 0}>
+      <ChartShell title={volumeLabel} empty={volumeData.length === 0} pdfChartId="volume">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={volumeData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />
@@ -222,7 +227,7 @@ export default function TransactionCharts({
         </ResponsiveContainer>
       </ChartShell>
 
-      <ChartShell title={categoryLabel} empty={categoryData.length === 0}>
+      <ChartShell title={categoryLabel} empty={categoryData.length === 0} pdfChartId="category">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -250,7 +255,7 @@ export default function TransactionCharts({
         </ResponsiveContainer>
       </ChartShell>
 
-      <ChartShell title={statusLabel} empty={statusData.length === 0}>
+      <ChartShell title={statusLabel} empty={statusData.length === 0} pdfChartId="status">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={statusData} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" stroke="#2a2a3e" />

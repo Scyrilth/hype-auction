@@ -130,9 +130,14 @@ export async function fetchTransactionsData(
   if (buyerBidsResponse.error) throw buyerBidsResponse.error;
   if (listingCountResponse.error) throw listingCountResponse.error;
 
-  const sellerAuctions = (sellerResponse.data ?? []).map((row) =>
-    parseAuctionRow(row as Record<string, unknown>)
-  );
+  const sellerAuctions = [
+    ...new Map(
+      (sellerResponse.data ?? []).map((row) => {
+        const auction = parseAuctionRow(row as Record<string, unknown>);
+        return [auction.id, auction] as const;
+      })
+    ).values(),
+  ];
 
   const buyerAuctionIds = [
     ...new Set(
@@ -162,12 +167,22 @@ export async function fetchTransactionsData(
   ];
   const topBidders = await getTopBidderByAuction(allIds);
 
-  const sellerRows: SellerTransactionRow[] = [];
+  const sellerRowsMap = new Map<string, SellerTransactionRow>();
   for (const auction of sellerAuctions) {
     const buyerWallet = topBidders.get(auction.id) ?? "Unknown";
     const row = buildSellerRow(auction, buyerWallet, currentRateFallback);
-    if (row) sellerRows.push(row);
+    if (!row) continue;
+
+    const existing = sellerRowsMap.get(row.auctionId);
+    if (!existing) {
+      sellerRowsMap.set(row.auctionId, row);
+      continue;
+    }
+    if (existing.buyerWallet === "Unknown" && row.buyerWallet !== "Unknown") {
+      sellerRowsMap.set(row.auctionId, row);
+    }
   }
+  const sellerRows = [...sellerRowsMap.values()];
 
   const buyerRows: BuyerTransactionRow[] = [];
   for (const auction of buyerAuctions) {

@@ -75,6 +75,7 @@ export default function TransactionsView() {
     SellerStatusFilter | BuyerStatusFilter
   >("all");
   const [roleInitialized, setRoleInitialized] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
 
   const wallet = publicKey?.toBase58() ?? "";
   const rate = solPrice ?? 132.5;
@@ -220,14 +221,19 @@ export default function TransactionsView() {
     }
   };
 
-  const handleExportPdf = () => {
-    exportTransactionsPdf({
-      role,
-      range,
-      summary: role === "selling" ? sellerSummary : buyerSummary,
-      rows: role === "selling" ? filteredSellerRows : filteredBuyerRows,
-      currentSolUsdRate: rate,
-    });
+  const handleExportPdf = async () => {
+    setPdfGenerating(true);
+    try {
+      await exportTransactionsPdf({
+        role,
+        range,
+        summary: role === "selling" ? sellerSummary : buyerSummary,
+        rows: role === "selling" ? filteredSellerRows : filteredBuyerRows,
+        currentSolUsdRate: rate,
+      });
+    } finally {
+      setPdfGenerating(false);
+    }
   };
 
   if (loading) return <TransactionsSkeleton />;
@@ -309,6 +315,7 @@ export default function TransactionsView() {
         buyerRows={filteredBuyerRows}
         onExportCsv={handleExportCsv}
         onExportPdf={handleExportPdf}
+        pdfGenerating={pdfGenerating}
       />
 
       {role === "selling" && <SellerInsights insights={sellerInsights} />}
