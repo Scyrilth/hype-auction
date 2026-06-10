@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 import LiveAuctionCard from "@/components/auction/LiveAuctionCard";
 import TrendingAuctionCard from "@/components/auction/TrendingAuctionCard";
@@ -39,6 +39,15 @@ function getItemKey(
     return (item as AuctionWithBidCount24h).auction.id;
   }
   return (item as Auction).id;
+}
+
+function getScrollStep(container: HTMLElement): number {
+  const item = container.querySelector<HTMLElement>(":scope > .horizontal-scroll-item");
+  if (!item) return container.clientWidth;
+
+  const styles = getComputedStyle(container);
+  const gap = parseFloat(styles.columnGap || styles.gap || "0") || 0;
+  return item.offsetWidth + gap;
 }
 
 function renderCarouselItem(
@@ -85,21 +94,27 @@ function renderCarouselItem(
 }
 
 export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
-  const { variant, items, visibleCount = 5 } = props;
-  const [startIndex, setStartIndex] = useState(0);
+  const { variant, items } = props;
+  const scrollRef = useRef<HTMLDivElement>(null);
   const itemCount = items.length;
-  const slots = Math.min(visibleCount, itemCount);
+
+  const scrollByOneCard = useCallback((direction: "left" | "right") => {
+    const container = scrollRef.current;
+    if (!container) return;
+
+    const amount = getScrollStep(container);
+    container.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  }, []);
 
   useEffect(() => {
-    setStartIndex(0);
+    const container = scrollRef.current;
+    if (container) container.scrollLeft = 0;
   }, [itemCount]);
 
   if (itemCount === 0) return null;
-
-  const visibleItems = Array.from(
-    { length: slots },
-    (_, slotIndex) => items[(startIndex + slotIndex) % itemCount]
-  );
 
   const showArrows = itemCount > 1;
 
@@ -108,9 +123,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
       {showArrows ? (
         <button
           type="button"
-          onClick={() =>
-            setStartIndex((index) => (index - 1 + itemCount) % itemCount)
-          }
+          onClick={() => scrollByOneCard("left")}
           className="z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
           aria-label="Scroll left"
         >
@@ -121,15 +134,13 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
       )}
 
       <div
-        className="horizontal-scroll-row grid min-w-0 flex-1 justify-items-start gap-3 overflow-x-auto sm:gap-4"
-        style={{
-          gridTemplateColumns: `repeat(${visibleCount}, minmax(0, 1fr))`,
-        }}
+        ref={scrollRef}
+        className="horizontal-scroll-row flex min-w-0 flex-1 gap-3 overflow-x-auto sm:gap-4"
       >
-        {visibleItems.map((item, slotIndex) => (
+        {items.map((item) => (
           <div
-            key={`${getItemKey(variant, item)}-${slotIndex}-${startIndex}`}
-            className="horizontal-scroll-item w-full min-w-0 overflow-hidden transition-opacity duration-300"
+            key={getItemKey(variant, item)}
+            className="horizontal-scroll-item w-[11.5rem] sm:w-[14rem]"
           >
             {renderCarouselItem(props, item)}
           </div>
@@ -139,7 +150,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
       {showArrows ? (
         <button
           type="button"
-          onClick={() => setStartIndex((index) => (index + 1) % itemCount)}
+          onClick={() => scrollByOneCard("right")}
           className="z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
           aria-label="Scroll right"
         >

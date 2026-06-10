@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import WalletNav from "@/components/WalletNav";
@@ -37,6 +37,7 @@ export default function TopNav() {
   const { notifications, unreadCount, refresh } = useNotifications();
   const [query, setQuery] = useState("");
   const [trayOpen, setTrayOpen] = useState(false);
+  const notificationAnchorRef = useRef<HTMLDivElement>(null);
 
   const { queryReady, suggestionGroups, flatSuggestions } = useSearchSuggestions(
     {
@@ -143,7 +144,7 @@ export default function TopNav() {
         <WalletNav />
 
         {connected && wallet && (
-          <div className="relative">
+          <div ref={notificationAnchorRef} className="relative">
             <button
               type="button"
               onClick={() => setTrayOpen((open) => !open)}
@@ -162,6 +163,7 @@ export default function TopNav() {
             <NotificationTray
               open={trayOpen}
               onClose={() => setTrayOpen(false)}
+              anchorRef={notificationAnchorRef}
               wallet={wallet}
               notifications={notifications}
               unreadCount={unreadCount}

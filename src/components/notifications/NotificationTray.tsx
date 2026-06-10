@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, type RefObject } from "react";
 
 import NotificationRow from "@/components/notifications/NotificationRow";
 import {
@@ -14,6 +14,7 @@ import {
 export default function NotificationTray({
   open,
   onClose,
+  anchorRef,
   wallet,
   notifications,
   unreadCount,
@@ -21,21 +22,21 @@ export default function NotificationTray({
 }: {
   open: boolean;
   onClose: () => void;
+  anchorRef: RefObject<HTMLElement | null>;
   wallet: string;
   notifications: Notification[];
   unreadCount: number;
   onRefresh: () => Promise<void>;
 }) {
   const router = useRouter();
-  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
 
     const handleMouseDown = (event: MouseEvent) => {
       if (
-        panelRef.current &&
-        !panelRef.current.contains(event.target as Node)
+        anchorRef.current &&
+        !anchorRef.current.contains(event.target as Node)
       ) {
         onClose();
       }
@@ -43,7 +44,7 @@ export default function NotificationTray({
 
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [open, onClose]);
+  }, [open, onClose, anchorRef]);
 
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
@@ -76,10 +77,7 @@ export default function NotificationTray({
   if (!open) return null;
 
   return (
-    <div
-      ref={panelRef}
-      className="absolute right-0 top-full z-50 mt-2 w-[380px] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl"
-    >
+    <div className="absolute right-0 top-full z-50 mt-2 w-[380px] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">Notifications</h2>
         {unreadCount > 0 && (
