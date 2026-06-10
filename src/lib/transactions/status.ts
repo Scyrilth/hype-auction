@@ -4,10 +4,26 @@ import type {
   SellerDisplayStatus,
 } from "./types";
 
+/** Escrow states that represent a transaction row in seller/buyer history. */
+export const TRANSACTION_ESCROW_STATES: EscrowState[] = [
+  "released",
+  "complete",
+  "funded",
+  "shipped",
+  "pending",
+  "refunded",
+  "disputed",
+];
+
+export function isTransactionEscrowState(state: EscrowState): boolean {
+  return TRANSACTION_ESCROW_STATES.includes(state);
+}
+
 export function mapSellerDisplayStatus(
   escrowState: EscrowState
 ): SellerDisplayStatus | null {
   switch (escrowState) {
+    case "released":
     case "complete":
       return "released";
     case "funded":
@@ -27,6 +43,7 @@ export function mapBuyerDisplayStatus(
   escrowState: EscrowState
 ): BuyerDisplayStatus | null {
   switch (escrowState) {
+    case "released":
     case "complete":
       return "completed";
     case "funded":

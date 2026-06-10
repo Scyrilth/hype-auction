@@ -12,6 +12,7 @@ export type EscrowState =
   | "pending"
   | "funded"
   | "shipped"
+  | "released"
   | "complete"
   | "disputed"
   | "refunded"

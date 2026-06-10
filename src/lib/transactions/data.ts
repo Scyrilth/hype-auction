@@ -3,7 +3,11 @@ import { supabase } from "@/lib/supabase";
 import type { Auction } from "@/lib/database.types";
 
 import { computeTransactionAmounts } from "./amounts";
-import { mapBuyerDisplayStatus, mapSellerDisplayStatus } from "./status";
+import {
+  isTransactionEscrowState,
+  mapBuyerDisplayStatus,
+  mapSellerDisplayStatus,
+} from "./status";
 import type {
   BuyerTransactionRow,
   SellerTransactionRow,
@@ -33,12 +37,9 @@ async function getTopBidderByAuction(
   return winners;
 }
 
-function getTransactionDate(auction: Auction): string {
-  return (
-    auction.escrow_funded_at ??
-    auction.end_time ??
-    auction.created_at
-  );
+/** Use end_time or created_at for date-range filtering (per product spec). */
+export function getTransactionDate(auction: Auction): string {
+  return auction.end_time ?? auction.created_at;
 }
 
 function buildSellerRow(
@@ -46,6 +47,8 @@ function buildSellerRow(
   buyerWallet: string,
   solUsdRate: number
 ): SellerTransactionRow | null {
+  if (!isTransactionEscrowState(auction.escrow_state)) return null;
+
   const displayStatus = mapSellerDisplayStatus(auction.escrow_state);
   if (!displayStatus) return null;
 
@@ -68,6 +71,8 @@ function buildBuyerRow(
   auction: Auction,
   solUsdRate: number
 ): BuyerTransactionRow | null {
+  if (!isTransactionEscrowState(auction.escrow_state)) return null;
+
   const displayStatus = mapBuyerDisplayStatus(auction.escrow_state);
   if (!displayStatus) return null;
 
@@ -98,8 +103,8 @@ export async function fetchTransactionsData(
         .from("auctions")
         .select("*")
         .eq("seller_wallet", normalizedWallet)
-        .eq("escrow_funded", true)
-        .order("escrow_funded_at", { ascending: false }),
+        .eq("status", "ended")
+        .order("end_time", { ascending: false }),
       supabase
         .from("bids")
         .select("auction_id")
@@ -130,7 +135,7 @@ export async function fetchTransactionsData(
       .from("auctions")
       .select("*")
       .in("id", buyerAuctionIds)
-      .eq("escrow_funded", true);
+      .eq("status", "ended");
 
     if (error) throw error;
     buyerAuctions = (data ?? []).map((row) =>
