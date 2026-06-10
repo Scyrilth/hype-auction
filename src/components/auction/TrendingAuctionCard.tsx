@@ -5,6 +5,7 @@ import {
   AuctionCardBidPrice,
   AuctionCardContent,
   AuctionCardImage,
+  AuctionCardShippingLine,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
@@ -77,6 +78,9 @@ export default function TrendingAuctionCard({
             <div className="shrink-0">
               <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
               <AuctionCardBidPrice amount={displayBid} />
+              <AuctionCardShippingLine
+                domesticShippingUsd={auction.domestic_shipping_usd}
+              />
               <FiatValue solAmount={displayBid} />
             </div>
             <div className="shrink-0 text-right">

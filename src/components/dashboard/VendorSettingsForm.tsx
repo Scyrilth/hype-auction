@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { displaySocialHandle, shortenAddress } from "@/lib/format";
 import { getImageExtension } from "@/lib/storage";
+import { COUNTRY_OPTIONS } from "@/lib/countries";
 import {
   getVendorSettings,
   updateVendorSettings,
@@ -39,6 +40,8 @@ export default function VendorSettingsForm() {
   const [instagramHandle, setInstagramHandle] = useState("");
   const [isVendor, setIsVendor] = useState(false);
   const [showCopyWallet, setShowCopyWallet] = useState(true);
+  const [country, setCountry] = useState("");
+  const [shipsInternationally, setShipsInternationally] = useState(false);
 
   useEffect(() => {
     if (!publicKey) return;
@@ -63,6 +66,8 @@ export default function VendorSettingsForm() {
         setInstagramHandle(displaySocialHandle(data.social_instagram));
         setIsVendor(data.is_vendor);
         setShowCopyWallet(data.show_copy_wallet ?? true);
+        setCountry(data.country ?? "");
+        setShipsInternationally(data.ships_internationally ?? false);
       } catch (error) {
         logSupabaseError("VendorSettingsForm.load", error);
         showToast(getErrorMessage(error), "error");
@@ -80,6 +85,11 @@ export default function VendorSettingsForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!publicKey) return;
+
+    if (!country.trim()) {
+      showToast("Select your shop country before saving.", "error");
+      return;
+    }
 
     setIsSaving(true);
 
@@ -99,6 +109,8 @@ export default function VendorSettingsForm() {
         instagramHandle,
         isVendor,
         showCopyWallet,
+        country,
+        shipsInternationally,
       });
 
       setProfile(updated);
@@ -175,6 +187,47 @@ export default function VendorSettingsForm() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <label htmlFor="country" className={labelClass}>
+            Country <span className="text-live-red">*</span>
+          </label>
+          <select
+            id="country"
+            required
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            className={inputClass}
+          >
+            <option value="">Select country</option>
+            {COUNTRY_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-end">
+          <label className="flex w-full cursor-pointer items-center gap-3 rounded-xl border border-border bg-background px-4 py-3">
+            <input
+              type="checkbox"
+              checked={shipsInternationally}
+              onChange={(e) => setShipsInternationally(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-accent"
+            />
+            <div>
+              <p className="text-sm font-medium text-white">
+                Ships internationally <span className="text-live-red">*</span>
+              </p>
+              <p className="text-xs text-muted">
+                Offer international flat-rate shipping on listings
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div className="grid gap-5 sm:grid-cols-2">
         <ImageUpload
           label="Avatar"
           bucket="Avatars"
@@ -199,6 +252,8 @@ export default function VendorSettingsForm() {
               instagramHandle,
               isVendor,
               showCopyWallet,
+              country,
+              shipsInternationally,
             });
             setProfile(updated);
             showToast("Avatar uploaded!");
@@ -229,6 +284,8 @@ export default function VendorSettingsForm() {
               instagramHandle,
               isVendor,
               showCopyWallet,
+              country,
+              shipsInternationally,
             });
             setProfile(updated);
             showToast("Banner uploaded!");

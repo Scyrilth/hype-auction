@@ -37,6 +37,8 @@ export function parseUser(row: Record<string, unknown>): User {
     average_rating: Number(row.average_rating ?? 0),
     show_copy_wallet: row.show_copy_wallet !== false,
     show_won_auctions: Boolean(row.show_won_auctions),
+    country: (row.country as string | null) ?? null,
+    ships_internationally: Boolean(row.ships_internationally),
   };
 }
 
@@ -182,6 +184,8 @@ export interface VendorSettingsInput {
   isVendor?: boolean;
   username?: string;
   showCopyWallet?: boolean;
+  country?: string;
+  shipsInternationally?: boolean;
 }
 
 export async function updateVendorSettings(
@@ -203,6 +207,8 @@ export async function updateVendorSettings(
         is_vendor: settings.isVendor ?? true,
         username: settings.username?.trim() || null,
         show_copy_wallet: settings.showCopyWallet ?? true,
+        country: settings.country?.trim() || null,
+        ships_internationally: settings.shipsInternationally ?? false,
       },
       { onConflict: "wallet_address" }
     )

@@ -1,8 +1,13 @@
+import {
+  canShipToBuyer,
+  isShippingExemptAuction,
+} from "@/lib/auction-shipping";
 import { logSupabaseError } from "@/lib/errors";
 import {
   getUserDisplayName,
   notifyBidPlaced,
 } from "@/lib/notifications";
+import { getDefaultShippingAddress } from "@/lib/shipping";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
@@ -22,7 +27,9 @@ export async function placeBid({
     await Promise.all([
       supabase
         .from("auctions")
-        .select("id, title, seller_wallet, current_bid, start_price")
+        .select(
+          "id, title, seller_wallet, current_bid, start_price, is_dummy"
+        )
         .eq("id", auctionId)
         .maybeSingle(),
       supabase
@@ -57,6 +64,35 @@ export async function placeBid({
     const tooLow = new Error("Bid must be higher than the current bid.");
     console.error("[placeBid] bid too low", { amount, floor });
     throw tooLow;
+  }
+
+  const isExempt = isShippingExemptAuction({
+    is_dummy: Boolean(auction.is_dummy),
+    seller_wallet: auction.seller_wallet as string,
+  });
+
+  if (!isExempt) {
+    const [{ data: seller }, defaultAddress] = await Promise.all([
+      supabase
+        .from("users")
+        .select("country, ships_internationally")
+        .eq("wallet_address", auction.seller_wallet as string)
+        .maybeSingle(),
+      getDefaultShippingAddress(bidderWallet).catch(() => null),
+    ]);
+
+    if (
+      defaultAddress &&
+      seller &&
+      !canShipToBuyer({
+        sellerCountry: (seller.country as string | null) ?? null,
+        shipsInternationally: Boolean(seller.ships_internationally),
+        buyerCountry: defaultAddress.country,
+        isExempt,
+      })
+    ) {
+      throw new Error("This seller doesn't ship to your country");
+    }
   }
 
   try {

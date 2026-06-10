@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AuctionSellerCard from "@/components/auction/AuctionSellerCard";
+import AuctionShippingInfo from "@/components/auction/AuctionShippingInfo";
 import BidAddressPromptModal from "@/components/auction/BidAddressPromptModal";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import LiveChat from "@/components/auction/LiveChat";
@@ -68,6 +69,7 @@ export default function AuctionBidSidebar({
   const [currentBid, setCurrentBid] = useState(getEffectiveBid(auction));
   const [bidInput, setBidInput] = useState("");
   const [isPlacingBid, setIsPlacingBid] = useState(false);
+  const [shippingBlocked, setShippingBlocked] = useState(false);
 
   const minimumBid = useMemo(
     () => getMinimumBid({ ...auction, current_bid: currentBid }),
@@ -142,6 +144,11 @@ export default function AuctionBidSidebar({
   };
 
   const handlePlaceBid = async (amount: number) => {
+    if (shippingBlocked) {
+      showToast("This seller does not ship to your country.", "error");
+      return;
+    }
+
     if (!isLive) {
       showToast("This auction is no longer live.", "error");
       return;
@@ -230,7 +237,7 @@ export default function AuctionBidSidebar({
 
             <button
               type="button"
-              disabled={isPlacingBid || loadingAddresses}
+              disabled={isPlacingBid || loadingAddresses || shippingBlocked}
               onClick={() => handlePlaceBid(parseFloat(bidInput))}
               className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -242,7 +249,7 @@ export default function AuctionBidSidebar({
                 <button
                   key={quick.label}
                   type="button"
-                  disabled={isPlacingBid || loadingAddresses}
+                  disabled={isPlacingBid || loadingAddresses || shippingBlocked}
                   onClick={() => {
                     setBidInput(quick.amount.toFixed(2));
                     void handlePlaceBid(quick.amount);
@@ -260,6 +267,12 @@ export default function AuctionBidSidebar({
           </p>
         )}
       </div>
+
+      <AuctionShippingInfo
+        auction={auction}
+        seller={seller}
+        onShippingBlockedChange={setShippingBlocked}
+      />
 
       <AuctionSellerCard seller={seller} reviewCount={sellerReviewCount} />
 

@@ -234,6 +234,8 @@ export async function getAuctionDetailData(
       average_rating: 0,
       show_copy_wallet: true,
       show_won_auctions: false,
+      country: null,
+      ships_internationally: false,
     } satisfies User;
 
     let seller: User = sellerPlaceholder;

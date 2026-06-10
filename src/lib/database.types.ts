@@ -38,6 +38,8 @@ export interface User {
   average_rating: number;
   show_copy_wallet: boolean;
   show_won_auctions: boolean;
+  country: string | null;
+  ships_internationally: boolean;
 }
 
 export interface WatchlistEntry {
@@ -76,6 +78,9 @@ export interface Auction {
   escrow_attempt_number: number;
   escrow_state: EscrowState;
   escrow_expired_at: string | null;
+  domestic_shipping_usd: number;
+  international_shipping_usd: number;
+  is_dummy: boolean;
 }
 
 export interface Bid {

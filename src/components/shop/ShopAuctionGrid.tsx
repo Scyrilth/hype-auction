@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   AuctionCardCategorySlot,
   AuctionCardContent,
+  AuctionCardShippingLine,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
@@ -80,6 +81,9 @@ export default function ShopAuctionGrid({
                     <p className="text-lg font-bold text-accent">
                       {formatSol(displayBid)}
                     </p>
+                    <AuctionCardShippingLine
+                      domesticShippingUsd={auction.domestic_shipping_usd}
+                    />
                     <FiatValue solAmount={displayBid} />
                   </div>
                   {showCountdown && (

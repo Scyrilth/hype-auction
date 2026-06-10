@@ -26,13 +26,21 @@ import {
 } from "@/lib/messages";
 import { supabase } from "@/lib/supabase";
 import {
+  isShippingExemptAuction,
+  resolveShippingUsd,
+} from "@/lib/auction-shipping";
+import {
+  calculatePaymentBreakdown,
   checkWalletBalance,
   createEscrowProvider,
   getExplorerTxUrl,
   initiatePayment,
   PLATFORM_WALLET,
+  type PaymentBreakdown,
 } from "@/lib/escrow";
-import { shortenAddress } from "@/lib/format";
+import { formatSol, shortenAddress } from "@/lib/format";
+import { getEffectiveBid } from "@/lib/parse-auction";
+import { getDefaultShippingAddress } from "@/lib/shipping";
 
 function formatMessageTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -151,6 +159,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const [paying, setPaying] = useState(false);
   const [paymentTx, setPaymentTx] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentBreakdown, setPaymentBreakdown] =
+    useState<PaymentBreakdown | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const wallet = publicKey?.toBase58();
@@ -188,6 +198,48 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     }
     void loadThread();
   }, [connected, wallet, router, loadThread]);
+
+  useEffect(() => {
+    if (!thread?.auction || !wallet || thread.auction.status !== "ended") {
+      setPaymentBreakdown(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const auction = thread.auction!;
+        const bidAmount = getEffectiveBid(auction);
+        const { data: seller } = await supabase
+          .from("users")
+          .select("country, ships_internationally")
+          .eq("wallet_address", thread.seller_wallet)
+          .maybeSingle();
+        const defaultAddress = await getDefaultShippingAddress(wallet).catch(
+          () => null
+        );
+        const isExempt = isShippingExemptAuction(auction);
+        const shippingUsd =
+          resolveShippingUsd({
+            domesticShippingUsd: auction.domestic_shipping_usd,
+            internationalShippingUsd: auction.international_shipping_usd,
+            sellerCountry: (seller?.country as string | null) ?? null,
+            buyerCountry: defaultAddress?.country ?? null,
+            shipsInternationally: Boolean(seller?.ships_internationally),
+            isExempt,
+          }) ?? 0;
+        const breakdown = await calculatePaymentBreakdown(bidAmount, shippingUsd);
+        if (!cancelled) setPaymentBreakdown(breakdown);
+      } catch {
+        if (!cancelled) setPaymentBreakdown(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [thread, wallet]);
 
   useEffect(() => {
     if (!wallet) return;
@@ -288,19 +340,39 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       return;
     }
 
-    const bidAmount =
-      thread.auction.current_bid > 0
-        ? thread.auction.current_bid
-        : thread.auction.start_price;
+    const bidAmount = getEffectiveBid(thread.auction);
 
     setPaying(true);
     setPaymentError(null);
 
     try {
-      const hasBalance = await checkWalletBalance(wallet, bidAmount);
+      const { data: seller } = await supabase
+        .from("users")
+        .select("country, ships_internationally")
+        .eq("wallet_address", thread.seller_wallet)
+        .maybeSingle();
+      const defaultAddress = await getDefaultShippingAddress(wallet).catch(
+        () => null
+      );
+      const isExempt = isShippingExemptAuction(thread.auction);
+      const shippingUsd =
+        resolveShippingUsd({
+          domesticShippingUsd: thread.auction.domestic_shipping_usd,
+          internationalShippingUsd: thread.auction.international_shipping_usd,
+          sellerCountry: (seller?.country as string | null) ?? null,
+          buyerCountry: defaultAddress?.country ?? null,
+          shipsInternationally: Boolean(seller?.ships_internationally),
+          isExempt,
+        }) ?? 0;
+
+      const breakdown =
+        paymentBreakdown ??
+        (await calculatePaymentBreakdown(bidAmount, shippingUsd));
+
+      const hasBalance = await checkWalletBalance(wallet, breakdown.totalSol);
       if (!hasBalance) {
         setPaymentError(
-          `Insufficient SOL. You need at least ${(bidAmount + 0.01).toFixed(2)} SOL including fees.`
+          `Insufficient SOL. You need at least ${(breakdown.totalSol + 0.01).toFixed(2)} SOL including fees.`
         );
         return;
       }
@@ -311,7 +383,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         anchorWallet,
         provider,
         bidAmount,
-        0,
+        shippingUsd,
         thread.seller_wallet,
         PLATFORM_WALLET,
         thread.auction.escrow_attempt_number || 1
@@ -478,6 +550,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         <div className="mt-3 shrink-0 space-y-3">
           {showPayNow && (
             <div className="space-y-2">
+              {paymentBreakdown && (
+                <div className="rounded-xl border border-border bg-background/60 px-3 py-2 text-xs text-zinc-300">
+                  Item: {formatSol(paymentBreakdown.itemSol)} + Shipping:{" "}
+                  {formatSol(paymentBreakdown.shippingSol)} = Total:{" "}
+                  {formatSol(paymentBreakdown.totalSol)}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => void handlePayNow()}

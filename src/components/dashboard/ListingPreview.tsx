@@ -38,6 +38,8 @@ export type ListingFormState = {
   durationHours: string;
   imageUrl: string;
   additionalImages: string[];
+  domesticShippingUsd: string;
+  internationalShippingUsd: string;
   itemDetails: ItemDetailRow[];
 };
 

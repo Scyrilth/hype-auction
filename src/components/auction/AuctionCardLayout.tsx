@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { formatDomesticShippingLine } from "@/lib/auction-shipping";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
 
@@ -125,6 +126,22 @@ export function AuctionCardTitle({
     >
       {children}
     </h3>
+  );
+}
+
+export function AuctionCardShippingLine({
+  domesticShippingUsd = 0,
+  className = "",
+}: {
+  domesticShippingUsd?: number;
+  className?: string;
+}) {
+  return (
+    <p
+      className={`text-sm text-muted ${className}`.trim()}
+    >
+      {formatDomesticShippingLine(domesticShippingUsd)}
+    </p>
   );
 }
 

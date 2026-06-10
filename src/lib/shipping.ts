@@ -25,6 +25,13 @@ export function isShippingAddressLocked(address: ShippingAddress): boolean {
   return address.used_for_auction_id !== null;
 }
 
+export async function getDefaultShippingAddress(
+  walletAddress: string
+): Promise<ShippingAddress | null> {
+  const addresses = await getShippingAddresses(walletAddress);
+  return addresses.find((address) => address.is_default) ?? addresses[0] ?? null;
+}
+
 export async function getShippingAddresses(
   walletAddress: string
 ): Promise<ShippingAddress[]> {

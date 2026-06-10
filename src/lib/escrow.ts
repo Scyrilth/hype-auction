@@ -294,11 +294,35 @@ async function fetchSolUsdFromBinance(): Promise<number> {
   return price;
 }
 
-export async function usdToLamports(usdAmount: number): Promise<number> {
+export async function usdToSol(usdAmount: number): Promise<number> {
   if (usdAmount <= 0) return 0;
   const solPrice = await fetchSolUsdFromBinance();
-  const solAmount = usdAmount / solPrice;
+  return usdAmount / solPrice;
+}
+
+export async function usdToLamports(usdAmount: number): Promise<number> {
+  const solAmount = await usdToSol(usdAmount);
   return Math.ceil(solAmount * LAMPORTS_PER_SOL);
+}
+
+export interface PaymentBreakdown {
+  itemSol: number;
+  shippingSol: number;
+  shippingUsd: number;
+  totalSol: number;
+}
+
+export async function calculatePaymentBreakdown(
+  bidAmountSol: number,
+  shippingUsd: number
+): Promise<PaymentBreakdown> {
+  const shippingSol = await usdToSol(shippingUsd);
+  return {
+    itemSol: bidAmountSol,
+    shippingSol,
+    shippingUsd,
+    totalSol: bidAmountSol + shippingSol,
+  };
 }
 
 export async function checkWalletBalance(

@@ -47,6 +47,8 @@ export async function createAuction({
   imageUrl,
   additionalImages = [],
   itemDetails = {},
+  domesticShippingUsd = 0,
+  internationalShippingUsd = 0,
 }: {
   sellerWallet: string;
   title: string;
@@ -58,6 +60,8 @@ export async function createAuction({
   imageUrl?: string;
   additionalImages?: string[];
   itemDetails?: Record<string, string>;
+  domesticShippingUsd?: number;
+  internationalShippingUsd?: number;
 }) {
   await upsertUser(sellerWallet);
 
@@ -94,6 +98,8 @@ export async function createAuction({
       item_details: cleanedDetails,
       reference_number: generateReferenceNumber(),
       shipping_status: "pending",
+      domestic_shipping_usd: domesticShippingUsd,
+      international_shipping_usd: internationalShippingUsd,
     };
 
     const { data, error } = await supabase

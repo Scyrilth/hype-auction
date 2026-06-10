@@ -96,5 +96,8 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     escrow_state: ((row.escrow_state as string | null | undefined) ??
       "none") as EscrowState,
     escrow_expired_at: (row.escrow_expired_at as string | null) ?? null,
+    domestic_shipping_usd: safeNumber(row.domestic_shipping_usd),
+    international_shipping_usd: safeNumber(row.international_shipping_usd),
+    is_dummy: Boolean(row.is_dummy),
   };
 }

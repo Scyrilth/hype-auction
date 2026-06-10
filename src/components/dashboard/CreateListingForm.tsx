@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import ItemDetailsSection from "@/components/dashboard/ItemDetailsSection";
@@ -22,12 +22,14 @@ import {
   type GradingCompany,
 } from "@/lib/grading";
 import { getImageExtension } from "@/lib/storage";
+import { isDummySellerWallet } from "@/lib/auction-shipping";
 import {
   AUCTION_CATEGORIES,
   AUCTION_CONDITIONS,
   AUCTION_DURATIONS,
   createAuction,
 } from "@/lib/seller";
+import { getVendorSettings } from "@/lib/vendors";
 
 const inputClass =
   "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent";
@@ -48,6 +50,8 @@ const initialForm: ListingFormState = {
   imageUrl: "",
   additionalImages: ["", "", "", ""],
   itemDetails: [],
+  domesticShippingUsd: "",
+  internationalShippingUsd: "",
 };
 
 export default function CreateListingForm() {
@@ -59,6 +63,30 @@ export default function CreateListingForm() {
   const [publishedAuction, setPublishedAuction] = useState<Auction | null>(
     null
   );
+  const [sellerCountry, setSellerCountry] = useState<string | null>(null);
+  const [shipsInternationally, setShipsInternationally] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!publicKey) return;
+
+    let cancelled = false;
+    setSettingsLoading(true);
+
+    void getVendorSettings(publicKey.toBase58())
+      .then((profile) => {
+        if (cancelled) return;
+        setSellerCountry(profile?.country ?? null);
+        setShipsInternationally(profile?.ships_internationally ?? false);
+      })
+      .finally(() => {
+        if (!cancelled) setSettingsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicKey]);
 
   const updateForm = <K extends keyof ListingFormState>(
     key: K,
@@ -80,8 +108,30 @@ export default function CreateListingForm() {
     if (!publicKey) return;
 
     const price = parseFloat(form.startPrice);
+    const domesticShipping = parseFloat(form.domesticShippingUsd);
+    const internationalShipping = parseFloat(form.internationalShippingUsd);
+
     if (!form.title.trim() || isNaN(price) || price <= 0) {
       showToast("Enter a valid title and starting bid.", "error");
+      return;
+    }
+
+    if (
+      isNaN(domesticShipping) ||
+      domesticShipping < 0 ||
+      form.domesticShippingUsd.trim() === ""
+    ) {
+      showToast("Enter a valid domestic shipping price.", "error");
+      return;
+    }
+
+    if (
+      shipsInternationally &&
+      (isNaN(internationalShipping) ||
+        internationalShipping < 0 ||
+        form.internationalShippingUsd.trim() === "")
+    ) {
+      showToast("Enter a valid international shipping price.", "error");
       return;
     }
 
@@ -118,6 +168,10 @@ export default function CreateListingForm() {
         imageUrl: form.imageUrl,
         additionalImages: form.additionalImages,
         itemDetails,
+        domesticShippingUsd: domesticShipping,
+        internationalShippingUsd: shipsInternationally
+          ? internationalShipping
+          : 0,
       });
 
       setPublishedAuction(auction);
@@ -133,6 +187,37 @@ export default function CreateListingForm() {
 
   const wallet = publicKey?.toBase58();
   if (!wallet) return null;
+
+  const isDummySeller = isDummySellerWallet(wallet);
+  const needsShippingSetup = !isDummySeller && !sellerCountry?.trim();
+
+  if (settingsLoading) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface p-8 text-center">
+        <p className="text-sm text-muted">Loading seller settings...</p>
+      </div>
+    );
+  }
+
+  if (needsShippingSetup) {
+    return (
+      <div className="mx-auto max-w-xl rounded-2xl border border-border bg-surface p-8 text-center">
+        <h1 className="text-xl font-semibold text-white">
+          Shipping setup required
+        </h1>
+        <p className="mt-3 text-sm text-muted">
+          Set up your shipping settings before creating a listing — it only
+          takes 30 seconds.
+        </p>
+        <Link
+          href="/dashboard/settings"
+          className="mt-6 inline-flex rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+        >
+          Go to shop settings
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -300,6 +385,46 @@ export default function CreateListingForm() {
                 </div>
               )}
             </div>
+
+            <div>
+              <label htmlFor="domesticShippingUsd" className={labelClass}>
+                Domestic shipping (USD) <span className="text-live-red">*</span>
+              </label>
+              <input
+                id="domesticShippingUsd"
+                type="number"
+                required
+                min="0"
+                step="0.01"
+                value={form.domesticShippingUsd}
+                onChange={(e) =>
+                  updateForm("domesticShippingUsd", e.target.value)
+                }
+                placeholder="e.g. 5.00"
+                className={inputClass}
+              />
+            </div>
+
+            {shipsInternationally && (
+              <div>
+                <label htmlFor="internationalShippingUsd" className={labelClass}>
+                  International shipping (USD)
+                </label>
+                <input
+                  id="internationalShippingUsd"
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={form.internationalShippingUsd}
+                  onChange={(e) =>
+                    updateForm("internationalShippingUsd", e.target.value)
+                  }
+                  placeholder="e.g. 20.00"
+                  className={inputClass}
+                />
+              </div>
+            )}
 
             <div>
               <label htmlFor="startPrice" className={labelClass}>

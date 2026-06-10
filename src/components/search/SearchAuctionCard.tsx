@@ -8,6 +8,7 @@ import {
   AuctionCardCategorySlot,
   AuctionCardContent,
   AuctionCardImage,
+  AuctionCardShippingLine,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
@@ -77,6 +78,9 @@ export default function SearchAuctionCard({
               <div className="shrink-0">
                 <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
                 <AuctionCardBidPrice amount={displayBid} />
+                <AuctionCardShippingLine
+                  domesticShippingUsd={auction.domesticShippingUsd}
+                />
                 <FiatValue solAmount={displayBid} />
               </div>
 
