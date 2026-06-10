@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -17,6 +18,7 @@ type ProfileTab =
   | "activity"
   | "won"
   | "reviews"
+  | "transactions"
   | "watchlist"
   | "collections"
   | "settings"
@@ -41,6 +43,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
     items.push({ id: "reviews", label: "Reviews Given" });
 
     if (isOwner) {
+      items.push({ id: "transactions", label: "Transactions" });
       items.push({ id: "watchlist", label: "Watchlist" });
     }
 
@@ -69,20 +72,30 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
 
       <section>
         <div className="mb-4 flex flex-wrap gap-2 border-b border-border pb-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "border-b-2 border-accent text-white"
-                  : "text-muted hover:text-white"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {tabs.map((tab) =>
+            tab.id === "transactions" ? (
+              <Link
+                key={tab.id}
+                href="/transactions?mode=buying"
+                className="rounded-t-lg px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-white"
+              >
+                {tab.label}
+              </Link>
+            ) : (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? "border-b-2 border-accent text-white"
+                    : "text-muted hover:text-white"
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          )}
         </div>
 
         {activeTab === "activity" && (

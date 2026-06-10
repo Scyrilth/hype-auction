@@ -1,0 +1,149 @@
+import type { EscrowState } from "@/lib/database.types";
+
+export type TransactionRole = "selling" | "buying";
+
+export type DateRangePreset =
+  | "today"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year"
+  | "all";
+
+export type ChartGranularity = "hour" | "day" | "week" | "month" | "quarter";
+
+export type SellerDisplayStatus = "released" | "funded" | "refunded" | "disputed";
+
+export type BuyerDisplayStatus = "completed" | "pending" | "refunded";
+
+export type SellerStatusFilter = "all" | SellerDisplayStatus;
+
+export type BuyerStatusFilter = "all" | BuyerDisplayStatus;
+
+export interface DateRange {
+  preset: DateRangePreset;
+  from: Date;
+  to: Date;
+  label: string;
+  isCustom?: boolean;
+}
+
+export interface TransactionAmounts {
+  itemSol: number;
+  shippingSol: number;
+  shippingUsd: number;
+  feeSol: number;
+  netSol: number;
+  totalSol: number;
+  usdApprox: number;
+}
+
+export interface SellerTransactionRow {
+  role: "selling";
+  auctionId: string;
+  reference: string | null;
+  itemTitle: string;
+  buyerWallet: string;
+  date: string;
+  amounts: TransactionAmounts;
+  escrowState: EscrowState;
+  displayStatus: SellerDisplayStatus;
+  txSignature: string | null;
+  category: string | null;
+}
+
+export interface BuyerTransactionRow {
+  role: "buying";
+  auctionId: string;
+  reference: string | null;
+  itemTitle: string;
+  sellerWallet: string;
+  date: string;
+  amounts: TransactionAmounts;
+  escrowState: EscrowState;
+  displayStatus: BuyerDisplayStatus;
+  txSignature: string | null;
+  category: string | null;
+}
+
+export type TransactionRow = SellerTransactionRow | BuyerTransactionRow;
+
+export interface TrendMetric {
+  current: number;
+  previous: number;
+  percentChange: number | null;
+  direction: "up" | "down" | "flat";
+}
+
+export interface SellerSummary {
+  totalEarned: TrendMetric;
+  pendingEscrow: TrendMetric;
+  platformFees: TrendMetric;
+  totalRefunded: TrendMetric;
+  pendingOrderCount: number;
+}
+
+export interface BuyerSummary {
+  totalSpent: TrendMetric;
+  pending: TrendMetric;
+  totalRefunded: TrendMetric;
+  purchasesCompleted: TrendMetric;
+  pendingOrderCount: number;
+}
+
+export interface TimeSeriesPoint {
+  label: string;
+  timestamp: number;
+  value: number;
+  count: number;
+}
+
+export interface CategoryBreakdownPoint {
+  category: string;
+  valueSol: number;
+  count: number;
+  percent: number;
+}
+
+export interface StatusBreakdownPoint {
+  status: string;
+  count: number;
+  valueSol: number;
+}
+
+export interface SellerInsights {
+  averageSalePrice: number;
+  disputeRate: number;
+  bestListing: { title: string; totalSol: number; auctionId: string } | null;
+}
+
+export interface TransactionsData {
+  sellerRows: SellerTransactionRow[];
+  buyerRows: BuyerTransactionRow[];
+  hasSellerListings: boolean;
+}
+
+export type SortDirection = "asc" | "desc";
+
+export type SellerSortKey =
+  | "reference"
+  | "itemTitle"
+  | "buyerWallet"
+  | "date"
+  | "itemSol"
+  | "shippingSol"
+  | "feeSol"
+  | "netSol"
+  | "usdApprox"
+  | "displayStatus";
+
+export type BuyerSortKey =
+  | "reference"
+  | "itemTitle"
+  | "sellerWallet"
+  | "date"
+  | "itemSol"
+  | "shippingSol"
+  | "totalSol"
+  | "usdApprox"
+  | "displayStatus";

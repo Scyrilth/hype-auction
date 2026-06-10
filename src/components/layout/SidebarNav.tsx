@@ -49,12 +49,14 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
       { href: "/dashboard", label: "Dashboard", icon: DashboardLayoutIcon },
       { href: shopSettingsHref, label: "Shop Settings", icon: SettingsIcon },
       { href: "/dashboard/create", label: "Create Listing", icon: StoreIcon },
+      { href: "/transactions", label: "Transactions", icon: null },
     ],
     [shopSettingsHref]
   );
 
   const isShopRoute =
     currentPath.startsWith("/dashboard") ||
+    currentPath.startsWith("/transactions") ||
     (shopSlug !== null && currentPath === shopSettingsHref);
 
   const [shopOpen, setShopOpen] = useState(false);
@@ -136,7 +138,11 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
                     href={href}
                     className={subLinkClass(currentPath === href)}
                   >
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
+                    {Icon ? (
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                    ) : (
+                      <i className="ti ti-receipt-2 h-3.5 w-3.5 shrink-0 text-base leading-none" />
+                    )}
                     <span>{label}</span>
                   </Link>
                 ))}

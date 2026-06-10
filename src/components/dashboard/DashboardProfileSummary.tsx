@@ -146,7 +146,16 @@ export default function DashboardProfileSummary({
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-4 flex justify-end">
+          <Link
+            href="/transactions"
+            className="text-sm font-medium text-accent transition-colors hover:text-purple-300"
+          >
+            View Transactions →
+          </Link>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {statItems.map((item) => (
             <div
               key={item.label}
