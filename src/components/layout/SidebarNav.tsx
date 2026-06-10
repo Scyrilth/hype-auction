@@ -16,7 +16,12 @@ import {
 } from "@/components/icons";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
+import { useViewMode } from "@/hooks/useViewMode";
 import { getProfileSlug } from "@/lib/profile-links";
+import {
+  shouldShowMyCollectionsInSidebar,
+  shouldShowMyShopInSidebar,
+} from "@/lib/view-mode";
 
 const MY_SHOP_STORAGE_KEY = "hype-sidebar-my-shop-open";
 
@@ -41,6 +46,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
   const currentPath = activePath ?? pathname;
   const { connected, wallet, username, isVendor, loading } = useSidebarUser();
   const { isAdmin } = useIsAdmin();
+  const { sidebarMode, setViewMode } = useViewMode();
   const showBecomeVendorCard = connected && !loading && !isVendor;
 
   const shopSlug = wallet ? getProfileSlug(username, wallet) : null;
@@ -61,7 +67,12 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
     currentPath.startsWith("/transactions") ||
     (shopSlug !== null && currentPath === shopSettingsHref);
 
-  const showMyShop = connected && isVendor;
+  const showMyShop = shouldShowMyShopInSidebar(sidebarMode, connected, isVendor);
+  const showMyCollections = shouldShowMyCollectionsInSidebar(
+    sidebarMode,
+    connected,
+    Boolean(wallet)
+  );
   const isAdminActive = currentPath.startsWith("/admin");
 
   const [shopOpen, setShopOpen] = useState(false);
@@ -148,7 +159,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
           </div>
         )}
 
-        {connected && wallet && (
+        {showMyCollections && (
           <Link
             href="/collections/manage"
             className={navLinkClass(isMyCollectionsActive)}
@@ -162,6 +173,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
           <div className="mt-auto border-t border-border/80 pt-3">
             <Link
               href="/admin"
+              onClick={() => setViewMode("admin")}
               className={`flex items-center gap-3 rounded-lg border px-2 py-2.5 text-sm transition-colors ${
                 isAdminActive
                   ? "border-accent/40 bg-accent/10 font-medium text-purple-200"
