@@ -34,6 +34,8 @@ const STATUS_COLORS = {
   Completed: "#34d399",
 };
 
+const BAR_CHART_CURSOR = { fill: "rgba(255,255,255,0.05)" };
+
 function ChartShell({
   title,
   children,
@@ -176,6 +178,7 @@ export default function TransactionCharts({
             <XAxis dataKey="label" tick={{ fill: "#71717a", fontSize: 10 }} />
             <YAxis tick={{ fill: "#71717a", fontSize: 10 }} />
             <Tooltip
+              cursor={BAR_CHART_CURSOR}
               content={
                 <ValueTooltip currency={currency} solPrice={solPrice} />
               }
@@ -248,6 +251,7 @@ export default function TransactionCharts({
               tick={{ fill: "#71717a", fontSize: 10 }}
             />
             <Tooltip
+              cursor={BAR_CHART_CURSOR}
               content={({ active, payload }) => {
                 if (!active || !payload?.length) return null;
                 const item = payload[0]?.payload as {
