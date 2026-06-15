@@ -255,17 +255,17 @@ export default function CreateListingForm() {
     return (
       <div className="mx-auto max-w-xl rounded-2xl border border-border bg-surface p-8 text-center">
         <h1 className="text-xl font-semibold text-white">
-          Shipping setup required
+          Set up your seller profile before creating a listing
         </h1>
         <p className="mt-3 text-sm text-muted">
-          Set up your shipping settings before creating a listing — it only
-          takes 30 seconds.
+          You need to add your country and shipping settings before you can list
+          items for sale.
         </p>
         <Link
-          href="/dashboard/settings"
+          href="/dashboard/settings?sellerSetup=1"
           className="mt-6 inline-flex rounded-full bg-accent px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
         >
-          Go to shop settings
+          Set up seller profile →
         </Link>
       </div>
     );

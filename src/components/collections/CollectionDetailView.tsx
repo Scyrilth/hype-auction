@@ -21,6 +21,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AddCollectionItemModal from "@/components/collections/AddCollectionItemModal";
+import CollectionItemsToolbar from "@/components/collections/CollectionItemsToolbar";
+import CollectionShareButton from "@/components/collections/CollectionShareButton";
 import CollectionItemCard from "@/components/collections/CollectionItemCard";
 import EditCollectionModal from "@/components/collections/EditCollectionModal";
 import SortableCollectionItemCard from "@/components/collections/SortableCollectionItemCard";
@@ -50,6 +52,13 @@ import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { isFollowing } from "@/lib/follows";
 import { displaySocialHandle, formatSol, formatTimeAgo } from "@/lib/format";
 import { getProfileHref } from "@/lib/profile-links";
+import {
+  filterCollectionItems,
+  getCollectionItemCategories,
+  sortCollectionItems,
+  type CollectionGradeFilter,
+  type CollectionSortOption,
+} from "@/lib/collection-filters";
 
 export default function CollectionDetailView({
   collectionId,
@@ -75,6 +84,9 @@ export default function CollectionDetailView({
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CollectionItem | null>(null);
   const [editCollectionOpen, setEditCollectionOpen] = useState(false);
+  const [sort, setSort] = useState<CollectionSortOption>("date");
+  const [gradeFilter, setGradeFilter] = useState<CollectionGradeFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -263,9 +275,22 @@ export default function CollectionDetailView({
 
   const hasEstimatedValues = totalEstimatedValue > 0;
 
-  const itemIds = useMemo(
-    () => collection?.items.map((item) => item.id) ?? [],
+  const itemCategories = useMemo(
+    () => getCollectionItemCategories(collection?.items ?? []),
     [collection?.items]
+  );
+
+  const displayItems = useMemo(() => {
+    const items = collection?.items ?? [];
+    return sortCollectionItems(
+      filterCollectionItems(items, gradeFilter, categoryFilter),
+      sort
+    );
+  }, [collection?.items, gradeFilter, categoryFilter, sort]);
+
+  const itemIds = useMemo(
+    () => displayItems.map((item) => item.id),
+    [displayItems]
   );
 
   const handleCollectionUpdated = (updated: Collection) => {
@@ -432,6 +457,7 @@ export default function CollectionDetailView({
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold text-white">{collection.name}</h1>
+          <CollectionShareButton collectionName={collection.name} />
           {isOwner && wallet && (
             <button
               type="button"
@@ -522,7 +548,23 @@ export default function CollectionDetailView({
         <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-12 text-center">
           <p className="text-sm text-muted">No items in this collection yet.</p>
         </div>
-      ) : isOwner && wallet ? (
+      ) : (
+        <>
+          <CollectionItemsToolbar
+            sort={sort}
+            onSortChange={setSort}
+            grade={gradeFilter}
+            onGradeChange={setGradeFilter}
+            category={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            categories={itemCategories}
+          />
+
+          {displayItems.length === 0 ? (
+            <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-12 text-center">
+              <p className="text-sm text-muted">No items match your filters.</p>
+            </div>
+          ) : isOwner && wallet ? (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -530,7 +572,7 @@ export default function CollectionDetailView({
         >
           <SortableContext items={itemIds} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-              {collection.items.map((item) => (
+              {displayItems.map((item) => (
                 <SortableCollectionItemCard
                   key={item.id}
                   item={item}
@@ -543,12 +585,14 @@ export default function CollectionDetailView({
             </div>
           </SortableContext>
         </DndContext>
-      ) : (
+          ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-          {collection.items.map((item) => (
+          {displayItems.map((item) => (
             <CollectionItemCard key={item.id} item={item} />
           ))}
         </div>
+          )}
+        </>
       )}
 
       {isOwner && wallet && (

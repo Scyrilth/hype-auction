@@ -64,8 +64,16 @@ function buildSectionItems(
   return sortBrowseAuctions(filtered, sortBy).slice(0, limit);
 }
 
-export default function BrowseView({ data }: { data: BrowsePageData }) {
-  const [globalCategory, setGlobalCategory] = useState("all");
+export default function BrowseView({
+  data,
+  initialCategory,
+}: {
+  data: BrowsePageData;
+  initialCategory?: string;
+}) {
+  const [globalCategory, setGlobalCategory] = useState(
+    initialCategory?.trim() || "all"
+  );
   const [sectionSorts, setSectionSorts] = useState<
     Record<SectionKey, BrowseSectionSortOption>
   >({

@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
-import { upsertUser } from "@/lib/users";
+import { getUserByWallet } from "@/lib/users";
 
+/** Ensures returning users are recognized without auto-creating new accounts. */
 export default function UserSync() {
   const { publicKey, connected } = useWallet();
   const syncedRef = useRef<string | null>(null);
@@ -18,12 +19,12 @@ export default function UserSync() {
     const walletAddress = publicKey.toBase58();
     if (syncedRef.current === walletAddress) return;
 
-    upsertUser(walletAddress)
+    getUserByWallet(walletAddress)
       .then(() => {
         syncedRef.current = walletAddress;
       })
       .catch((error) => {
-        console.error("Failed to sync user to Supabase:", error);
+        console.error("Failed to check user record:", error);
       });
   }, [connected, publicKey]);
 

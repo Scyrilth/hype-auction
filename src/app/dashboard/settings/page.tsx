@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import VendorSettingsForm from "@/components/dashboard/VendorSettingsForm";
 import WalletGate from "@/components/dashboard/WalletGate";
 import Sidebar from "@/components/layout/Sidebar";
@@ -23,7 +25,15 @@ export default function VendorSettingsPage() {
                 </p>
               </div>
 
-              <VendorSettingsForm />
+              <Suspense
+                fallback={
+                  <div className="rounded-2xl border border-border bg-surface p-8 text-center text-sm text-muted">
+                    Loading settings...
+                  </div>
+                }
+              >
+                <VendorSettingsForm />
+              </Suspense>
             </div>
           </WalletGate>
         </main>

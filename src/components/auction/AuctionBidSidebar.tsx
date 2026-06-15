@@ -17,6 +17,11 @@ import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
 import { getProfileSlug } from "@/lib/profile-links";
 import { placeBid } from "@/lib/bids";
+import {
+  fetchActiveBuyerStrikes,
+  summarizeBuyerStrikes,
+  type BuyerStrikeSummary,
+} from "@/lib/buyer-strikes";
 import type { Auction, User } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { getEscrowStatusLabel, getExplorerTxUrl } from "@/lib/escrow";
@@ -70,6 +75,9 @@ export default function AuctionBidSidebar({
   const [bidInput, setBidInput] = useState("");
   const [isPlacingBid, setIsPlacingBid] = useState(false);
   const [shippingBlocked, setShippingBlocked] = useState(false);
+  const [strikeSummary, setStrikeSummary] = useState<BuyerStrikeSummary | null>(
+    null
+  );
 
   const minimumBid = useMemo(
     () => getMinimumBid({ ...auction, current_bid: currentBid }),
@@ -102,6 +110,30 @@ export default function AuctionBidSidebar({
       setBidInput(minimumBid.toFixed(2));
     }
   }, [minimumBid, bidInput]);
+
+  useEffect(() => {
+    if (!wallet) {
+      setStrikeSummary(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    void fetchActiveBuyerStrikes(wallet)
+      .then((strikes) => {
+        if (!cancelled) setStrikeSummary(summarizeBuyerStrikes(strikes));
+      })
+      .catch(() => {
+        if (!cancelled) setStrikeSummary(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [wallet]);
+
+  const biddingBlocked =
+    strikeSummary?.status === "banned" || strikeSummary?.status === "suspended";
 
   const topBidderLabel = topBidderUsername
     ? `@${topBidderUsername.replace(/^@+/, "")}`
@@ -237,19 +269,42 @@ export default function AuctionBidSidebar({
 
             <button
               type="button"
-              disabled={isPlacingBid || loadingAddresses || shippingBlocked}
+              disabled={
+                isPlacingBid || loadingAddresses || shippingBlocked || biddingBlocked
+              }
               onClick={() => handlePlaceBid(parseFloat(bidInput))}
               className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isPlacingBid || loadingAddresses ? "Placing bid..." : "Place Bid"}
             </button>
 
+            {strikeSummary?.status === "banned" && (
+              <p className="text-xs text-red-300">
+                Your account has been banned from bidding
+              </p>
+            )}
+            {strikeSummary?.status === "suspended" && (
+              <p className="text-xs text-red-300">
+                Your bidding is suspended until{" "}
+                {strikeSummary.suspensionExpiresAt
+                  ? new Date(strikeSummary.suspensionExpiresAt).toLocaleDateString()
+                  : "later"}
+              </p>
+            )}
+            {strikeSummary?.status === "warning" && (
+              <p className="text-xs text-amber-300">
+                You have a warning on your account
+              </p>
+            )}
+
             <div className="grid grid-cols-3 gap-2">
               {quickBids.map((quick) => (
                 <button
                   key={quick.label}
                   type="button"
-                  disabled={isPlacingBid || loadingAddresses || shippingBlocked}
+                  disabled={
+                    isPlacingBid || loadingAddresses || shippingBlocked || biddingBlocked
+                  }
                   onClick={() => {
                     setBidInput(quick.amount.toFixed(2));
                     void handlePlaceBid(quick.amount);

@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import FiatValue from "@/components/ui/FiatValue";
 import { useSolPrice } from "@/hooks/useSolPrice";
 import { fetchAdminOverview } from "@/lib/admin/data";
+import { getProfileSlug } from "@/lib/profile-links";
 
 import { useAdminContext } from "./AdminContext";
 
@@ -103,8 +105,17 @@ export default function AdminOverview() {
               <tbody>
                 {data.topVendors.map((v) => (
                   <tr key={v.wallet} className="border-t border-border/60">
-                    <td className="py-2 text-white">
-                      {v.username ? `@${v.username}` : v.wallet.slice(0, 8) + "…"}
+                    <td className="py-2">
+                      {v.username ? (
+                        <Link
+                          href={`/shop/${getProfileSlug(v.username, v.wallet)}`}
+                          className="text-purple-300 underline decoration-purple-500/50 underline-offset-2 hover:text-purple-200"
+                        >
+                          @{v.username}
+                        </Link>
+                      ) : (
+                        <span className="text-white">{v.wallet.slice(0, 8) + "…"}</span>
+                      )}
                     </td>
                     <td className="py-2">{v.salesCount}</td>
                     <td className="py-2">{v.volumeSol.toFixed(2)} SOL</td>
@@ -129,7 +140,14 @@ export default function AdminOverview() {
             <tbody>
               {data.topCategories.slice(0, 10).map((c) => (
                 <tr key={c.category} className="border-t border-border/60">
-                  <td className="py-2 text-white">{c.category}</td>
+                  <td className="py-2">
+                    <Link
+                      href={`/browse?category=${encodeURIComponent(c.category)}`}
+                      className="text-purple-300 underline decoration-purple-500/50 underline-offset-2 hover:text-purple-200"
+                    >
+                      {c.category}
+                    </Link>
+                  </td>
                   <td className="py-2">{c.listingCount}</td>
                   <td className="py-2">{c.volumeSol.toFixed(2)} SOL</td>
                 </tr>

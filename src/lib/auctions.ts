@@ -5,6 +5,11 @@ import { supabase } from "@/lib/supabase";
 import { parseUser } from "@/lib/vendors";
 import type { Auction, Bid, User } from "@/lib/database.types";
 
+/**
+ * Dummy listings: run `supabase/dummy-listings-refresh.sql` periodically during
+ * development to keep `is_dummy = true` auctions live (extends end_time by 7 days).
+ */
+
 export interface LiveAuctionView {
   auction: Auction;
   bidCount: number;

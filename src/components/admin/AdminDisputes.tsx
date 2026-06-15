@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -79,9 +80,7 @@ export default function AdminDisputes() {
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`rounded-full px-3 py-1 text-xs capitalize ${
-              tab === t ? "bg-accent/20 text-purple-200" : "text-muted"
-            }`}
+            className={adminTabClass(tab === t)}
           >
             {t}
           </button>

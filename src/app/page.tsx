@@ -4,6 +4,7 @@ import LiveAuctionsGrid from "@/components/auction/LiveAuctionsGrid";
 import TrendingSection from "@/components/auction/TrendingSection";
 import LiveChat from "@/components/auction/LiveChat";
 import UpcomingAuctions from "@/components/auction/UpcomingAuctions";
+import HomepageHero from "@/components/home/HomepageHero";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
 import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
@@ -33,6 +34,9 @@ export default async function Home() {
         <TopNav />
 
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
+          <HomepageHero />
+
+          <div id="homepage-listings">
           {featured ? (
             <>
               <FeaturedAuctionSection featured={featured} />
@@ -51,6 +55,7 @@ export default async function Home() {
           )}
 
           <UpcomingAuctions auctions={upcomingAuctions} />
+          </div>
         </main>
       </div>
     </div>

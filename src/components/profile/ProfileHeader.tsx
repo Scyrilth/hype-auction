@@ -31,7 +31,13 @@ function formatMemberSince(iso: string) {
   })}`;
 }
 
-export default function ProfileHeader({ user }: { user: User }) {
+export default function ProfileHeader({
+  user,
+  strikeCount,
+}: {
+  user: User;
+  strikeCount?: number;
+}) {
   const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -84,6 +90,11 @@ export default function ProfileHeader({ user }: { user: User }) {
                 <h1 className="text-xl font-bold text-white sm:text-2xl">
                   {user.username ? `@${user.username.replace(/^@+/, "")}` : displayName}
                 </h1>
+                {typeof strikeCount === "number" && strikeCount > 0 && (
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                    {strikeCount} strike{strikeCount === 1 ? "" : "s"}
+                  </span>
+                )}
                 {user.is_verified && <VerifiedBadge />}
               </div>
 

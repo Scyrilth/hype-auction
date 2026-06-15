@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { WatchlistProvider } from "@/components/auction/WatchlistProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { WelcomeOnboardingGate } from "@/components/onboarding/WelcomeOnboardingModal";
 import UserSync from "@/components/UserSync";
 import WalletContextProvider from "@/components/WalletContextProvider";
 
@@ -43,6 +44,7 @@ export default function RootLayout({
           <ToastProvider>
             <WatchlistProvider>
               <UserSync />
+              <WelcomeOnboardingGate />
               {children}
             </WatchlistProvider>
           </ToastProvider>

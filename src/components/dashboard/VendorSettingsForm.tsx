@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import ImageUpload from "@/components/ui/ImageUpload";
+import SellerProfileSetupBanner from "@/components/dashboard/SellerProfileSetupBanner";
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { displaySocialHandle, shortenAddress } from "@/lib/format";
@@ -133,8 +134,11 @@ export default function VendorSettingsForm() {
 
   const shopSlug =
     profile?.username?.trim() || publicKey?.toBase58() || "";
+  const showSellerSetupBanner = !country.trim();
 
   return (
+    <>
+      <SellerProfileSetupBanner visible={showSellerSetupBanner} />
     <form
       onSubmit={handleSubmit}
       className="space-y-6 rounded-2xl border border-border bg-surface p-6"
@@ -392,5 +396,6 @@ export default function VendorSettingsForm() {
         {isSaving ? "Saving..." : "Save settings"}
       </button>
     </form>
+    </>
   );
 }

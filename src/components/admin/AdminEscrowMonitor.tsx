@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -108,7 +109,7 @@ export default function AdminEscrowMonitor() {
         <button
           type="button"
           onClick={() => setFilter("all")}
-          className={`rounded-full px-3 py-1 text-xs ${filter === "all" ? "bg-accent/20 text-purple-200" : "text-muted"}`}
+          className={adminTabClass(filter === "all")}
         >
           All
         </button>
@@ -117,9 +118,7 @@ export default function AdminEscrowMonitor() {
             key={pill.key}
             type="button"
             onClick={() => setFilter(pill.key)}
-            className={`rounded-full px-3 py-1 text-xs ${
-              filter === pill.key ? "bg-accent/20 text-purple-200" : "text-muted"
-            }`}
+            className={adminTabClass(filter === pill.key)}
           >
             {pill.label}: {pill.count} ({pill.totalSol.toFixed(2)} SOL)
           </button>

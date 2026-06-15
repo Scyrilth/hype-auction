@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import EditCollectionModal from "@/components/collections/EditCollectionModal";
@@ -26,6 +26,40 @@ export default function ManageCollectionsView() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [editingCollection, setEditingCollection] =
     useState<CollectionWithOwner | null>(null);
+  const [sort, setSort] = useState<"date" | "name" | "value">("date");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+
+  const collectionCategories = useMemo(() => {
+    const categories = new Set<string>();
+    for (const collection of collections) {
+      for (const category of collection.categories) {
+        if (category.trim()) categories.add(category.trim());
+      }
+    }
+    return [...categories].sort((a, b) => a.localeCompare(b));
+  }, [collections]);
+
+  const sortedCollections = useMemo(() => {
+    let list = [...collections];
+    if (categoryFilter !== "all") {
+      list = list.filter((collection) =>
+        collection.categories.includes(categoryFilter)
+      );
+    }
+
+    switch (sort) {
+      case "name":
+        return list.sort((a, b) => a.name.localeCompare(b.name));
+      case "value":
+        return list.sort((a, b) => b.item_count - a.item_count);
+      case "date":
+      default:
+        return list.sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
+  }, [collections, sort, categoryFilter]);
 
   const loadCollections = useCallback(async () => {
     if (!wallet) return;
@@ -96,6 +130,42 @@ export default function ManageCollectionsView() {
         </Link>
       </div>
 
+      {collections.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-xs text-muted">
+            Sort
+            <select
+              value={sort}
+              onChange={(event) =>
+                setSort(event.target.value as "date" | "name" | "value")
+              }
+              className="rounded-lg border border-border bg-surface-elevated px-2 py-1.5 text-xs text-white"
+            >
+              <option value="date">Date added (newest first)</option>
+              <option value="value">Estimated value (highest first)</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </label>
+          {collectionCategories.length > 0 && (
+            <label className="flex items-center gap-2 text-xs text-muted">
+              Category
+              <select
+                value={categoryFilter}
+                onChange={(event) => setCategoryFilter(event.target.value)}
+                className="rounded-lg border border-border bg-surface-elevated px-2 py-1.5 text-xs text-white"
+              >
+                <option value="all">All categories</option>
+                {collectionCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      )}
+
       {collections.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-[#1a1835] px-6 py-16 text-center">
           <i className="ti ti-stack-2 mb-4 text-4xl text-purple-300" />
@@ -114,7 +184,7 @@ export default function ManageCollectionsView() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {collections.map((collection) => (
+          {sortedCollections.map((collection) => (
             <div
               key={collection.id}
               className="overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835]"

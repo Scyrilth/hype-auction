@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import DashboardProfileSummary from "@/components/dashboard/DashboardProfileSummary";
+import SellerSetupBanner from "@/components/dashboard/SellerSetupBanner";
 import DashboardTabs, {
   DashboardActivityFeed,
 } from "@/components/dashboard/DashboardTabs";
@@ -65,6 +66,9 @@ export default function DashboardView() {
     );
   }
 
+  const showSellerBanner =
+    !data.profile?.country?.trim() && data.stats.totalListings === 0;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <DashboardProfileSummary
@@ -72,6 +76,10 @@ export default function DashboardView() {
         walletAddress={publicKey.toBase58()}
         stats={data.stats}
       />
+
+      {showSellerBanner && (
+        <SellerSetupBanner walletAddress={publicKey.toBase58()} />
+      )}
 
       <DashboardTabs
         activeAuctions={data.activeAuctions}

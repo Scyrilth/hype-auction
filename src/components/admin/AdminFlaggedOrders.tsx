@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
@@ -103,9 +104,7 @@ export default function AdminFlaggedOrders() {
             key={f}
             type="button"
             onClick={() => setFilter(f)}
-            className={`rounded-full px-3 py-1 text-xs capitalize ${
-              filter === f ? "bg-accent/20 text-purple-200" : "text-muted"
-            }`}
+            className={adminTabClass(filter === f)}
           >
             {f}
           </button>
