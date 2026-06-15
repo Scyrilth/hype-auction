@@ -51,7 +51,7 @@ export default function AuctionBidSidebar({
   const router = useRouter();
   const { showToast } = useToast();
   const connectPhantom = usePhantomConnect();
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, connecting } = useWallet();
   const { username } = useSidebarUser();
   const wallet = publicKey?.toBase58() ?? null;
   const {
@@ -132,14 +132,24 @@ export default function AuctionBidSidebar({
     };
   }, [wallet]);
 
-  const biddingBlocked =
-    strikeSummary?.status === "banned" || strikeSummary?.status === "suspended";
+  const isWalletConnected = connected && Boolean(publicKey);
 
   const topBidderLabel = topBidderUsername
     ? `@${topBidderUsername.replace(/^@+/, "")}`
     : topBidder
       ? shortenAddress(topBidder, 4)
       : "—";
+
+  const biddingBlocked =
+    strikeSummary?.status === "banned" || strikeSummary?.status === "suspended";
+
+  const handleConnectWallet = async () => {
+    try {
+      await connectPhantom();
+    } catch {
+      showToast("Connect your wallet to place a bid.", "error");
+    }
+  };
 
   const executePlaceBid = async (amount: number) => {
     if (!publicKey) return;
@@ -186,13 +196,7 @@ export default function AuctionBidSidebar({
       return;
     }
 
-    if (!connected || !publicKey) {
-      try {
-        await connectPhantom();
-        showToast("Wallet connected! Click Place Bid again.");
-      } catch {
-        showToast("Connect your wallet to place a bid.", "error");
-      }
+    if (!isWalletConnected) {
       return;
     }
 
@@ -246,75 +250,98 @@ export default function AuctionBidSidebar({
 
         {isLive ? (
           <div className="mt-5 space-y-3">
-            <div>
-              <label
-                htmlFor="bid-amount"
-                className="text-xs font-medium uppercase tracking-wider text-muted"
+            {!isWalletConnected ? (
+              <button
+                type="button"
+                onClick={() => void handleConnectWallet()}
+                disabled={connecting}
+                className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Your bid (SOL)
-              </label>
-              <input
-                id="bid-amount"
-                type="number"
-                min={minimumBid}
-                step="0.01"
-                value={bidInput}
-                onChange={(event) => setBidInput(event.target.value)}
-                className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
-              />
-              <p className="mt-1 text-xs text-muted">
-                Minimum {formatSol(minimumBid)}
-              </p>
-            </div>
+                {connecting ? "Connecting..." : "Connect Wallet to Bid"}
+              </button>
+            ) : (
+              <>
+                <div>
+                  <label
+                    htmlFor="bid-amount"
+                    className="text-xs font-medium uppercase tracking-wider text-muted"
+                  >
+                    Your bid (SOL)
+                  </label>
+                  <input
+                    id="bid-amount"
+                    type="number"
+                    min={minimumBid}
+                    step="0.01"
+                    value={bidInput}
+                    onChange={(event) => setBidInput(event.target.value)}
+                    className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
+                  />
+                  <p className="mt-1 text-xs text-muted">
+                    Minimum {formatSol(minimumBid)}
+                  </p>
+                </div>
 
-            <button
-              type="button"
-              disabled={
-                isPlacingBid || loadingAddresses || shippingBlocked || biddingBlocked
-              }
-              onClick={() => handlePlaceBid(parseFloat(bidInput))}
-              className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isPlacingBid || loadingAddresses ? "Placing bid..." : "Place Bid"}
-            </button>
-
-            {strikeSummary?.status === "banned" && (
-              <p className="text-xs text-red-300">
-                Your account has been banned from bidding
-              </p>
-            )}
-            {strikeSummary?.status === "suspended" && (
-              <p className="text-xs text-red-300">
-                Your bidding is suspended until{" "}
-                {strikeSummary.suspensionExpiresAt
-                  ? new Date(strikeSummary.suspensionExpiresAt).toLocaleDateString()
-                  : "later"}
-              </p>
-            )}
-            {strikeSummary?.status === "warning" && (
-              <p className="text-xs text-amber-300">
-                You have a warning on your account
-              </p>
-            )}
-
-            <div className="grid grid-cols-3 gap-2">
-              {quickBids.map((quick) => (
                 <button
-                  key={quick.label}
                   type="button"
                   disabled={
-                    isPlacingBid || loadingAddresses || shippingBlocked || biddingBlocked
+                    isPlacingBid ||
+                    loadingAddresses ||
+                    shippingBlocked ||
+                    biddingBlocked
                   }
-                  onClick={() => {
-                    setBidInput(quick.amount.toFixed(2));
-                    void handlePlaceBid(quick.amount);
-                  }}
-                  className="rounded-full border border-border py-2 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
+                  onClick={() => handlePlaceBid(parseFloat(bidInput))}
+                  className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {quick.label}
+                  {isPlacingBid || loadingAddresses
+                    ? "Placing bid..."
+                    : "Place Bid"}
                 </button>
-              ))}
-            </div>
+
+                {strikeSummary?.status === "banned" && (
+                  <p className="text-xs text-red-300">
+                    Your account has been banned from bidding
+                  </p>
+                )}
+                {strikeSummary?.status === "suspended" && (
+                  <p className="text-xs text-red-300">
+                    Your bidding is suspended until{" "}
+                    {strikeSummary.suspensionExpiresAt
+                      ? new Date(
+                          strikeSummary.suspensionExpiresAt
+                        ).toLocaleDateString()
+                      : "later"}
+                  </p>
+                )}
+                {strikeSummary?.status === "warning" && (
+                  <p className="text-xs text-amber-300">
+                    You have a warning on your account
+                  </p>
+                )}
+
+                <div className="grid grid-cols-3 gap-2">
+                  {quickBids.map((quick) => (
+                    <button
+                      key={quick.label}
+                      type="button"
+                      disabled={
+                        isPlacingBid ||
+                        loadingAddresses ||
+                        shippingBlocked ||
+                        biddingBlocked
+                      }
+                      onClick={() => {
+                        setBidInput(quick.amount.toFixed(2));
+                        void handlePlaceBid(quick.amount);
+                      }}
+                      className="rounded-full border border-border py-2 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
+                    >
+                      {quick.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <p className="mt-5 rounded-xl bg-background/60 px-3 py-3 text-sm text-muted">
