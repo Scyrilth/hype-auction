@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { getErrorMessage } from "@/lib/errors";
+import { isPhantomWalletAvailable } from "@/lib/wallet-detection";
 import {
   createAuctionThread,
   createGeneralInquiryThread,
@@ -30,7 +31,7 @@ export default function MessageThreadButton({
   label?: string;
 }) {
   const router = useRouter();
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, wallets } = useWallet();
   const connectPhantom = usePhantomConnect();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -51,7 +52,9 @@ export default function MessageThreadButton({
         await connectPhantom();
         showToast("Wallet connected! Click again to open messages.");
       } catch {
-        showToast("Connect your wallet to send messages.", "error");
+        if (isPhantomWalletAvailable(wallets)) {
+          showToast("Connect your wallet to send messages.", "error");
+        }
       }
       return;
     }

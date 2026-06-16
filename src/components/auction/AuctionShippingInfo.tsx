@@ -22,7 +22,7 @@ export default function AuctionShippingInfo({
   seller: User;
   onShippingBlockedChange?: (blocked: boolean) => void;
 }) {
-  const { publicKey } = useWallet();
+  const { publicKey, connected } = useWallet();
   const [buyerCountry, setBuyerCountry] = useState<string | null>(null);
   const [loadingAddress, setLoadingAddress] = useState(false);
 
@@ -35,9 +35,21 @@ export default function AuctionShippingInfo({
     isExempt
   );
 
+  const domesticRateLabel =
+    isExempt || auction.domestic_shipping_usd <= 0
+      ? "Free"
+      : formatShippingUsd(auction.domestic_shipping_usd);
+
+  const internationalRateLabel =
+    shipsInternationally &&
+    (isExempt || auction.international_shipping_usd <= 0
+      ? "Free"
+      : formatShippingUsd(auction.international_shipping_usd));
+
   useEffect(() => {
-    if (!publicKey) {
+    if (!connected || !publicKey) {
       setBuyerCountry(null);
+      setLoadingAddress(false);
       return;
     }
 
@@ -57,20 +69,24 @@ export default function AuctionShippingInfo({
     return () => {
       cancelled = true;
     };
-  }, [publicKey]);
+  }, [connected, publicKey]);
 
-  const shippingUsd = resolveShippingUsd({
-    domesticShippingUsd: auction.domestic_shipping_usd,
-    internationalShippingUsd: auction.international_shipping_usd,
-    sellerCountry,
-    buyerCountry,
-    shipsInternationally,
-    isExempt,
-  });
+  const personalizedShippingUsd =
+    connected && buyerCountry
+      ? resolveShippingUsd({
+          domesticShippingUsd: auction.domestic_shipping_usd,
+          internationalShippingUsd: auction.international_shipping_usd,
+          sellerCountry,
+          buyerCountry,
+          shipsInternationally,
+          isExempt,
+        })
+      : null;
 
   const shippingBlocked =
-    !isExempt &&
+    connected &&
     Boolean(buyerCountry) &&
+    !isExempt &&
     !canShipToBuyer({
       sellerCountry,
       shipsInternationally,
@@ -79,18 +95,22 @@ export default function AuctionShippingInfo({
     });
 
   useEffect(() => {
-    onShippingBlockedChange?.(shippingBlocked);
-  }, [onShippingBlockedChange, shippingBlocked]);
+    onShippingBlockedChange?.(
+      connected && buyerCountry ? shippingBlocked : false
+    );
+  }, [onShippingBlockedChange, shippingBlocked, connected, buyerCountry]);
 
-  const shippingCostLabel = loadingAddress
-    ? "Checking address..."
-    : !buyerCountry
-      ? "Shipping cost calculated at checkout"
-      : shippingBlocked
-        ? "Not available to your country"
-        : shippingUsd == null
-          ? "Shipping cost calculated at checkout"
-          : `Shipping: ${formatShippingUsd(shippingUsd)}`;
+  const yourShippingLabel = !connected
+    ? null
+    : loadingAddress
+      ? "Checking your address..."
+      : !buyerCountry
+        ? null
+        : shippingBlocked
+          ? "Not available to your country"
+          : personalizedShippingUsd == null
+            ? null
+            : formatShippingUsd(personalizedShippingUsd);
 
   return (
     <section className="rounded-2xl border border-border bg-surface p-5">
@@ -106,9 +126,21 @@ export default function AuctionShippingInfo({
           </div>
         )}
         <div className="flex flex-wrap justify-between gap-2">
-          <dt className="text-muted">Shipping cost</dt>
-          <dd className="font-medium text-white">{shippingCostLabel}</dd>
+          <dt className="text-muted">Domestic shipping</dt>
+          <dd className="font-medium text-white">{domesticRateLabel}</dd>
         </div>
+        {shipsInternationally && internationalRateLabel && (
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">International shipping</dt>
+            <dd className="font-medium text-white">{internationalRateLabel}</dd>
+          </div>
+        )}
+        {yourShippingLabel && (
+          <div className="flex flex-wrap justify-between gap-2">
+            <dt className="text-muted">Your shipping</dt>
+            <dd className="font-medium text-white">{yourShippingLabel}</dd>
+          </div>
+        )}
       </dl>
 
       {shippingBlocked && (

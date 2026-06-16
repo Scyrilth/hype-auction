@@ -9,6 +9,8 @@ import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-phantom";
 import { clusterApiUrl } from "@solana/web3.js";
 
+import { WalletInstallProvider } from "@/components/wallet/WalletInstallProvider";
+
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 export default function WalletContextProvider({
@@ -23,7 +25,9 @@ export default function WalletContextProvider({
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
+        <WalletModalProvider>
+          <WalletInstallProvider>{children}</WalletInstallProvider>
+        </WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   );

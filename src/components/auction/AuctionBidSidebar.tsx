@@ -147,7 +147,7 @@ export default function AuctionBidSidebar({
     try {
       await connectPhantom();
     } catch {
-      showToast("Connect your wallet to place a bid.", "error");
+      // User declined connection; install prompt is handled inside connectPhantom.
     }
   };
 

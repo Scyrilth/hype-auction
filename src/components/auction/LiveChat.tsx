@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 
 import { SendIcon, SmileIcon } from "@/components/icons";
+import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { getProfileHref } from "@/lib/profile-links";
@@ -19,6 +20,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function LiveChat({ auctionId }: { auctionId?: string }) {
   const { publicKey, connected } = useWallet();
+  const connectPhantom = usePhantomConnect();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(!!auctionId);
@@ -125,7 +127,13 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
     }
   };
 
-  const canChat = connected && publicKey && auctionId;
+  const handleInputFocus = () => {
+    if (!connected || !publicKey) {
+      void connectPhantom();
+    }
+  };
+
+  const canChat = Boolean(connected && publicKey && auctionId);
   const inputPlaceholder = !auctionId
     ? "No active auction"
     : !connected
@@ -185,9 +193,10 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={handleInputFocus}
             placeholder={inputPlaceholder}
-            disabled={!canChat || sending}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted outline-none disabled:cursor-not-allowed disabled:opacity-60"
+            readOnly={!canChat}
+            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted outline-none read-only:cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           />
           <button
             type="button"
@@ -199,8 +208,14 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
           </button>
           <button
             type="button"
-            onClick={handleSend}
-            disabled={!canChat || sending || !input.trim()}
+            onClick={() => {
+              if (!canChat) {
+                void connectPhantom();
+                return;
+              }
+              void handleSend();
+            }}
+            disabled={canChat && (sending || !input.trim())}
             className="text-accent transition-colors hover:text-purple-400 disabled:cursor-not-allowed disabled:opacity-40"
             aria-label="Send"
           >

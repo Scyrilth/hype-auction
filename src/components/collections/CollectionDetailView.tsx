@@ -59,13 +59,14 @@ import {
   type CollectionGradeFilter,
   type CollectionSortOption,
 } from "@/lib/collection-filters";
+import { isPhantomWalletAvailable } from "@/lib/wallet-detection";
 
 export default function CollectionDetailView({
   collectionId,
 }: {
   collectionId: string;
 }) {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, wallets } = useWallet();
   const connectPhantom = usePhantomConnect();
   const { showToast } = useToast();
   const wallet = publicKey?.toBase58();
@@ -200,7 +201,9 @@ export default function CollectionDetailView({
         await connectPhantom();
         showToast("Wallet connected! Click like again.");
       } catch {
-        showToast("Connect your wallet to like collections.", "error");
+        if (isPhantomWalletAvailable(wallets)) {
+          showToast("Connect your wallet to like collections.", "error");
+        }
       }
       return;
     }
@@ -336,7 +339,11 @@ export default function CollectionDetailView({
   const handleComment = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!connected || !wallet) {
-      showToast("Connect your wallet to comment.", "error");
+      try {
+        await connectPhantom();
+      } catch {
+        // Install prompt or user decline handled by connect flow.
+      }
       return;
     }
 
@@ -646,9 +653,13 @@ export default function CollectionDetailView({
               </button>
             </form>
           ) : (
-            <p className="mb-6 text-sm text-muted">
-              Connect your wallet to leave a comment.
-            </p>
+            <button
+              type="button"
+              onClick={() => void connectPhantom()}
+              className="mb-6 text-sm font-medium text-accent transition-colors hover:text-purple-300"
+            >
+              Connect your wallet to leave a comment
+            </button>
           )}
 
           {comments.length === 0 ? (

@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { toggleFollow } from "@/lib/follows";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { isPhantomWalletAvailable } from "@/lib/wallet-detection";
 
 export default function FollowButton({
   vendorWallet,
@@ -18,7 +19,7 @@ export default function FollowButton({
   initialFollowersCount: number;
   onFollowersChange?: (count: number) => void;
 }) {
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, wallets } = useWallet();
   const connectPhantom = usePhantomConnect();
   const { showToast } = useToast();
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
@@ -30,7 +31,9 @@ export default function FollowButton({
         await connectPhantom();
         showToast("Wallet connected! Click Follow again.");
       } catch {
-        showToast("Connect your wallet to follow vendors.", "error");
+        if (isPhantomWalletAvailable(wallets)) {
+          showToast("Connect your wallet to follow vendors.", "error");
+        }
       }
       return;
     }
