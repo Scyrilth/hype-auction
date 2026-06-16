@@ -25,6 +25,12 @@ import {
 
 const MY_SHOP_STORAGE_KEY = "hype-sidebar-my-shop-open";
 
+const sidebarLegalLinks = [
+  { href: "/tos", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/faq", label: "FAQ" },
+] as const;
+
 function navLinkClass(active: boolean) {
   return `flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition-colors ${
     active
@@ -207,10 +213,31 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
         </div>
       )}
 
-      <div className="mt-4 flex items-center gap-2 text-xs text-muted">
-        <span>Built on</span>
-        <SolanaLogo className="h-4 w-4" />
-        <span className="font-semibold tracking-wider text-zinc-400">SOLANA</span>
+      <div className="mt-4 space-y-2">
+        <nav
+          aria-label="Legal"
+          className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted"
+        >
+          {sidebarLegalLinks.map((link, index) => (
+            <span key={link.href} className="inline-flex items-center gap-1.5">
+              {index > 0 && <span aria-hidden="true">·</span>}
+              <Link
+                href={link.href}
+                className="transition-colors hover:text-zinc-400"
+              >
+                {link.label}
+              </Link>
+            </span>
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2 text-xs text-muted">
+          <span>Built on</span>
+          <SolanaLogo className="h-4 w-4" />
+          <span className="font-semibold tracking-wider text-zinc-400">
+            SOLANA
+          </span>
+        </div>
       </div>
     </aside>
   );
