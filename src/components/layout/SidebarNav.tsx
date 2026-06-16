@@ -214,20 +214,15 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
       )}
 
       <div className="mt-4 space-y-2">
-        <nav
-          aria-label="Legal"
-          className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-muted"
-        >
-          {sidebarLegalLinks.map((link, index) => (
-            <span key={link.href} className="inline-flex items-center gap-1.5">
-              {index > 0 && <span aria-hidden="true">·</span>}
-              <Link
-                href={link.href}
-                className="transition-colors hover:text-zinc-400"
-              >
-                {link.label}
-              </Link>
-            </span>
+        <nav aria-label="Legal" className="flex flex-col gap-1 text-xs text-muted">
+          {sidebarLegalLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="transition-colors hover:text-zinc-400"
+            >
+              {link.label}
+            </Link>
           ))}
         </nav>
 
