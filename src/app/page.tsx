@@ -5,8 +5,7 @@ import TrendingSection from "@/components/auction/TrendingSection";
 import LiveChat from "@/components/auction/LiveChat";
 import UpcomingAuctions from "@/components/auction/UpcomingAuctions";
 import HomepageHero from "@/components/home/HomepageHero";
-import Sidebar from "@/components/layout/Sidebar";
-import TopNav from "@/components/layout/TopNav";
+import AppShell from "@/components/layout/AppShell";
 import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
 import { checkEndingSoonNotifications } from "@/lib/notifications";
 import { getAuctionsPageData, getTrendingAuctions } from "@/lib/auctions";
@@ -27,37 +26,29 @@ export default async function Home() {
   const labelMaps = { bidCounts, bidCounts24h, topFeaturedIds };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
+    <AppShell contentClassName="flex-1 p-3 sm:p-4 lg:p-5">
+      <HomepageHero />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopNav />
-
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
-          <HomepageHero />
-
-          <div id="homepage-listings">
-          {featured ? (
-            <>
-              <FeaturedAuctionSection featured={featured} />
-              <TrendingSection items={trending} labelMaps={labelMaps} />
-              <LiveAuctionsGrid auctions={otherLive} labelMaps={labelMaps} />
-            </>
-          ) : (
-            <div className="featured-auction-grid w-full">
-              <div className="featured-auction-video min-w-0">
-                <AuctionEmptyState />
-              </div>
-              <div className="featured-auction-chat min-w-0">
-                <LiveChat />
-              </div>
+      <div id="homepage-listings">
+        {featured ? (
+          <>
+            <FeaturedAuctionSection featured={featured} />
+            <TrendingSection items={trending} labelMaps={labelMaps} />
+            <LiveAuctionsGrid auctions={otherLive} labelMaps={labelMaps} />
+          </>
+        ) : (
+          <div className="featured-auction-grid w-full">
+            <div className="featured-auction-video min-w-0">
+              <AuctionEmptyState />
             </div>
-          )}
-
-          <UpcomingAuctions auctions={upcomingAuctions} />
+            <div className="featured-auction-chat min-w-0">
+              <LiveChat />
+            </div>
           </div>
-        </main>
+        )}
+
+        <UpcomingAuctions auctions={upcomingAuctions} />
       </div>
-    </div>
+    </AppShell>
   );
 }

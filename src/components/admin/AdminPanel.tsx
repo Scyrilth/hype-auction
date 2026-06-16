@@ -9,6 +9,7 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopBar from "@/components/admin/AdminTopBar";
 import AdminUserManagement from "@/components/admin/AdminUserManagement";
+import SiteFooter from "@/components/layout/SiteFooter";
 
 import { AdminProvider, useAdminContext } from "./AdminContext";
 
@@ -22,12 +23,15 @@ function AdminContent() {
       <AdminSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopBar wallet={wallet} />
-        <main className="flex-1 overflow-y-auto bg-background p-4 lg:p-6">
-          {activeTab === "overview" && <AdminOverview />}
-          {activeTab === "flagged" && <AdminFlaggedOrders />}
-          {activeTab === "disputes" && <AdminDisputes />}
-          {activeTab === "escrow" && <AdminEscrowMonitor />}
-          {activeTab === "users" && <AdminUserManagement />}
+        <main className="flex flex-1 flex-col overflow-y-auto bg-background">
+          <div className="flex-1 p-4 lg:p-6">
+            {activeTab === "overview" && <AdminOverview />}
+            {activeTab === "flagged" && <AdminFlaggedOrders />}
+            {activeTab === "disputes" && <AdminDisputes />}
+            {activeTab === "escrow" && <AdminEscrowMonitor />}
+            {activeTab === "users" && <AdminUserManagement />}
+          </div>
+          <SiteFooter />
         </main>
       </div>
     </div>
