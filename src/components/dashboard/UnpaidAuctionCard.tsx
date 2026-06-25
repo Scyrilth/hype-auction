@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
+import { useSolPrice } from "@/hooks/useSolPrice";
 import { getErrorMessage } from "@/lib/errors";
 import { formatSol, shortenAddress, displaySocialHandle } from "@/lib/format";
 import {
@@ -133,6 +134,7 @@ export default function UnpaidAuctionCard({
   onRefresh: () => void;
 }) {
   const { showToast } = useToast();
+  const { solPrice } = useSolPrice();
   const { auction, winnerWallet, nextBidders } = action;
   const topBidder = nextBidders[0];
   const [offerOpen, setOfferOpen] = useState(false);
@@ -232,7 +234,11 @@ export default function UnpaidAuctionCard({
                 topBidder.username
                   ? displaySocialHandle(topBidder.username)
                   : shortenAddress(topBidder.wallet, 4)
-              } for ${formatSol(topBidder.amount)}. They will have 2 hours to accept or decline.`
+              } for ${formatSol(topBidder.amount)}${
+                solPrice
+                  ? ` (~$${(topBidder.amount * solPrice).toFixed(2)})`
+                  : ""
+              }. They will have 2 hours to accept or decline.`
             : ""
         }
         confirmLabel="Send offer"

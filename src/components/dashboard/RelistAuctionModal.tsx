@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { useToast } from "@/components/ui/Toast";
+import { useSolPrice } from "@/hooks/useSolPrice";
 import type { Auction } from "@/lib/database.types";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { getErrorMessage } from "@/lib/errors";
@@ -35,7 +36,9 @@ export default function RelistAuctionModal({
 }) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { solPrice } = useSolPrice();
   const [startPrice, setStartPrice] = useState("");
+  const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
   const [durationHours, setDurationHours] = useState(
     String(AUCTION_DURATIONS[4].hours)
   );
@@ -43,15 +46,22 @@ export default function RelistAuctionModal({
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setSuggestedPrice(null);
+      return;
+    }
 
     void getRelistSuggestion(auction.id, excludeWallets).then((suggested) => {
       if (suggested > 0) {
+        setSuggestedPrice(suggested);
         setStartPrice(suggested.toFixed(2));
-      } else if (auction.current_bid > 0) {
-        setStartPrice(auction.current_bid.toFixed(2));
       } else {
-        setStartPrice(auction.start_price.toFixed(2));
+        setSuggestedPrice(null);
+        if (auction.current_bid > 0) {
+          setStartPrice(auction.current_bid.toFixed(2));
+        } else {
+          setStartPrice(auction.start_price.toFixed(2));
+        }
       }
     });
   }, [auction, excludeWallets, open]);
@@ -66,6 +76,18 @@ export default function RelistAuctionModal({
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const parsedStartPrice = parseFloat(startPrice);
+  const hasValidStartPrice =
+    Number.isFinite(parsedStartPrice) && parsedStartPrice > 0;
+  const startPriceUsd =
+    hasValidStartPrice && solPrice
+      ? parsedStartPrice * solPrice
+      : null;
+  const suggestedUsd =
+    suggestedPrice != null && solPrice
+      ? suggestedPrice * solPrice
+      : null;
 
   const imageSrc = resolveAuctionImageUrl(auction.image_url, {
     title: auction.title,
@@ -150,9 +172,17 @@ export default function RelistAuctionModal({
               onChange={(event) => setStartPrice(event.target.value)}
               className={inputClass}
             />
-            {startPrice && (
+            {hasValidStartPrice && startPriceUsd != null && (
               <p className="mt-1 text-xs text-muted">
-                Suggested from recent bids: {formatSol(parseFloat(startPrice) || 0)}
+                {formatSol(parsedStartPrice)} ≈ ${startPriceUsd.toFixed(2)} USD
+              </p>
+            )}
+            {suggestedPrice != null && suggestedPrice > 0 && (
+              <p className="mt-1 text-xs text-muted">
+                Suggested from recent bids: {formatSol(suggestedPrice)}
+                {suggestedUsd != null
+                  ? ` (~$${suggestedUsd.toFixed(2)})`
+                  : ""}
               </p>
             )}
           </div>
