@@ -64,9 +64,6 @@ export function getPaymentAttemptDeadline(
 
 export function arePaymentAttemptsExhausted(auction: Auction): boolean {
   if (auction.payment_completed_at) return false;
-  if (auction.escrow_state !== "none" && auction.escrow_state !== "pending") {
-    return false;
-  }
   if (auction.escrow_attempt_number >= 3) return true;
   return Date.now() > getPaymentAttemptDeadline(auction.end_time, 3).getTime();
 }
@@ -83,9 +80,6 @@ export function needsSellerUnpaidAction(auction: Auction): boolean {
   if (auction.status !== "ended") return false;
   if (auction.relisted_auction_id) return false;
   if (auction.payment_completed_at) return false;
-  if (auction.escrow_state !== "none" && auction.escrow_state !== "pending") {
-    return false;
-  }
   if (hasActiveNextBidderOffer(auction)) return false;
   return arePaymentAttemptsExhausted(auction);
 }
@@ -340,23 +334,54 @@ export async function syncUnpaidAuctionState(auction: Auction): Promise<Auction>
 export async function fetchUnpaidAuctionActions(
   sellerWallet: string
 ): Promise<UnpaidAuctionAction[]> {
+  const wallet = sellerWallet.trim();
+
   const { data, error } = await supabase
     .from("auctions")
     .select("*")
-    .eq("seller_wallet", sellerWallet)
+    .eq("seller_wallet", wallet)
     .eq("status", "ended")
     .is("payment_completed_at", null)
     .is("relisted_auction_id", null)
-    .in("escrow_state", ["none", "pending"]);
+    .gte("escrow_attempt_number", 3);
 
   if (error) throw error;
+
+  console.log("[fetchUnpaidAuctionActions] query params:", {
+    seller_wallet: wallet,
+    status: "ended",
+    payment_completed_at: null,
+    escrow_attempt_number_gte: 3,
+  });
+  console.log(
+    "[fetchUnpaidAuctionActions] raw rows:",
+    (data ?? []).map((row) => ({
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      escrow_state: row.escrow_state,
+      escrow_attempt_number: row.escrow_attempt_number,
+      payment_completed_at: row.payment_completed_at,
+      seller_wallet: row.seller_wallet,
+    }))
+  );
 
   const actions: UnpaidAuctionAction[] = [];
 
   for (const row of data ?? []) {
     let auction = parseAuctionRow(row as Record<string, unknown>);
     auction = await syncUnpaidAuctionState(auction);
-    if (!needsSellerUnpaidAction(auction)) continue;
+    if (!needsSellerUnpaidAction(auction)) {
+      console.log("[fetchUnpaidAuctionActions] skipped after filter:", {
+        id: auction.id,
+        title: auction.title,
+        escrow_attempt_number: auction.escrow_attempt_number,
+        payment_completed_at: auction.payment_completed_at,
+        next_bidder_wallet: auction.next_bidder_wallet,
+        relisted_auction_id: auction.relisted_auction_id,
+      });
+      continue;
+    }
 
     const winnerWallet = (await getTopBidderWallet(auction.id)) ?? "";
     const excluded = uniqueWallets([
@@ -373,6 +398,15 @@ export async function fetchUnpaidAuctionActions(
       nextBidders,
     });
   }
+
+  console.log(
+    "[fetchUnpaidAuctionActions] actions returned:",
+    actions.map((action) => ({
+      id: action.auction.id,
+      title: action.auction.title,
+      nextBidderCount: action.nextBidders.length,
+    }))
+  );
 
   return actions;
 }

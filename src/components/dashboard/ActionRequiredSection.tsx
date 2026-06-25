@@ -23,11 +23,13 @@ export default function ActionRequiredSection({
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      console.log("[ActionRequiredSection] loading for seller:", sellerWallet);
       await syncExpiredNextBidderOffers();
       const items = await fetchUnpaidAuctionActions(sellerWallet);
+      console.log("[ActionRequiredSection] fetched actions:", items);
       setActions(items);
     } catch (error) {
-      console.error(getErrorMessage(error));
+      console.error("[ActionRequiredSection] load failed:", getErrorMessage(error));
       setActions([]);
     } finally {
       setLoading(false);
