@@ -63,6 +63,11 @@ export const faqCategories: FaqCategory[] = [
         answer:
           "You receive a notification and a message thread opens with the seller. You have 10 minutes to click Pay Now and complete payment via Phantom.",
       },
+      {
+        question: "What happens if I receive an offer as the next highest bidder?",
+        answer:
+          "If the original winner of an auction fails to pay, the seller may offer the item to you as the next highest bidder. You will receive a notification with 2 hours to accept or decline. Declining carries no penalty — you are free to pass without any strike or consequence. A strike is only issued if you accept the offer and then fail to complete payment within 2 hours.",
+      },
     ],
   },
   {
@@ -78,7 +83,7 @@ export const faqCategories: FaqCategory[] = [
           },
           {
             title: "Step 2 — Pay Now (0 to 10 minutes)",
-            body: "Click Pay Now in your message thread. Phantom opens — approve the transaction. SOL (item price plus shipping) locks into smart contract escrow. If you miss this window you get a 2nd attempt with a 2 hour window, then a 3rd with a 4 hour window. Miss all three and a strike is issued, the next highest bidder is offered the item.",
+            body: "Click Pay Now in your message thread. Phantom opens — approve the transaction. SOL (item price plus shipping) locks into smart contract escrow. If you miss this window you get a 2nd attempt with a 2 hour window, then a 3rd with a 4 hour window. Miss all three and a strike is issued. The seller is then notified and can choose to offer the item to the next highest bidder or relist it.",
           },
           {
             title: "Step 3 — Seller ships (within 5 days)",
@@ -136,6 +141,11 @@ export const faqCategories: FaqCategory[] = [
         question: "What if a buyer does not pay?",
         answer:
           "After 3 missed payment windows, the next highest bidder is offered the item. After all bidders pass, you can relist at the average of recent competitive bids.",
+      },
+      {
+        question: "What happens if the winner of my auction doesn't pay?",
+        answer:
+          "After all payment windows expire, you will receive a notification in your dashboard. You can view the top next highest bidders and their bid amounts, then choose to offer the item to the next highest bidder or relist it as a new auction. If you relist, all previous bidders are automatically notified.",
       },
     ],
   },

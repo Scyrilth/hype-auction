@@ -12,6 +12,10 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   ending_soon: "ti-clock",
   new_follower: "ti-user-plus",
   new_message: "ti-message",
+  next_bidder_offer: "ti-gift",
+  winner_declined: "ti-user-x",
+  item_relisted: "ti-refresh",
+  action_required_unpaid: "ti-alert-triangle",
 };
 
 export default function NotificationRow({

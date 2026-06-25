@@ -105,5 +105,14 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     domestic_shipping_usd: safeNumber(row.domestic_shipping_usd),
     international_shipping_usd: safeNumber(row.international_shipping_usd),
     is_dummy: Boolean(row.is_dummy),
+    next_bidder_offered_at:
+      (row.next_bidder_offered_at as string | null) ?? null,
+    next_bidder_response_deadline:
+      (row.next_bidder_response_deadline as string | null) ?? null,
+    next_bidder_wallet: (row.next_bidder_wallet as string | null) ?? null,
+    relisted_auction_id: (row.relisted_auction_id as string | null) ?? null,
+    payment_excluded_wallets: Array.isArray(row.payment_excluded_wallets)
+      ? (row.payment_excluded_wallets as string[])
+      : [],
   };
 }

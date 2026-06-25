@@ -46,6 +46,8 @@ export const termsSections: LegalSectionData[] = [
       "SOL is locked in a smart contract escrow — neither party can access it until conditions are met",
       "Shipping cost is included in the total payment amount",
       "USD equivalent shown is an estimate based on live SOL/USD rate",
+      "If all payment attempts fail, the seller may choose to offer the item to the next highest bidder or relist the item as a new auction",
+      "Next highest bidders who are offered a win may accept or decline without penalty. A strike is only issued if a bidder accepts an offered win and subsequently fails to pay within the 2 hour payment window",
     ],
   },
   {
@@ -98,6 +100,7 @@ export const termsSections: LegalSectionData[] = [
       "Strikes are tied to wallet address and follow the buyer across accounts",
       "Strikes expire after 6 months of good behaviour",
       "Permanent bans may be appealed by contacting support",
+      "Declining an offered win (when original winner didn't pay) does not result in a strike or penalty of any kind",
     ],
   },
   {

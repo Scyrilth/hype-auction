@@ -84,6 +84,11 @@ export interface Auction {
   domestic_shipping_usd: number;
   international_shipping_usd: number;
   is_dummy: boolean;
+  next_bidder_offered_at: string | null;
+  next_bidder_response_deadline: string | null;
+  next_bidder_wallet: string | null;
+  relisted_auction_id: string | null;
+  payment_excluded_wallets: string[];
 }
 
 export interface Bid {

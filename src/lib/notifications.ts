@@ -10,7 +10,11 @@ export type NotificationType =
   | "item_shipped"
   | "ending_soon"
   | "new_follower"
-  | "new_message";
+  | "new_message"
+  | "next_bidder_offer"
+  | "winner_declined"
+  | "item_relisted"
+  | "action_required_unpaid";
 
 export interface Notification {
   id: string;
@@ -72,6 +76,14 @@ async function hasNotification(
   }
 
   return Boolean(data);
+}
+
+export async function hasNotificationForAuction(
+  wallet: string,
+  type: NotificationType,
+  link: string
+): Promise<boolean> {
+  return hasNotification(wallet, type, link);
 }
 
 export async function createNotification(

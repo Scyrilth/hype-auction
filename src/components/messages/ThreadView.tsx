@@ -9,6 +9,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
 import MessageContent from "@/components/messages/MessageContent";
+import NextBidderOfferTile from "@/components/messages/NextBidderOfferTile";
 import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -40,7 +41,29 @@ import {
 } from "@/lib/escrow";
 import { formatSol, shortenAddress } from "@/lib/format";
 import { getEffectiveBid } from "@/lib/parse-auction";
+import {
+  acceptNextBidderOffer,
+  declineNextBidderOffer,
+  parseNextBidderOfferMessage,
+  type NextBidderOfferPayload,
+} from "@/lib/non-payment-resolution";
 import { getDefaultShippingAddress } from "@/lib/shipping";
+
+function getLatestOfferForWallet(
+  messages: EnrichedDirectMessage[],
+  bidderWallet: string
+): NextBidderOfferPayload | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    const offer = parseNextBidderOfferMessage(
+      message.rawContent ?? message.content
+    );
+    if (offer && offer.bidder_wallet === bidderWallet) {
+      return offer;
+    }
+  }
+  return null;
+}
 
 function formatMessageTime(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -80,6 +103,10 @@ function MessageBubble({
   senderWallet,
   senderAvatar,
   onCopyTracking,
+  viewerWallet,
+  onAcceptOffer,
+  onDeclineOffer,
+  offerLoading,
 }: {
   message: EnrichedDirectMessage;
   isMine: boolean;
@@ -88,14 +115,37 @@ function MessageBubble({
   senderWallet: string;
   senderAvatar: string | null;
   onCopyTracking: (trackingNumber: string) => void;
+  viewerWallet?: string | null;
+  onAcceptOffer?: () => void;
+  onDeclineOffer?: () => void;
+  offerLoading?: boolean;
 }) {
   const messageContent = message.rawContent ?? message.content;
   const auctionSummary = parseAuctionSummaryMessage(messageContent);
+  const nextBidderOffer = parseNextBidderOfferMessage(messageContent);
 
   if (auctionSummary) {
     return (
       <div className="w-full overflow-visible py-2">
         <AuctionSummaryTile summary={auctionSummary} />
+      </div>
+    );
+  }
+
+  if (nextBidderOffer) {
+    const canRespond =
+      Boolean(viewerWallet) &&
+      viewerWallet === nextBidderOffer.bidder_wallet &&
+      nextBidderOffer.status === "pending";
+    return (
+      <div className="w-full overflow-visible py-2">
+        <NextBidderOfferTile
+          offer={nextBidderOffer}
+          canRespond={canRespond}
+          loading={offerLoading}
+          onAccept={() => onAcceptOffer?.()}
+          onDecline={() => onDeclineOffer?.()}
+        />
       </div>
     );
   }
@@ -161,6 +211,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentBreakdown, setPaymentBreakdown] =
     useState<PaymentBreakdown | null>(null);
+  const [offerResponding, setOfferResponding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const wallet = publicKey?.toBase58();
@@ -210,7 +261,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     void (async () => {
       try {
         const auction = thread.auction!;
-        const bidAmount = getEffectiveBid(auction);
+        const latestOffer = getLatestOfferForWallet(thread.messages, wallet);
+        const bidAmount =
+          latestOffer?.status === "accepted"
+            ? latestOffer.amount_sol
+            : getEffectiveBid(auction);
         const { data: seller } = await supabase
           .from("users")
           .select("country, ships_internationally")
@@ -340,7 +395,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       return;
     }
 
-    const bidAmount = getEffectiveBid(thread.auction);
+    const latestOffer = thread
+      ? getLatestOfferForWallet(thread.messages, wallet)
+      : null;
+    const bidAmount =
+      latestOffer?.status === "accepted"
+        ? latestOffer.amount_sol
+        : getEffectiveBid(thread.auction);
 
     setPaying(true);
     setPaymentError(null);
@@ -404,6 +465,42 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     }
   };
 
+  const handleAcceptOffer = async () => {
+    if (!wallet || !thread?.auction_id || offerResponding) return;
+    setOfferResponding(true);
+    try {
+      await acceptNextBidderOffer({
+        auctionId: thread.auction_id,
+        bidderWallet: wallet,
+        threadId,
+      });
+      showToast("Offer accepted. Complete payment within 2 hours.");
+      await loadThread();
+    } catch (error) {
+      showToast(getErrorMessage(error), "error");
+    } finally {
+      setOfferResponding(false);
+    }
+  };
+
+  const handleDeclineOffer = async () => {
+    if (!wallet || !thread?.auction_id || offerResponding) return;
+    setOfferResponding(true);
+    try {
+      await declineNextBidderOffer({
+        auctionId: thread.auction_id,
+        bidderWallet: wallet,
+        threadId,
+      });
+      showToast("Offer declined.");
+      await loadThread();
+    } catch (error) {
+      showToast(getErrorMessage(error), "error");
+    } finally {
+      setOfferResponding(false);
+    }
+  };
+
   if (!connected || !wallet) return null;
 
   if (loading || !thread) {
@@ -424,17 +521,30 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     shortenAddress(otherParty.wallet_address, 6);
 
   const escrowState = thread.auction?.escrow_state;
-  const winnerWallet = thread.top_bidder_wallet ?? thread.buyer_wallet;
-  const isAuctionWinner = Boolean(wallet) && wallet === winnerWallet;
   const needsEscrowPayment =
     !escrowState || escrowState === "none" || escrowState === "pending";
 
-  const showPayNow =
-    isAuctionWinner &&
-    Boolean(thread.auction_id) &&
-    Boolean(thread.auction) &&
+  const latestOffer =
+    wallet && thread
+      ? getLatestOfferForWallet(thread.messages, wallet)
+      : null;
+  const isNextBidderBuyer =
+    thread?.auction?.next_bidder_wallet === thread?.buyer_wallet &&
+    thread.buyer_wallet === wallet;
+  const isOriginalWinner =
+    Boolean(wallet) &&
+    wallet === (thread?.top_bidder_wallet ?? thread?.buyer_wallet) &&
+    !thread?.auction?.next_bidder_wallet;
+  const canPayAsBuyer =
+    Boolean(isBuyer) &&
+    Boolean(thread?.auction_id) &&
+    Boolean(thread?.auction) &&
     thread.auction?.status === "ended" &&
-    needsEscrowPayment;
+    needsEscrowPayment &&
+    (isOriginalWinner ||
+      (isNextBidderBuyer && latestOffer?.status === "accepted"));
+
+  const showPayNow = canPayAsBuyer;
 
   const showConfirmReceipt =
     isBuyer &&
@@ -530,6 +640,10 @@ export default function ThreadView({ threadId }: { threadId: string }) {
                 onCopyTracking={(trackingNumber) =>
                   void handleCopyTracking(trackingNumber)
                 }
+                viewerWallet={wallet}
+                onAcceptOffer={() => void handleAcceptOffer()}
+                onDeclineOffer={() => void handleDeclineOffer()}
+                offerLoading={offerResponding}
               />
               {showTimestamp && !message.is_system && (
                 <p
