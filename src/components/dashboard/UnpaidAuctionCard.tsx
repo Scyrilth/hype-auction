@@ -12,8 +12,12 @@ import {
   type NextBidderRow,
   type UnpaidAuctionAction,
 } from "@/lib/non-payment-resolution";
+import { getProfileHref } from "@/lib/profile-links";
 
 import RelistAuctionModal from "./RelistAuctionModal";
+
+const profileLinkClass =
+  "transition-colors hover:text-purple-300 hover:underline decoration-purple-500/50 underline-offset-2";
 
 function ConfirmDialog({
   open,
@@ -93,11 +97,14 @@ function NextBidderList({ bidders }: { bidders: NextBidderRow[] }) {
             <span className="text-xs font-semibold text-muted">
               #{bidder.rank}
             </span>
-            <span className="text-sm font-medium text-white">
+            <Link
+              href={getProfileHref(bidder.username, bidder.wallet)}
+              className={`text-sm font-medium text-white ${profileLinkClass}`}
+            >
               {bidder.username
                 ? displaySocialHandle(bidder.username)
                 : shortenAddress(bidder.wallet, 4)}
-            </span>
+            </Link>
             {bidder.isNextInLine && (
               <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
                 Next in line
@@ -177,7 +184,13 @@ export default function UnpaidAuctionCard({
             </div>
             {winnerWallet && (
               <p className="mt-1 text-xs text-muted">
-                Winner: {shortenAddress(winnerWallet, 6)}
+                Winner:{" "}
+                <Link
+                  href={getProfileHref(null, winnerWallet)}
+                  className={profileLinkClass}
+                >
+                  {shortenAddress(winnerWallet, 6)}
+                </Link>
               </p>
             )}
           </div>
