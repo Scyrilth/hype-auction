@@ -104,9 +104,12 @@ function NextBidderList({ bidders }: { bidders: NextBidderRow[] }) {
               </span>
             )}
           </div>
-          <span className="text-sm font-semibold text-white">
-            {formatSol(bidder.amount)}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-semibold text-white">
+              {formatSol(bidder.amount)}
+            </span>
+            <FiatValue solAmount={bidder.amount} showTooltip={false} />
+          </div>
         </li>
       ))}
     </ul>
