@@ -90,7 +90,10 @@ export function isNextBidderOfferContent(content: unknown): boolean {
     return (content as { type?: string }).type === "next_bidder_offer";
   }
   if (typeof content === "string") {
-    return content.includes('"type":"next_bidder_offer"');
+    return (
+      content.includes('"type":"next_bidder_offer"') ||
+      content.includes('"type": "next_bidder_offer"')
+    );
   }
   return false;
 }
@@ -133,6 +136,40 @@ export function parseNextBidderOfferMessage(
         : "pending",
     item_title: typeof value.item_title === "string" ? value.item_title : "Item",
   };
+}
+
+/** Whether the connected wallet can accept or decline a pending next-bidder offer. */
+export function canRespondToNextBidderOffer({
+  auction,
+  viewerWallet,
+  offer,
+}: {
+  auction: Pick<
+    Auction,
+    | "next_bidder_wallet"
+    | "next_bidder_response_deadline"
+    | "escrow_state"
+    | "payment_completed_at"
+  > | null;
+  viewerWallet: string | null | undefined;
+  offer: NextBidderOfferPayload;
+}): boolean {
+  if (!viewerWallet || !auction) return false;
+  if (offer.status !== "pending") return false;
+  if (auction.payment_completed_at) return false;
+  if (auction.next_bidder_wallet !== viewerWallet) return false;
+
+  const escrowAwaitingNextBidder =
+    auction.escrow_state === "pending" ||
+    (auction.escrow_state === "funded" && !auction.payment_completed_at);
+  if (!escrowAwaitingNextBidder) return false;
+
+  const deadline =
+    auction.next_bidder_response_deadline || offer.response_deadline;
+  if (!deadline) return false;
+  if (new Date(deadline).getTime() <= Date.now()) return false;
+
+  return true;
 }
 
 async function getTopBidderWallet(auctionId: string): Promise<string | null> {

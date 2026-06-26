@@ -1,5 +1,6 @@
 "use client";
 
+import { useSolPrice } from "@/hooks/useSolPrice";
 import { formatSol } from "@/lib/format";
 import type { NextBidderOfferPayload } from "@/lib/non-payment-resolution";
 
@@ -16,6 +17,7 @@ export default function NextBidderOfferTile({
   onAccept: () => void;
   onDecline: () => void;
 }) {
+  const { solPrice } = useSolPrice();
   const deadline = offer.payment_deadline ?? offer.response_deadline;
   const deadlineLabel = deadline
     ? new Date(deadline).toLocaleString(undefined, {
@@ -25,6 +27,11 @@ export default function NextBidderOfferTile({
         minute: "2-digit",
       })
     : null;
+
+  const usdSuffix =
+    solPrice && solPrice > 0
+      ? ` (~$${(offer.amount_sol * solPrice).toFixed(2)})`
+      : "";
 
   return (
     <div className="w-full rounded-2xl border border-purple-500/30 bg-purple-950/20 p-4">
@@ -37,6 +44,7 @@ export default function NextBidderOfferTile({
         didn&apos;t complete payment. You&apos;ve been offered this item for{" "}
         <span className="font-semibold text-white">
           {formatSol(offer.amount_sol)}
+          {usdSuffix}
         </span>
         .
       </p>
@@ -57,7 +65,7 @@ export default function NextBidderOfferTile({
         <p className="mt-2 text-xs text-amber-300">This offer has expired.</p>
       )}
 
-      {canRespond && offer.status === "pending" && (
+      {canRespond && (
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <button
             type="button"
@@ -71,7 +79,7 @@ export default function NextBidderOfferTile({
             type="button"
             onClick={onDecline}
             disabled={loading}
-            className="flex-1 rounded-full border border-border bg-surface-elevated py-2.5 text-sm font-semibold text-white transition-colors hover:border-accent/40 disabled:opacity-60"
+            className="flex-1 rounded-full border border-border bg-transparent py-2.5 text-sm font-semibold text-white transition-colors hover:border-accent/40 hover:bg-surface-elevated disabled:opacity-60"
           >
             Decline
           </button>

@@ -44,6 +44,7 @@ import { formatSol, shortenAddress } from "@/lib/format";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import {
   acceptNextBidderOffer,
+  canRespondToNextBidderOffer,
   declineNextBidderOffer,
   parseNextBidderOfferMessage,
   type NextBidderOfferPayload,
@@ -63,6 +64,33 @@ function getLatestOfferForWallet(
       return offer;
     }
   }
+  return null;
+}
+
+function getLatestRespondableOfferMessageId(
+  messages: EnrichedDirectMessage[],
+  auction: ThreadDetail["auction"],
+  viewerWallet: string
+): string | null {
+  if (!auction) return null;
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    const offer = parseNextBidderOfferMessage(
+      message.rawContent ?? message.content
+    );
+    if (
+      offer &&
+      canRespondToNextBidderOffer({
+        auction,
+        viewerWallet,
+        offer,
+      })
+    ) {
+      return message.id;
+    }
+  }
+
   return null;
 }
 
@@ -104,7 +132,7 @@ function MessageBubble({
   senderWallet,
   senderAvatar,
   onCopyTracking,
-  viewerWallet,
+  canRespondToOffer,
   onAcceptOffer,
   onDeclineOffer,
   offerLoading,
@@ -116,7 +144,7 @@ function MessageBubble({
   senderWallet: string;
   senderAvatar: string | null;
   onCopyTracking: (trackingNumber: string) => void;
-  viewerWallet?: string | null;
+  canRespondToOffer?: boolean;
   onAcceptOffer?: () => void;
   onDeclineOffer?: () => void;
   offerLoading?: boolean;
@@ -134,15 +162,11 @@ function MessageBubble({
   }
 
   if (nextBidderOffer) {
-    const canRespond =
-      Boolean(viewerWallet) &&
-      viewerWallet === nextBidderOffer.bidder_wallet &&
-      nextBidderOffer.status === "pending";
     return (
       <div className="w-full overflow-visible py-2">
         <NextBidderOfferTile
           offer={nextBidderOffer}
-          canRespond={canRespond}
+          canRespond={Boolean(canRespondToOffer)}
           loading={offerLoading}
           onAccept={() => onAcceptOffer?.()}
           onDecline={() => onDeclineOffer?.()}
@@ -468,21 +492,93 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     }
   };
 
-  const handleAcceptOffer = async () => {
-    if (!wallet || !thread?.auction_id || offerResponding) return;
+  const handleAcceptAndPay = async () => {
+    if (
+      !wallet ||
+      !anchorWallet ||
+      !thread?.auction_id ||
+      !thread.auction ||
+      offerResponding ||
+      paying
+    ) {
+      return;
+    }
+
     setOfferResponding(true);
+    setPaymentError(null);
+
     try {
+      const latestOffer = getLatestOfferForWallet(thread.messages, wallet);
+      const bidAmount =
+        latestOffer?.amount_sol ?? getEffectiveBid(thread.auction);
+
       await acceptNextBidderOffer({
         auctionId: thread.auction_id,
         bidderWallet: wallet,
         threadId,
       });
-      showToast("Offer accepted. Complete payment within 2 hours.");
+
+      const { data: seller } = await supabase
+        .from("users")
+        .select("country, ships_internationally")
+        .eq("wallet_address", thread.seller_wallet)
+        .maybeSingle();
+      const defaultAddress = await getDefaultShippingAddress(wallet).catch(
+        () => null
+      );
+      const isExempt = isShippingExemptAuction(thread.auction);
+      const shippingUsd =
+        resolveShippingUsd({
+          domesticShippingUsd: thread.auction.domestic_shipping_usd,
+          internationalShippingUsd: thread.auction.international_shipping_usd,
+          sellerCountry: (seller?.country as string | null) ?? null,
+          buyerCountry: defaultAddress?.country ?? null,
+          shipsInternationally: Boolean(seller?.ships_internationally),
+          isExempt,
+        }) ?? 0;
+
+      const breakdown = await calculatePaymentBreakdown(bidAmount, shippingUsd);
+
+      const hasBalance = await checkWalletBalance(wallet, breakdown.totalSol);
+      if (!hasBalance) {
+        setPaymentError(
+          `Insufficient SOL. You need at least ${(breakdown.totalSol + 0.01).toFixed(2)} SOL including fees.`
+        );
+        showToast("Offer accepted. Add funds and use Pay Now below.", "error");
+        await loadThread();
+        return;
+      }
+
+      setOfferResponding(false);
+      setPaying(true);
+
+      const provider = createEscrowProvider(connection, anchorWallet);
+      const result = await initiatePayment(
+        thread.auction_id,
+        anchorWallet,
+        provider,
+        bidAmount,
+        shippingUsd,
+        thread.seller_wallet,
+        PLATFORM_WALLET,
+        thread.auction.escrow_attempt_number || 1
+      );
+
+      if (!result.success) {
+        setPaymentError(result.error);
+        showToast("Offer accepted. Complete payment with Pay Now below.");
+        await loadThread();
+        return;
+      }
+
+      setPaymentTx(result.txSignature);
+      showToast("✅ Offer accepted and payment secured in escrow!");
       await loadThread();
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {
       setOfferResponding(false);
+      setPaying(false);
     }
   };
 
@@ -559,6 +655,15 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const paymentSecured = ["funded", "shipped", "complete", "disputed"].includes(
     escrowState ?? ""
   );
+
+  const respondableOfferMessageId =
+    wallet && thread.auction
+      ? getLatestRespondableOfferMessageId(
+          thread.messages,
+          thread.auction,
+          wallet
+        )
+      : null;
 
   const groupedMessages = thread.messages.map((message, index) => {
     const prev = thread.messages[index - 1];
@@ -643,10 +748,10 @@ export default function ThreadView({ threadId }: { threadId: string }) {
                 onCopyTracking={(trackingNumber) =>
                   void handleCopyTracking(trackingNumber)
                 }
-                viewerWallet={wallet}
-                onAcceptOffer={() => void handleAcceptOffer()}
+                canRespondToOffer={message.id === respondableOfferMessageId}
+                onAcceptOffer={() => void handleAcceptAndPay()}
                 onDeclineOffer={() => void handleDeclineOffer()}
-                offerLoading={offerResponding}
+                offerLoading={offerResponding || paying}
               />
               {showTimestamp && !message.is_system && (
                 <p
