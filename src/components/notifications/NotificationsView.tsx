@@ -11,6 +11,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import {
   markAllAsRead,
   markAsRead,
+  getNotificationHref,
   type Notification,
 } from "@/lib/notifications";
 
@@ -85,8 +86,9 @@ export default function NotificationsView() {
           // navigation still proceeds
         }
       }
-      if (notification.link) {
-        router.push(notification.link);
+      const href = getNotificationHref(notification);
+      if (href) {
+        router.push(href);
       }
     },
     [refresh, router]

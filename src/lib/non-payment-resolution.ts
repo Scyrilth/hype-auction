@@ -310,7 +310,7 @@ async function appendExcludedWallet(
 }
 
 async function notifySellerActionRequired(auction: Auction): Promise<void> {
-  const link = `/dashboard?unpaid=${auction.id}`;
+  const link = "/dashboard";
   const alreadySent = await hasNotificationForAuction(
     auction.seller_wallet,
     "action_required_unpaid",
@@ -849,7 +849,7 @@ export async function syncExpiredNextBidderOffers(): Promise<void> {
       accepted
         ? `The offered bidder did not pay for ${auction.title}. Choose your next action on the dashboard.`
         : `The next highest bidder did not respond for ${auction.title}. Choose your next action on the dashboard.`,
-      `/dashboard?unpaid=${auction.id}`
+      `/dashboard`
     );
   }
 }

@@ -149,7 +149,7 @@ export async function createWinnerThread(
     winnerWallet,
     auctionTitle: auction.title,
     amount: winnerBidAmount,
-    threadId: thread.id,
+    auctionId: auction.id,
   });
 }
 

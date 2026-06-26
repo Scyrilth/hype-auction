@@ -1,5 +1,6 @@
 import { logSupabaseError } from "@/lib/errors";
 import { formatSol, shortenAddress } from "@/lib/format";
+import { getProfileHref } from "@/lib/profile-links";
 import { supabase } from "@/lib/supabase";
 
 export type NotificationType =
@@ -15,7 +16,9 @@ export type NotificationType =
   | "winner_declined"
   | "item_relisted"
   | "action_required_unpaid"
-  | "offer_sent_confirmation";
+  | "offer_sent_confirmation"
+  | "payment_confirmed"
+  | "tracking_uploaded";
 
 export interface Notification {
   id: string;
@@ -39,6 +42,21 @@ export function parseNotification(row: Record<string, unknown>): Notification {
     is_read: Boolean(row.is_read),
     created_at: row.created_at as string,
   };
+}
+
+const DASHBOARD_NOTIFICATION_TYPES: NotificationType[] = [
+  "action_required_unpaid",
+  "winner_declined",
+];
+
+/** Resolve the in-app path for a notification click. */
+export function getNotificationHref(notification: Notification): string | null {
+  if (DASHBOARD_NOTIFICATION_TYPES.includes(notification.type)) {
+    return "/dashboard";
+  }
+
+  const link = notification.link?.trim();
+  return link || null;
 }
 
 export async function getUserDisplayName(wallet: string): Promise<string> {
@@ -282,19 +300,49 @@ export async function notifyAuctionWon({
   winnerWallet,
   auctionTitle,
   amount,
-  threadId,
+  auctionId,
 }: {
   winnerWallet: string;
   auctionTitle: string;
   amount: number;
-  threadId: string;
+  auctionId: string;
 }): Promise<void> {
   await createNotification(
     winnerWallet,
     "auction_won",
     "You won the auction!",
     `You won ${auctionTitle} with a bid of ${formatSol(amount)}.`,
-    `/messages/${threadId}`
+    `/auction/${auctionId}`
+  );
+}
+
+export async function notifyPaymentConfirmed({
+  buyerWallet,
+  sellerWallet,
+  auctionTitle,
+  threadId,
+}: {
+  buyerWallet: string;
+  sellerWallet: string;
+  auctionTitle: string;
+  threadId: string;
+}): Promise<void> {
+  const link = `/messages/${threadId}`;
+
+  await createNotification(
+    buyerWallet,
+    "payment_confirmed",
+    "Payment confirmed",
+    `Your payment for ${auctionTitle} is secured in escrow.`,
+    link
+  );
+
+  await createNotification(
+    sellerWallet,
+    "payment_confirmed",
+    "Payment received",
+    `Payment for ${auctionTitle} has been secured in escrow.`,
+    link
   );
 }
 
@@ -315,8 +363,8 @@ export async function notifyItemShipped({
 }): Promise<void> {
   await createNotification(
     buyerWallet,
-    "item_shipped",
-    "Your item has been shipped!",
+    "tracking_uploaded",
+    "Tracking uploaded",
     `${sellerDisplayName} shipped ${auctionTitle} via ${courier}. Tracking: ${trackingNumber}`,
     `/messages/${threadId}`
   );
@@ -329,20 +377,19 @@ export async function notifyNewFollower({
   followingWallet: string;
   followerWallet: string;
 }): Promise<void> {
-  const [{ data: followingUser }, followerDisplayName] = await Promise.all([
+  const [followerUser, followerDisplayName] = await Promise.all([
     supabase
       .from("users")
-      .select("username, is_vendor")
-      .eq("wallet_address", followingWallet)
+      .select("username")
+      .eq("wallet_address", followerWallet)
       .maybeSingle(),
     getUserDisplayName(followerWallet),
   ]);
 
-  const slug =
-    (followingUser?.username as string | null)?.trim() || followingWallet;
-  const link = followingUser?.is_vendor
-    ? `/shop/${slug}`
-    : `/profile/${slug}`;
+  const link = getProfileHref(
+    (followerUser.data?.username as string | null) ?? null,
+    followerWallet
+  );
 
   await createNotification(
     followingWallet,

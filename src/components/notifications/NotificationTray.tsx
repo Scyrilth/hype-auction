@@ -8,6 +8,7 @@ import NotificationRow from "@/components/notifications/NotificationRow";
 import {
   markAllAsRead,
   markAsRead,
+  getNotificationHref,
   type Notification,
 } from "@/lib/notifications";
 
@@ -58,8 +59,9 @@ export default function NotificationTray({
       }
 
       onClose();
-      if (notification.link) {
-        router.push(notification.link);
+      const href = getNotificationHref(notification);
+      if (href) {
+        router.push(href);
       }
     },
     [onClose, onRefresh, router]

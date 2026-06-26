@@ -9,6 +9,8 @@ import {
 } from "@solana/web3.js";
 
 import { fetchSolUsdRate } from "@/lib/sol-price";
+import { getAuctionThreadId } from "@/lib/messages";
+import { notifyPaymentConfirmed } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 
 const PROGRAM_ID = new PublicKey(
@@ -458,6 +460,29 @@ export async function initiatePayment(
 
     if (error) {
       console.error("Supabase escrow update failed:", error);
+    }
+
+    const buyerWallet = wallet.publicKey.toBase58();
+    try {
+      const [{ data: auctionRow }, threadId] = await Promise.all([
+        supabase
+          .from("auctions")
+          .select("title")
+          .eq("id", auctionId)
+          .maybeSingle(),
+        getAuctionThreadId(auctionId, buyerWallet),
+      ]);
+
+      if (threadId && auctionRow?.title) {
+        await notifyPaymentConfirmed({
+          buyerWallet,
+          sellerWallet,
+          auctionTitle: auctionRow.title as string,
+          threadId,
+        });
+      }
+    } catch (notifyError) {
+      console.error("Payment notification failed:", notifyError);
     }
 
     return {
