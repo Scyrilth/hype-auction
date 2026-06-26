@@ -23,7 +23,7 @@ import { getProfileHref } from "@/lib/profile-links";
 import type { VendorSuggestion } from "@/lib/vendor-suggestions";
 
 const navLinks = [
-  { label: "Live", href: "/", live: true },
+  { label: "Live", href: "/live", live: true },
   { label: "Browse", href: "/browse" },
   { label: "Collections", href: "/collections" },
   { label: "Vendors", href: "/vendors" },
@@ -78,6 +78,10 @@ export default function TopNav() {
   );
 
   const isLinkActive = (href: string) => {
+    if (href === "/live") {
+      return pathname === "/live" || pathname.startsWith("/live/");
+    }
+
     if (href === "/") return pathname === "/";
 
     if (href === "/collections") {
