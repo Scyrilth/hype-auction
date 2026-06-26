@@ -8,6 +8,7 @@ import {
 } from "@/lib/messages";
 import {
   createNotification,
+  getUserDisplayName,
   hasNotificationForAuction,
 } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
@@ -498,6 +499,15 @@ export async function offerToNextBidder({
     "You've been offered an auction win",
     `The winner of ${auction.title} didn't complete payment. As the next highest bidder, you've been offered this item for ${formatSol(bidAmount)}. You have 2 hours to accept or decline.`,
     `/messages/${thread.id}`
+  );
+
+  const bidderDisplayName = await getUserDisplayName(bidderWallet);
+  await createNotification(
+    sellerWallet,
+    "offer_sent_confirmation",
+    "Offer sent",
+    `Your offer for ${auction.title} has been sent to ${bidderDisplayName}. They have 2 hours to accept or decline. You'll be notified of their decision.`,
+    `/auction/${auctionId}`
   );
 }
 

@@ -16,6 +16,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   winner_declined: "ti-user-x",
   item_relisted: "ti-refresh",
   action_required_unpaid: "ti-alert-triangle",
+  offer_sent_confirmation: "ti-send",
 };
 
 export default function NotificationRow({

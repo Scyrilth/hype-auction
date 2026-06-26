@@ -14,7 +14,8 @@ export type NotificationType =
   | "next_bidder_offer"
   | "winner_declined"
   | "item_relisted"
-  | "action_required_unpaid";
+  | "action_required_unpaid"
+  | "offer_sent_confirmation";
 
 export interface Notification {
   id: string;

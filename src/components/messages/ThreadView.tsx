@@ -14,6 +14,7 @@ import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { getErrorMessage } from "@/lib/errors";
 import {
   confirmReceipt,
@@ -201,6 +202,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const { showToast } = useToast();
+  const { refresh: refreshUnreadCount } = useUnreadMessageCount();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -234,13 +236,14 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       }
       setThread(data);
       await markThreadMessagesRead(threadId, wallet);
+      void refreshUnreadCount();
     } catch (error) {
       console.error("Failed to load thread:", error);
       showToast(getErrorMessage(error), "error");
     } finally {
       setLoading(false);
     }
-  }, [threadId, wallet, router, showToast]);
+  }, [threadId, wallet, router, showToast, refreshUnreadCount]);
 
   useEffect(() => {
     if (!connected || !wallet) {

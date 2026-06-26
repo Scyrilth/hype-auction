@@ -7,10 +7,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import UserAvatar from "@/components/ui/UserAvatar";
+import { useToast } from "@/components/ui/Toast";
+import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import {
+  formatMessagePreview,
   formatOrderRef,
   getThreadThumbnail,
   getThreadsForWallet,
+  markAllThreadMessagesRead,
   type MessagesTab,
   type ThreadListItem,
 } from "@/lib/messages";
@@ -47,7 +51,12 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
   const otherName =
     thread.other_party.username ??
     shortenAddress(thread.other_party.wallet_address, 6);
-  const preview = thread.last_message?.content ?? "No messages yet";
+  const preview = thread.last_message
+    ? formatMessagePreview(
+        thread.last_message.content,
+        thread.last_message.rawContent
+      )
+    : "No messages yet";
   const time = thread.last_message?.created_at ?? thread.created_at;
 
   return (
@@ -73,7 +82,7 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
               {formatOrderRef(thread.auction_id)}
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1 self-center">
             <span className="text-[11px] text-muted">
               {formatRelativeTime(time)}
             </span>
@@ -83,8 +92,8 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
               </span>
             )}
             {thread.unread_count > 0 && (
-              <span className="rounded-full bg-live-red px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {thread.unread_count}
+              <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-live-red px-1 text-[10px] font-bold text-white">
+                {thread.unread_count > 9 ? "9+" : thread.unread_count}
               </span>
             )}
           </div>
@@ -99,7 +108,7 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
           />
           <p className="truncate text-xs text-zinc-400">
             <span className="font-medium text-zinc-300">{otherName}:</span>{" "}
-            {preview.length > 50 ? `${preview.slice(0, 50)}…` : preview}
+            {preview}
           </p>
         </div>
       </div>
@@ -110,9 +119,12 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
 export default function MessagesView() {
   const router = useRouter();
   const { publicKey, connected } = useWallet();
+  const { showToast } = useToast();
+  const { refresh: refreshUnreadCount } = useUnreadMessageCount();
   const [activeTab, setActiveTab] = useState<MessagesTab>("buying");
   const [threads, setThreads] = useState<ThreadListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const loadThreads = useCallback(async () => {
     if (!publicKey) return;
@@ -139,6 +151,22 @@ export default function MessagesView() {
     void loadThreads();
   }, [connected, publicKey, router, loadThreads]);
 
+  const handleMarkAllRead = async () => {
+    if (!publicKey || markingAllRead) return;
+    setMarkingAllRead(true);
+    try {
+      await markAllThreadMessagesRead(publicKey.toBase58());
+      await loadThreads();
+      void refreshUnreadCount();
+      showToast("Marked all as read");
+    } catch (error) {
+      console.error("Failed to mark all messages as read:", error);
+      showToast("Could not mark messages as read.", "error");
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
+
   if (!connected || !publicKey) {
     return null;
   }
@@ -152,21 +180,31 @@ export default function MessagesView() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 border-b border-border pb-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? "border-b-2 border-accent text-white"
-                : "text-muted hover:text-white"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-1">
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? "border-b-2 border-accent text-white"
+                  : "text-muted hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => void handleMarkAllRead()}
+          disabled={markingAllRead || loading}
+          className="px-2 py-1 text-xs text-muted transition-colors hover:text-white disabled:opacity-50"
+        >
+          Mark all as read
+        </button>
       </div>
 
       {loading ? (

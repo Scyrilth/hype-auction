@@ -107,6 +107,90 @@ export function formatOrderRef(auctionId: string | null): string {
   return `#${auctionId.slice(0, 8)}`;
 }
 
+const MESSAGE_PREVIEW_MAX = 60;
+
+function tryParseMessageJson(
+  value: unknown
+): Record<string, unknown> | null {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{")) return null;
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/** Readable one-line preview for thread list rows. */
+export function formatMessagePreview(
+  content: string,
+  rawContent?: unknown
+): string {
+  const parsed =
+    tryParseMessageJson(rawContent) ?? tryParseMessageJson(content);
+
+  if (parsed) {
+    const type = parsed.type;
+
+    if (type === "auction_summary") {
+      const title =
+        typeof parsed.title === "string" && parsed.title.trim()
+          ? parsed.title.trim()
+          : "Auction";
+      return `Auction: ${title}`;
+    }
+
+    if (type === "payment_confirmation") {
+      return "Payment confirmed";
+    }
+
+    if (type === "tracking_update") {
+      return "Tracking uploaded";
+    }
+
+    if (type === "next_bidder_offer") {
+      return "You've been offered this item";
+    }
+
+    if (type === "system") {
+      const message =
+        typeof parsed.message === "string" ? parsed.message.trim() : "";
+      if (message) {
+        return message.length > MESSAGE_PREVIEW_MAX
+          ? `${message.slice(0, MESSAGE_PREVIEW_MAX)}…`
+          : message;
+      }
+      return "New message";
+    }
+
+    const title = typeof parsed.title === "string" ? parsed.title.trim() : "";
+    const message =
+      typeof parsed.message === "string" ? parsed.message.trim() : "";
+    const fallback = title || message || "New message";
+    return fallback.length > MESSAGE_PREVIEW_MAX
+      ? `${fallback.slice(0, MESSAGE_PREVIEW_MAX)}…`
+      : fallback;
+  }
+
+  const plain = (typeof rawContent === "string" ? rawContent : content).trim();
+  if (!plain) return "No messages yet";
+  return plain.length > MESSAGE_PREVIEW_MAX
+    ? `${plain.slice(0, MESSAGE_PREVIEW_MAX)}…`
+    : plain;
+}
+
 export function formatReferenceLabel(referenceNumber: string | null): string | null {
   if (!referenceNumber) return null;
   return referenceNumber;
@@ -590,6 +674,28 @@ export async function markThreadMessagesRead(
     .update({ is_read: true })
     .eq("thread_id", threadId)
     .neq("sender_wallet", wallet)
+    .eq("is_read", false);
+
+  if (error) throw error;
+}
+
+/** Marks non-system messages from others as read across all user threads. */
+export async function markAllThreadMessagesRead(wallet: string): Promise<void> {
+  const { data: threads, error: threadsError } = await supabase
+    .from("message_threads")
+    .select("id")
+    .or(`buyer_wallet.eq.${wallet},seller_wallet.eq.${wallet}`);
+
+  if (threadsError) throw threadsError;
+  if (!threads?.length) return;
+
+  const threadIds = threads.map((row) => row.id as string);
+  const { error } = await supabase
+    .from("direct_messages")
+    .update({ is_read: true })
+    .in("thread_id", threadIds)
+    .neq("sender_wallet", wallet)
+    .eq("is_system", false)
     .eq("is_read", false);
 
   if (error) throw error;

@@ -8,6 +8,10 @@ import type { Auction, Bid, User } from "@/lib/database.types";
 /**
  * Dummy listings: run `supabase/dummy-listings-refresh.sql` periodically during
  * development to keep `is_dummy = true` auctions live (extends end_time by 7 days).
+ *
+ * UPDATE public.auctions
+ * SET end_time = NOW() + INTERVAL '7 days', status = 'live'
+ * WHERE is_dummy = true AND escrow_tx_signature NOT LIKE 'admin_dummy_%';
  */
 
 export interface LiveAuctionView {
