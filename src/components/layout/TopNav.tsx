@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AdminViewSwitcher from "@/components/admin/AdminViewSwitcher";
@@ -33,6 +34,7 @@ const navLinks = [
 ] as const;
 
 export default function TopNav() {
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { connected } = useWallet();
@@ -45,6 +47,10 @@ export default function TopNav() {
   const [trayOpen, setTrayOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const notificationAnchorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { queryReady, suggestionGroups, flatSuggestions } = useSearchSuggestions(
     {
@@ -97,9 +103,8 @@ export default function TopNav() {
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
-  return (
-    <>
-      <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-x-hidden overflow-y-visible border-b border-border bg-surface pl-2 pr-2 left-0 sm:gap-1.5 sm:pr-3 md:left-44 md:gap-2 md:pl-2.5 md:pr-4">
+  const header = (
+      <header className="!fixed top-0 left-0 right-0 z-[100] flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-x-hidden border-b border-border bg-surface pl-2 pr-2 sm:gap-1.5 sm:pr-3 md:left-44 md:overflow-visible md:gap-2 md:pl-2.5 md:pr-4">
         <button
           type="button"
           onClick={() => setMobileNavOpen(true)}
@@ -253,7 +258,11 @@ export default function TopNav() {
         )}
       </div>
     </header>
+  );
 
+  return (
+    <>
+      {mounted ? createPortal(header, document.body) : header}
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}
