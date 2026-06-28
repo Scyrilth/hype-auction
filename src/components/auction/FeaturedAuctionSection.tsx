@@ -9,12 +9,12 @@ export default function FeaturedAuctionSection({
 }) {
   return (
     <section className="w-full">
-      <div className="featured-heading mb-4 flex items-center gap-3">
-        <h2 className="featured-heading-text text-3xl font-bold text-white">
+      <div className="featured-heading mb-3 flex items-center gap-2.5">
+        <h2 className="featured-heading-text text-2xl font-bold text-white">
           Featured
         </h2>
         <span
-          className="h-7 w-1 rounded-full bg-accent shadow-[0_0_14px_rgba(124,58,237,0.75)]"
+          className="h-6 w-1 rounded-full bg-accent shadow-[0_0_14px_rgba(124,58,237,0.75)]"
           aria-hidden
         />
       </div>

@@ -15,7 +15,7 @@ export default function SuggestedVendorsSection({
       </h2>
 
       <div className="-mx-1 w-full min-w-0 max-w-full overflow-x-hidden px-1 pb-2">
-        <div className="horizontal-scroll-row flex gap-4 overflow-x-auto">
+        <div className="horizontal-scroll-row flex gap-3 overflow-x-auto">
           {vendors.map((entry) => (
             <div
               key={entry.vendor.wallet_address}

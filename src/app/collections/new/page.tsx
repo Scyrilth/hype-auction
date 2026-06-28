@@ -8,10 +8,10 @@ export default function NewCollectionPage() {
     <AppShell
       activePath="/collections/manage"
       shellClassName="bg-[#0d0d1a]"
-      contentClassName="flex-1 overflow-y-auto bg-[#0d0d1a] p-4 sm:p-5"
+      contentClassName="flex-1 overflow-y-auto bg-[#0d0d1a] p-3 sm:p-4"
     >
       <BackButton className="mb-4" />
-      <h1 className="mb-6 text-2xl font-bold text-white">
+      <h1 className="mb-6 text-xl font-bold text-white">
         Create Collection
       </h1>
       <WalletGate>

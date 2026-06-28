@@ -281,7 +281,7 @@ export default function CreateListingForm() {
       </Link>
 
       <header className="mt-4">
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">
+        <h1 className="text-xl font-bold text-white sm:text-2xl">
           Create New Listing
         </h1>
         <p className="mt-1 text-sm text-muted">

@@ -79,7 +79,7 @@ export default function SearchResults({
   return (
     <div className="space-y-10">
       <Section title="Vendors" count={vendors.length}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {vendors.map((vendor) => (
             <SearchVendorCard key={vendor.shopSlug} vendor={vendor} />
           ))}
@@ -87,7 +87,7 @@ export default function SearchResults({
       </Section>
 
       <Section title="Live Auctions" count={liveAuctions.length}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {liveAuctions.map((auction) => (
             <SearchAuctionCard key={auction.id} auction={auction} />
           ))}
@@ -95,7 +95,7 @@ export default function SearchResults({
       </Section>
 
       <Section title="Categories" count={categories.length}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map((category) => (
             <SearchCategoryCard key={category.name} category={category} />
           ))}
@@ -103,7 +103,7 @@ export default function SearchResults({
       </Section>
 
       <Section title="Past Auctions" count={pastAuctions.length}>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {pastAuctions.map((auction) => (
             <SearchAuctionCard key={auction.id} auction={auction} />
           ))}

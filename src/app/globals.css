@@ -39,10 +39,10 @@ body {
   border: 1px solid var(--border) !important;
   border-radius: 9999px !important;
   font-family: inherit !important;
-  font-size: 0.875rem !important;
-  height: 36px !important;
-  line-height: 36px !important;
-  padding: 0 14px !important;
+  font-size: 0.75rem !important;
+  height: 32px !important;
+  line-height: 32px !important;
+  padding: 0 12px !important;
 }
 
 .wallet-adapter-button:not([disabled]):hover {
@@ -104,13 +104,6 @@ body {
   width: calc((100% - 3rem) / var(--carousel-columns));
   min-width: 12rem;
   flex-shrink: 0;
-}
-
-@media (min-width: 640px) {
-  /* sm:gap-4 = 4 × 1rem */
-  .carousel-row-scroll > .horizontal-scroll-item {
-    width: calc((100% - 4rem) / var(--carousel-columns));
-  }
 }
 
 .homepage-carousel-track {

@@ -17,9 +17,9 @@ export default function HomepageHero() {
   };
 
   return (
-    <section className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#4C1D95] px-6 py-10 sm:px-10 sm:py-14">
+    <section className="mb-5 overflow-hidden rounded-2xl bg-gradient-to-br from-[#7C3AED] to-[#4C1D95] px-5 py-8 sm:px-8 sm:py-10">
       <div className="mx-auto max-w-3xl text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
+        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl lg:text-4xl">
           Live Auctions on Solana
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-purple-100 sm:text-base">

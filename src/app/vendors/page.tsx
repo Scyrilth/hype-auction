@@ -11,7 +11,7 @@ export default async function VendorsPage() {
   return (
     <AppShell
       activePath="/vendors"
-      contentClassName="flex-1 overflow-y-auto p-4 sm:p-5"
+      contentClassName="flex-1 overflow-y-auto p-3 sm:p-4"
     >
       <BackButton className="mb-4" />
       <VendorDirectory vendors={vendors} />

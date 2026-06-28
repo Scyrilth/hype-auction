@@ -38,7 +38,7 @@ export default function ShopAuctionGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
       {auctions.map((auction) => {
         const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
         const displayBid =

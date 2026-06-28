@@ -17,10 +17,10 @@ export default function TrendingSection({
   if (items.length === 0) return null;
 
   return (
-    <section className="mt-8 w-full min-w-0">
-      <div className="mb-4 flex items-center gap-2">
-        <TrendingUpIcon className="h-6 w-6 text-orange-400" />
-        <h2 className="text-2xl font-bold text-white">Trending</h2>
+    <section className="mt-6 w-full min-w-0">
+      <div className="mb-3 flex items-center gap-2">
+        <TrendingUpIcon className="h-5 w-5 text-orange-400" />
+        <h2 className="text-xl font-bold text-white">Trending</h2>
         <span aria-hidden>🔥</span>
       </div>
 

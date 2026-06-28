@@ -32,7 +32,7 @@ const sidebarLegalLinks = [
 ] as const;
 
 function navLinkClass(active: boolean) {
-  return `flex items-center gap-3 whitespace-nowrap rounded-lg px-2 py-2.5 text-sm transition-colors ${
+  return `flex items-center gap-2.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm transition-colors ${
     active
       ? "bg-accent/15 font-medium text-accent"
       : "text-zinc-300 hover:bg-surface-elevated hover:text-white"
@@ -40,7 +40,7 @@ function navLinkClass(active: boolean) {
 }
 
 function subLinkClass(active: boolean) {
-  return `flex items-center gap-2.5 whitespace-nowrap rounded-lg py-2 pl-9 pr-2 text-xs transition-colors ${
+  return `flex items-center gap-2 whitespace-nowrap rounded-lg py-1.5 pl-8 pr-2 text-xs transition-colors ${
     active
       ? "font-medium text-accent"
       : "text-muted hover:bg-surface-elevated hover:text-white"
@@ -114,14 +114,14 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
     currentPath.startsWith("/collections/manage/");
 
   return (
-    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-52 flex-col overflow-y-auto border-r border-border bg-surface px-3 py-5 md:flex lg:px-5 lg:py-6">
-      <div className="mb-6">
-        <HypeAuctionLogo className="h-9 w-full max-w-[11rem]" showTagline />
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-44 flex-col overflow-y-auto border-r border-border bg-surface px-2.5 py-4 md:flex lg:px-3 lg:py-5">
+      <div className="mb-4">
+        <HypeAuctionLogo className="h-8 w-full max-w-[9.5rem]" showTagline />
       </div>
 
-      <nav className="mb-4 flex flex-1 flex-col gap-1 border-b border-border pb-4">
+      <nav className="mb-3 flex flex-1 flex-col gap-0.5 border-b border-border pb-3">
         <Link href="/" className={navLinkClass(isHomeActive)}>
-          <HomeIcon className="h-4 w-4 shrink-0" />
+          <HomeIcon className="h-3.5 w-3.5 shrink-0" />
           <span>Home</span>
         </Link>
 
@@ -133,12 +133,12 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
               className={`${navLinkClass(isShopSectionActive)} w-full justify-between`}
               aria-expanded={shopOpen}
             >
-              <span className="flex items-center gap-3">
-                <StarFilledIcon className="h-4 w-4 shrink-0 text-accent" />
+              <span className="flex items-center gap-2.5">
+                <StarFilledIcon className="h-3.5 w-3.5 shrink-0 text-accent" />
                 <span>My Shop</span>
               </span>
               <ChevronDownIcon
-                className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${
+                className={`h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-200 ${
                   shopOpen ? "rotate-180" : ""
                 }`}
               />
@@ -170,23 +170,23 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
             href="/collections/manage"
             className={navLinkClass(isMyCollectionsActive)}
           >
-            <i className="ti ti-stack-2 h-4 w-4 shrink-0 text-base leading-none" />
+            <i className="ti ti-stack-2 h-3.5 w-3.5 shrink-0 text-base leading-none" />
             <span>My Collections</span>
           </Link>
         )}
 
         {isAdmin && (
-          <div className="mt-auto border-t border-border/80 pt-3">
+          <div className="mt-auto border-t border-border/80 pt-2">
             <Link
               href="/admin"
               onClick={() => setViewMode("admin")}
-              className={`flex w-full items-center gap-3 whitespace-nowrap rounded-lg border px-2 py-2.5 text-sm transition-colors ${
+              className={`flex w-full items-center gap-2.5 whitespace-nowrap rounded-lg border px-2 py-1.5 text-sm transition-colors ${
                 isAdminActive
                   ? "border-accent/40 bg-accent/10 font-medium text-purple-200"
                   : "border-purple-900/50 text-zinc-400 hover:border-accent/30 hover:bg-purple-950/30 hover:text-purple-200"
               }`}
             >
-              <i className="ti ti-shield h-4 w-4 shrink-0 text-base leading-none" />
+              <i className="ti ti-shield h-3.5 w-3.5 shrink-0 text-base leading-none" />
               <span>Admin Panel</span>
             </Link>
           </div>
@@ -194,9 +194,9 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
       </nav>
 
       {showBecomeVendorCard && (
-        <div className="mt-auto rounded-xl border border-purple-800 bg-purple-950/30 p-3">
-          <div className="flex gap-3">
-            <StoreIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+        <div className="mt-auto rounded-xl border border-purple-800 bg-purple-950/30 p-2.5">
+          <div className="flex gap-2.5">
+            <StoreIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
             <div className="min-w-0">
               <p className="text-sm text-white">Want to sell?</p>
               <p className="mt-0.5 text-xs text-muted">

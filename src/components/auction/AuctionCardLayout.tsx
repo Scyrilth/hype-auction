@@ -36,7 +36,7 @@ export function AuctionCategoryImagePlaceholder({
 }
 
 export const VIEW_AUCTION_BUTTON_CLASS =
-  "block w-full rounded-full bg-accent py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-accent-hover";
+  "block w-full rounded-full bg-accent py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-accent-hover";
 
 export function ViewAuctionButton({
   auctionId,
@@ -105,7 +105,7 @@ export function AuctionCardContent({
 }) {
   return (
     <div
-      className={`flex min-h-[10.5rem] flex-1 flex-col justify-between gap-3 p-4 pb-4 ${className}`.trim()}
+      className={`flex min-h-[9.5rem] flex-1 flex-col justify-between gap-2.5 p-3 pb-3 ${className}`.trim()}
     >
       <div className="min-h-0">{header}</div>
       <div className="mt-auto shrink-0">{footer}</div>
@@ -153,7 +153,7 @@ export function AuctionCardTitle({
 }) {
   return (
     <h3
-      className={`line-clamp-2 h-12 text-sm font-semibold text-white ${className}`.trim()}
+      className={`line-clamp-2 h-10 text-sm font-semibold text-white ${className}`.trim()}
     >
       {children}
     </h3>
@@ -169,7 +169,7 @@ export function AuctionCardShippingLine({
 }) {
   return (
     <p
-      className={`text-sm text-muted ${className}`.trim()}
+      className={`text-xs text-muted ${className}`.trim()}
     >
       {formatDomesticShippingLine(domesticShippingUsd)}
     </p>
@@ -185,7 +185,7 @@ export function AuctionCardBidPrice({
 }) {
   return (
     <p
-      className={`whitespace-nowrap text-lg font-bold tabular-nums leading-tight text-accent ${className}`.trim()}
+      className={`whitespace-nowrap text-base font-bold tabular-nums leading-tight text-accent ${className}`.trim()}
     >
       {formatSol(amount)}
     </p>

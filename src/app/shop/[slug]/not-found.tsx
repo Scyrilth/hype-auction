@@ -5,7 +5,7 @@ import AppShell from "@/components/layout/AppShell";
 export default function ShopNotFound() {
   return (
     <AppShell contentClassName="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-      <h1 className="text-2xl font-bold text-white">Shop not found</h1>
+      <h1 className="text-xl font-bold text-white">Shop not found</h1>
       <p className="text-sm text-muted">
         This vendor does not exist or has not set up their shop yet.
       </p>

@@ -83,7 +83,7 @@ export default function WalletNav() {
         type="button"
         onClick={handleConnect}
         disabled={connecting}
-        className="rounded-full border border-border bg-surface-elevated px-4 py-1.5 text-sm font-medium text-white transition-colors hover:border-accent hover:bg-accent disabled:opacity-60"
+        className="rounded-full border border-border bg-surface-elevated px-3 py-1 text-xs font-medium text-white transition-colors hover:border-accent hover:bg-accent disabled:opacity-60"
       >
         {connecting ? "Connecting..." : "Connect Wallet"}
       </button>
@@ -99,7 +99,7 @@ export default function WalletNav() {
       <button
         type="button"
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-sm transition-colors hover:border-accent"
+        className="flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs transition-colors hover:border-accent"
       >
         <span className="font-medium text-white">{balanceLabel}</span>
         <span className="text-border">|</span>

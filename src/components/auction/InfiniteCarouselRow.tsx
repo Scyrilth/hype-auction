@@ -167,7 +167,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
     <div className="homepage-carousel-track relative w-full min-w-0 max-w-full">
       <div
         ref={scrollRef}
-        className="carousel-row-scroll flex w-full min-w-0 items-stretch gap-3 overflow-x-auto sm:gap-4"
+        className="carousel-row-scroll flex w-full min-w-0 items-stretch gap-3 overflow-x-auto"
         style={
           {
             "--carousel-columns": visibleCount,

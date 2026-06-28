@@ -42,7 +42,7 @@ export default function BrowseAuctionCard({
       className="group flex h-full w-full min-w-[12rem] flex-col rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
-      <div className="relative h-48 w-full overflow-hidden rounded-t-2xl bg-surface-elevated">
+      <div className="relative h-40 w-full overflow-hidden rounded-t-2xl bg-surface-elevated">
         <AuctionCardImage
           imageUrl={auction.image_url}
           title={auction.title}

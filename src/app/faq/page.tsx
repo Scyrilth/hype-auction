@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function FaqPage() {
   return (
-    <AppShell contentClassName="flex-1 p-4 sm:p-5">
+    <AppShell contentClassName="flex-1 p-3 sm:p-4">
       <LegalPageLayout
         title="Frequently Asked Questions"
         subtitle="Last updated: June 2026"

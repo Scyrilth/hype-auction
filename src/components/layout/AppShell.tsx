@@ -6,7 +6,7 @@ export default function AppShell({
   children,
   activePath,
   shellClassName = "bg-background",
-  contentClassName = "flex-1 p-3 sm:p-4 lg:p-5",
+  contentClassName = "flex-1 p-2.5 sm:p-3 lg:p-4",
 }: {
   children: React.ReactNode;
   activePath?: string;
@@ -18,8 +18,8 @@ export default function AppShell({
       <Sidebar activePath={activePath} />
       <TopNav />
 
-      <div className="min-h-screen pt-12 sm:pt-14 md:ml-52">
-        <main className="flex min-h-[calc(100vh-3rem)] flex-col sm:min-h-[calc(100vh-3.5rem)]">
+      <div className="min-h-screen pt-12 md:ml-44">
+        <main className="flex min-h-[calc(100vh-3rem)] flex-col">
           <div className={contentClassName}>{children}</div>
           <SiteFooter />
         </main>

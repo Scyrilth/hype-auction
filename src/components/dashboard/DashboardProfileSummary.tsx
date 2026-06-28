@@ -96,7 +96,7 @@ export default function DashboardProfileSummary({
               className="border-4 border-surface"
             />
             <div className="min-w-0 flex-1 pb-1">
-              <h1 className="break-words text-2xl font-bold text-white">
+              <h1 className="break-words text-xl font-bold text-white">
                 {titleLine}
               </h1>
               {shopName && username ? (

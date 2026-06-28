@@ -41,7 +41,7 @@ export default async function AuctionDetailPage({
   } catch (error) {
     console.error("AuctionDetailPage:fetch", error);
     return (
-      <AppShell contentClassName="flex-1 overflow-y-auto p-4 sm:p-5">
+      <AppShell contentClassName="flex-1 overflow-y-auto p-3 sm:p-4">
         <BackButton className="mb-4" />
         <AuctionDetailError />
       </AppShell>
@@ -53,7 +53,7 @@ export default async function AuctionDetailPage({
   }
 
   return (
-    <AppShell contentClassName="flex-1 overflow-y-auto p-4 sm:p-5">
+    <AppShell contentClassName="flex-1 overflow-y-auto p-3 sm:p-4">
       <AuctionDetailScrollReset auctionId={id} />
       <BackButton className="mb-4" />
       <AuctionDetailView data={data} />

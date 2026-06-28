@@ -25,7 +25,7 @@ export default async function Home() {
   const labelMaps = { bidCounts, bidCounts24h, topFeaturedIds };
 
   return (
-    <AppShell contentClassName="flex-1 p-3 sm:p-4 lg:p-5">
+    <AppShell contentClassName="flex-1 p-2.5 sm:p-3 lg:p-4">
       <HomepageHero />
 
       <div id="homepage-listings">

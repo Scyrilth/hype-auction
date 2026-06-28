@@ -10,7 +10,7 @@ export default function BrowseCategoryGrid({
   liveCounts: Record<string, number>;
 }) {
   return (
-    <div className="browse-category-grid grid gap-3 sm:gap-4">
+    <div className="browse-category-grid grid gap-3">
       {categories.map((category) => {
         const liveCount = liveCounts[category.label] ?? 0;
 

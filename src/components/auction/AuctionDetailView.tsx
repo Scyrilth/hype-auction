@@ -33,7 +33,7 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
           <AuctionImageGallery auction={auction} isLive={isLive} />
 
           <div>
-            <h1 className="text-2xl font-bold text-white sm:text-3xl">
+            <h1 className="text-xl font-bold text-white sm:text-2xl">
               {title}
             </h1>
 

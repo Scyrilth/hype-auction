@@ -20,7 +20,7 @@ export default async function CollectionsPage() {
     <AppShell
       activePath="/collections"
       shellClassName="bg-[#0d0d1a]"
-      contentClassName="flex-1 overflow-y-auto bg-[#0d0d1a] p-4 sm:p-5"
+      contentClassName="flex-1 overflow-y-auto bg-[#0d0d1a] p-3 sm:p-4"
     >
       <CollectionsDiscoveryView initialCollections={collections} />
     </AppShell>

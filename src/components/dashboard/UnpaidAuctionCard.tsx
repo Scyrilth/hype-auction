@@ -169,7 +169,7 @@ export default function UnpaidAuctionCard({
           </p>
         </div>
 
-        <div className="space-y-4 p-4 sm:p-5">
+        <div className="space-y-4 p-3 sm:p-4">
           <div>
             <Link
               href={`/auction/${auction.id}`}

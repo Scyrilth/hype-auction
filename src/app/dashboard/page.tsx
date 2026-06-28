@@ -6,7 +6,7 @@ export default function DashboardPage() {
   return (
     <AppShell
       activePath="/dashboard"
-      contentClassName="flex-1 overflow-y-auto p-5"
+      contentClassName="flex-1 overflow-y-auto p-4"
     >
       <WalletGate>
         <DashboardView />

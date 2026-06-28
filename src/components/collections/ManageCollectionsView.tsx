@@ -120,7 +120,7 @@ export default function ManageCollectionsView() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <BackButton className="mb-2" />
-          <h1 className="text-2xl font-bold text-white">My Collections</h1>
+          <h1 className="text-xl font-bold text-white">My Collections</h1>
         </div>
         <Link
           href="/collections/new"

@@ -110,7 +110,7 @@ export default function NotificationsView() {
       <BackButton className="mb-4" />
 
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-white">Notifications</h1>
+        <h1 className="text-xl font-bold text-white">Notifications</h1>
         {isConnected && unreadCount > 0 && (
           <button
             type="button"

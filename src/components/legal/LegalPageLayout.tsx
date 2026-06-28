@@ -17,7 +17,7 @@ export default function LegalPageLayout({
       <BackButton className="mb-4" />
 
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-white sm:text-3xl">{title}</h1>
+        <h1 className="text-xl font-bold text-white sm:text-2xl">{title}</h1>
         <p className="mt-2 text-sm text-muted">{subtitle}</p>
       </header>
 

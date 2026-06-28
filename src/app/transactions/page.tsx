@@ -9,7 +9,7 @@ export default function TransactionsPage() {
   return (
     <AppShell
       activePath="/transactions"
-      contentClassName="flex-1 overflow-y-auto p-5"
+      contentClassName="flex-1 overflow-y-auto p-4"
     >
       <WalletGate>
         <Suspense fallback={<TransactionsSkeleton />}>
