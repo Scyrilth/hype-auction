@@ -2,7 +2,7 @@ import { auctionCategoryMatchesQuery } from "@/lib/categories";
 import { normalizeSearchQuery } from "@/lib/search";
 
 export function itemDetailsMatchQuery(
-  itemDetails: Record<string, string> | null | undefined,
+  itemDetails: Record<string, unknown> | null | undefined,
   query: string
 ): boolean {
   const q = normalizeSearchQuery(query);

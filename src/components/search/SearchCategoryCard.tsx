@@ -13,7 +13,7 @@ export default function SearchCategoryCard({
 
   return (
     <Link
-      href={`/search?q=${encodeURIComponent(category.name)}`}
+      href={`/search?category=${encodeURIComponent(category.name)}`}
       className="group relative overflow-hidden rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-accent/20 via-purple-950/40 to-background opacity-80 transition-opacity group-hover:opacity-100" />

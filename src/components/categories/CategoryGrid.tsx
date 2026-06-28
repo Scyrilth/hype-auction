@@ -17,7 +17,7 @@ export default function CategoryGrid({
         return (
           <Link
             key={category.id}
-            href={`/search?q=${encodeURIComponent(category.label)}`}
+            href={`/search?category=${encodeURIComponent(category.label)}`}
             className="group rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-accent/50 hover:bg-surface-elevated"
           >
             <div className="flex items-start justify-between gap-3">

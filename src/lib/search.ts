@@ -5,7 +5,7 @@ import {
   resolveCategoryLabels,
   vendorCategoriesMatchQuery,
 } from "@/lib/categories";
-import { parseAuctionRow } from "@/lib/parse-auction";
+import { parseAuctionRow, normalizeItemDetails } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
 import {
   getVendorDirectory,
@@ -14,6 +14,14 @@ import {
 
 export function normalizeSearchQuery(query: string) {
   return query.trim().toLowerCase();
+}
+
+/** Resolve the active search query from /search URL params (`q` or `category`). */
+export function resolveSearchPageQuery(params: {
+  q?: string;
+  category?: string;
+}): string {
+  return (params.q ?? params.category ?? "").trim();
 }
 
 export function matchesVendorEntry(
@@ -92,14 +100,8 @@ export async function getSellerWalletsWithMatchingAuctionTitles(
 
   for (const row of detailRows ?? []) {
     const wallet = row.seller_wallet as string;
-    const itemDetails = row.item_details;
-    if (
-      wallet &&
-      itemDetails &&
-      typeof itemDetails === "object" &&
-      !Array.isArray(itemDetails) &&
-      itemDetailsMatchQuery(itemDetails as Record<string, string>, q)
-    ) {
+    const itemDetails = normalizeItemDetails(row.item_details);
+    if (wallet && itemDetailsMatchQuery(itemDetails, q)) {
       wallets.add(wallet);
     }
   }
