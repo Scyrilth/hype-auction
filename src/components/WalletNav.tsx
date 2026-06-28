@@ -85,12 +85,12 @@ export default function WalletNav() {
 
   if (!connected || !publicKey) {
     return (
-      <div className="group relative shrink-0">
+      <div className="group relative z-10 shrink-0">
         <button
           type="button"
-          onClick={handleConnect}
+          onClick={() => void handleConnect()}
           disabled={connecting}
-          className="rounded-full border border-border bg-surface-elevated px-2.5 py-0.5 text-[11px] font-medium text-white transition-colors hover:border-accent hover:bg-accent disabled:opacity-60"
+          className="touch-manipulation rounded-full border border-border bg-surface-elevated px-2.5 py-0.5 text-[11px] font-medium text-white transition-colors hover:border-accent hover:bg-accent disabled:opacity-60"
         >
           {connecting ? "Connecting..." : "Connect Wallet"}
         </button>
@@ -100,10 +100,6 @@ export default function WalletNav() {
           role="tooltip"
         >
           Connect your Phantom wallet to start bidding
-        </p>
-
-        <p className="pointer-events-none absolute right-0 top-full z-50 mt-0.5 w-max max-w-[9.5rem] text-right text-[10px] leading-snug text-muted md:hidden">
-          On mobile? Use the Phantom app browser at phantom.app
         </p>
       </div>
     );
