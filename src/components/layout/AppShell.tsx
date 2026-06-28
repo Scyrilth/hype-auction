@@ -1,6 +1,6 @@
 import Sidebar from "@/components/layout/Sidebar";
 import SiteFooter from "@/components/layout/SiteFooter";
-import TopNav from "@/components/layout/TopNav";
+import TopNavLoader from "@/components/layout/TopNavLoader";
 
 export default function AppShell({
   children,
@@ -16,7 +16,7 @@ export default function AppShell({
   return (
     <div className={`min-h-screen ${shellClassName}`}>
       <Sidebar activePath={activePath} />
-      <TopNav />
+      <TopNavLoader />
 
       <div className="min-h-screen pt-12 md:ml-44">
         <main className="flex min-h-[calc(100vh-3rem)] flex-col">

@@ -12,6 +12,7 @@ export function isOnboarded(walletAddress: string): boolean {
 }
 
 export function markOnboarded(walletAddress: string) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(onboardingStorageKey(walletAddress), "true");
 }
 
@@ -21,5 +22,6 @@ export function isSellerBannerDismissed(walletAddress: string): boolean {
 }
 
 export function dismissSellerBanner(walletAddress: string) {
+  if (typeof window === "undefined") return;
   localStorage.setItem(sellerBannerDismissKey(walletAddress), "true");
 }

@@ -262,7 +262,9 @@ export default function TopNav() {
 
   return (
     <>
-      {mounted ? createPortal(header, document.body) : header}
+      {mounted && typeof document !== "undefined"
+        ? createPortal(header, document.body)
+        : null}
       <MobileNavDrawer
         open={mobileNavOpen}
         onClose={() => setMobileNavOpen(false)}

@@ -25,7 +25,9 @@ export default function MobilePhantomTip() {
   const [visible, setVisible] = useState(false);
 
   const dismiss = useCallback(() => {
-    localStorage.setItem(STORAGE_KEY, "true");
+    if (typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, "true");
+    }
     setVisible(false);
   }, []);
 
@@ -37,13 +39,20 @@ export default function MobilePhantomTip() {
     if (!mounted) return;
 
     if (connected) {
-      localStorage.setItem(STORAGE_KEY, "true");
+      if (typeof window !== "undefined") {
+        localStorage.setItem(STORAGE_KEY, "true");
+      }
       setVisible(false);
       return;
     }
 
     if (!isMobileViewport()) return;
-    if (localStorage.getItem(STORAGE_KEY) === "true") return;
+    if (
+      typeof window !== "undefined" &&
+      localStorage.getItem(STORAGE_KEY) === "true"
+    ) {
+      return;
+    }
 
     const showTimer = window.setTimeout(() => setVisible(true), 400);
     return () => window.clearTimeout(showTimer);
@@ -64,7 +73,7 @@ export default function MobilePhantomTip() {
     window.open("https://phantom.app", "_blank", "noopener,noreferrer");
   }, [dismiss]);
 
-  if (!mounted || !visible) return null;
+  if (!mounted || !visible || typeof document === "undefined") return null;
 
   return createPortal(
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] p-4 md:hidden">

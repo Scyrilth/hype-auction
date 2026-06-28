@@ -9,7 +9,8 @@ export function itemDetailsMatchQuery(
   if (!q || !itemDetails) return false;
 
   for (const [key, value] of Object.entries(itemDetails)) {
-    if (key.toLowerCase().includes(q) || value.toLowerCase().includes(q)) {
+    const valueText = String(value ?? "");
+    if (key.toLowerCase().includes(q) || valueText.toLowerCase().includes(q)) {
       return true;
     }
   }

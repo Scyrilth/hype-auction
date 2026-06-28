@@ -100,7 +100,7 @@ export default function AnchoredPortal({
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [anchorRef, onClose, open]);
 
-  if (!open || !mounted) return null;
+  if (!open || !mounted || typeof document === "undefined") return null;
 
   const useMobileLayout = viewportSafeOnMobile && isMobile;
 

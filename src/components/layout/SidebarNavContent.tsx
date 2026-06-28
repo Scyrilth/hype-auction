@@ -144,6 +144,8 @@ export default function SidebarNavContent({
   const [shopOpen, setShopOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const stored = localStorage.getItem(MY_SHOP_STORAGE_KEY);
     if (stored !== null) {
       setShopOpen(stored === "true");
@@ -155,12 +157,16 @@ export default function SidebarNavContent({
   const toggleShopOpen = () => {
     setShopOpen((open) => {
       const next = !open;
-      localStorage.setItem(MY_SHOP_STORAGE_KEY, String(next));
+      if (typeof window !== "undefined") {
+        localStorage.setItem(MY_SHOP_STORAGE_KEY, String(next));
+      }
       return next;
     });
   };
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     if (isShopRoute) {
       setShopOpen(true);
       localStorage.setItem(MY_SHOP_STORAGE_KEY, "true");

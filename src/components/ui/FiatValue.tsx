@@ -37,7 +37,7 @@ export default function FiatValue({
   if (!Number.isFinite(usdAmount) || usdAmount < 0) return null;
 
   const tooltip =
-    mounted && showTip && showTooltip
+    mounted && showTip && showTooltip && typeof document !== "undefined"
       ? createPortal(
           <span
             role="tooltip"

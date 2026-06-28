@@ -21,7 +21,7 @@ export default function PortalInfoTooltip({
   }, []);
 
   const tooltip =
-    mounted && showTip
+    mounted && showTip && typeof document !== "undefined"
       ? createPortal(
           <span
             role="tooltip"

@@ -5,7 +5,7 @@ import { WatchlistProvider } from "@/components/auction/WatchlistProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { WelcomeOnboardingGate } from "@/components/onboarding/WelcomeOnboardingModal";
 import UserSync from "@/components/UserSync";
-import MobilePhantomTip from "@/components/wallet/MobilePhantomTip";
+import MobilePhantomTipLoader from "@/components/wallet/MobilePhantomTipLoader";
 import WalletContextProvider from "@/components/WalletContextProvider";
 
 import "./globals.css";
@@ -46,7 +46,7 @@ export default function RootLayout({
             <WatchlistProvider>
               <UserSync />
               <WelcomeOnboardingGate />
-              <MobilePhantomTip />
+              <MobilePhantomTipLoader />
               {children}
             </WatchlistProvider>
           </ToastProvider>
