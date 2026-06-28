@@ -114,7 +114,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
     currentPath.startsWith("/collections/manage/");
 
   return (
-    <aside className="hidden h-full w-[13%] min-w-44 max-w-56 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 md:flex lg:px-5 lg:py-6">
+    <aside className="hidden h-[calc(100vh-3rem)] w-[13%] min-w-44 max-w-56 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 sm:h-[calc(100vh-3.5rem)] md:flex lg:px-5 lg:py-6">
       <div className="mb-6">
         <HypeAuctionLogo className="h-9 w-full max-w-[9.5rem]" showTagline />
       </div>

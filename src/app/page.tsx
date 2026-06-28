@@ -2,7 +2,6 @@ import AuctionEmptyState from "@/components/auction/AuctionEmptyState";
 import FeaturedAuctionSection from "@/components/auction/FeaturedAuctionSection";
 import LiveAuctionsGrid from "@/components/auction/LiveAuctionsGrid";
 import TrendingSection from "@/components/auction/TrendingSection";
-import LiveChat from "@/components/auction/LiveChat";
 import UpcomingAuctions from "@/components/auction/UpcomingAuctions";
 import HomepageHero from "@/components/home/HomepageHero";
 import AppShell from "@/components/layout/AppShell";
@@ -37,14 +36,7 @@ export default async function Home() {
             <LiveAuctionsGrid auctions={otherLive} labelMaps={labelMaps} />
           </>
         ) : (
-          <div className="featured-auction-grid w-full">
-            <div className="featured-auction-video min-w-0">
-              <AuctionEmptyState />
-            </div>
-            <div className="featured-auction-chat min-w-0">
-              <LiveChat />
-            </div>
-          </div>
+          <AuctionEmptyState />
         )}
 
         <UpcomingAuctions auctions={upcomingAuctions} />
