@@ -37,7 +37,7 @@ export default function AuctionSuggestionSection({
 
       <div className="-mx-1 w-full min-w-0 max-w-full overflow-x-hidden px-1 pb-2">
         <div
-          className="carousel-row-scroll flex gap-3 overflow-x-auto"
+          className="carousel-row-scroll flex gap-3 overflow-x-auto pr-4 md:pr-0"
           style={{ "--carousel-columns": 5 } as CSSProperties}
         >
           {auctions.map((auction) => (

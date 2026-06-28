@@ -19,7 +19,7 @@ const SCROLL_EDGE_THRESHOLD = 4;
 export const CAROUSEL_VISIBLE_COLUMNS = 5;
 
 const carouselArrowClass =
-  "absolute top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm transition-all duration-150 ease-in-out hover:scale-110 hover:border-white/35 hover:bg-white/25";
+  "absolute top-1/2 z-10 hidden h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/60 text-white shadow-sm backdrop-blur-sm transition-all duration-150 ease-in-out hover:scale-110 hover:border-white/35 hover:bg-white/25 md:flex";
 
 type InfiniteCarouselRowProps = {
   labelMaps?: AuctionLabelMaps;
@@ -167,7 +167,7 @@ export default function InfiniteCarouselRow(props: InfiniteCarouselRowProps) {
     <div className="homepage-carousel-track relative w-full min-w-0 max-w-full">
       <div
         ref={scrollRef}
-        className="carousel-row-scroll flex w-full min-w-0 items-stretch gap-3 overflow-x-auto"
+        className="carousel-row-scroll flex w-full min-w-0 items-stretch gap-3 overflow-x-auto pr-4 md:pr-0"
         style={
           {
             "--carousel-columns": visibleCount,

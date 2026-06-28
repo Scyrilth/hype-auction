@@ -8,6 +8,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import AdminViewSwitcher from "@/components/admin/AdminViewSwitcher";
 import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
+import MobileNavDrawer from "@/components/layout/MobileNavDrawer";
 import WalletNav from "@/components/WalletNav";
 import NotificationTray from "@/components/notifications/NotificationTray";
 import SearchSuggestionsDropdown from "@/components/search/SearchSuggestionsDropdown";
@@ -42,6 +43,7 @@ export default function TopNav() {
   const { notifications, unreadCount, refresh } = useNotifications();
   const [query, setQuery] = useState("");
   const [trayOpen, setTrayOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const notificationAnchorRef = useRef<HTMLDivElement>(null);
 
   const { queryReady, suggestionGroups, flatSuggestions } = useSearchSuggestions(
@@ -96,8 +98,19 @@ export default function TopNav() {
   };
 
   return (
-    <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1.5 overflow-hidden border-b border-border bg-surface pl-2.5 pr-3 left-0 sm:gap-2 sm:pl-3 md:left-44 lg:gap-2 lg:pr-4">
-      <HypeAuctionLogo className="h-6 w-auto shrink-0 md:hidden" />
+    <>
+      <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1.5 overflow-hidden border-b border-border bg-surface pl-2 pr-3 left-0 sm:gap-2 sm:pl-2.5 md:left-44 lg:gap-2 lg:pr-4">
+        <button
+          type="button"
+          onClick={() => setMobileNavOpen(true)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-300 transition-colors hover:bg-surface-elevated hover:text-white md:hidden"
+          aria-label="Open navigation menu"
+          aria-expanded={mobileNavOpen}
+        >
+          <i className="ti ti-menu-2 text-lg leading-none" aria-hidden />
+        </button>
+
+        <HypeAuctionLogo className="h-6 w-auto shrink-0 md:hidden" />
 
       <div className="relative min-w-0 flex-1 max-w-[11rem] sm:max-w-[13rem] lg:max-w-[14rem] xl:max-w-[16rem]">
         <SearchSuggestionsDropdown
@@ -228,5 +241,11 @@ export default function TopNav() {
         )}
       </div>
     </header>
+
+      <MobileNavDrawer
+        open={mobileNavOpen}
+        onClose={() => setMobileNavOpen(false)}
+      />
+    </>
   );
 }
