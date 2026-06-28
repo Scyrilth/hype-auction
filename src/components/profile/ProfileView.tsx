@@ -113,13 +113,14 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
       <ProfileStatsRow stats={profile.stats} />
 
       <section>
-        <div className="mb-4 flex flex-wrap gap-2 border-b border-border pb-1">
+        <div className="profile-tabs-scroll -mx-3 mb-4 overflow-x-auto border-b border-border px-3 pb-1 sm:mx-0 sm:px-0">
+          <div className="flex w-max min-w-full flex-nowrap gap-1">
           {tabs.map((tab) =>
             tab.id === "transactions" ? (
               <Link
                 key={tab.id}
                 href="/transactions?mode=buying"
-                className="rounded-t-lg px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-white"
+                className="shrink-0 whitespace-nowrap rounded-t-lg px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-white"
               >
                 {tab.label}
               </Link>
@@ -128,7 +129,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-b-2 border-accent text-white"
                     : "text-muted hover:text-white"
@@ -138,6 +139,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
               </button>
             )
           )}
+          </div>
         </div>
 
         {activeTab === "activity" && (

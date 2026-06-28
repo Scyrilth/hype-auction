@@ -99,7 +99,7 @@ export default function TopNav() {
 
   return (
     <>
-      <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1.5 overflow-hidden border-b border-border bg-surface pl-2 pr-3 left-0 sm:gap-2 sm:pl-2.5 md:left-44 lg:gap-2 lg:pr-4">
+      <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1.5 overflow-x-hidden overflow-y-visible border-b border-border bg-surface pl-2 pr-3 left-0 sm:gap-2 sm:pl-2.5 md:left-44 lg:gap-2 lg:pr-4">
         <button
           type="button"
           onClick={() => setMobileNavOpen(true)}

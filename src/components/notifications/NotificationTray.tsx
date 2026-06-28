@@ -79,7 +79,7 @@ export default function NotificationTray({
   if (!open) return null;
 
   return (
-    <div className="absolute right-0 top-full z-50 mt-2 w-[380px] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl">
+    <div className="absolute right-0 top-full z-[100] mt-2 w-[380px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl">
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">Notifications</h2>
         {unreadCount > 0 && (

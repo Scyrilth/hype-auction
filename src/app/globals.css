@@ -87,6 +87,16 @@ body {
   flex-shrink: 0;
 }
 
+.profile-tabs-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.profile-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* Arrow-driven carousels — smooth scroll without snap (keeps row edges aligned) */
 .carousel-row-scroll {
   --carousel-columns: 5;

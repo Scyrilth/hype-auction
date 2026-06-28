@@ -73,9 +73,24 @@ export default function WalletNav() {
   }, [publicKey]);
 
   const handleDisconnect = useCallback(async () => {
-    await disconnect();
-    setMenuOpen(false);
+    try {
+      await disconnect();
+    } catch (error) {
+      console.error("Wallet disconnect failed:", error);
+    } finally {
+      setMenuOpen(false);
+    }
   }, [disconnect]);
+
+  const handleSwitchWallet = useCallback(async () => {
+    setMenuOpen(false);
+    try {
+      await disconnect();
+      await connectPhantom();
+    } catch (error) {
+      console.error("Wallet switch failed:", error);
+    }
+  }, [connectPhantom, disconnect]);
 
   if (!connected || !publicKey) {
     return (
@@ -123,20 +138,42 @@ export default function WalletNav() {
       </button>
 
       {menuOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 min-w-[160px] overflow-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg">
+        <div className="absolute right-0 top-full z-[100] mt-2 min-w-[200px] overflow-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg">
+          <div className="border-b border-border px-4 py-2.5">
+            <p className="text-[11px] text-muted">Balance</p>
+            <p className="text-sm font-semibold text-white">{balanceLabel}</p>
+            <p className="mt-1 truncate font-mono text-xs text-zinc-400">
+              {publicKey.toBase58()}
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={handleCopyAddress}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
           >
+            <i className="ti ti-copy text-base leading-none" aria-hidden />
             Copy address
           </button>
+
+          <div className="border-t border-border" />
+
           <button
             type="button"
-            onClick={handleDisconnect}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+            onClick={() => void handleDisconnect()}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
           >
-            Disconnect
+            <i className="ti ti-logout text-base leading-none" aria-hidden />
+            Disconnect Wallet
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleSwitchWallet()}
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+          >
+            <i className="ti ti-switch-horizontal text-base leading-none" aria-hidden />
+            Switch wallet
           </button>
         </div>
       )}

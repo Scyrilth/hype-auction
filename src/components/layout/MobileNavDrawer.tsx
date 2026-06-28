@@ -35,7 +35,7 @@ export default function MobileNavDrawer({
 
   return (
     <div
-      className={`fixed inset-0 z-[60] md:hidden ${
+      className={`fixed inset-0 z-[100] md:hidden ${
         open ? "pointer-events-auto" : "pointer-events-none"
       }`}
       aria-hidden={!open}
