@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, type RefObject } from "react";
+import { useCallback, type RefObject } from "react";
 
 import NotificationRow from "@/components/notifications/NotificationRow";
+import AnchoredPortal from "@/components/ui/AnchoredPortal";
 import {
   markAllAsRead,
   markAsRead,
@@ -30,22 +31,6 @@ export default function NotificationTray({
   onRefresh: () => Promise<void>;
 }) {
   const router = useRouter();
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handleMouseDown = (event: MouseEvent) => {
-      if (
-        anchorRef.current &&
-        !anchorRef.current.contains(event.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("mousedown", handleMouseDown);
-    return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [open, onClose, anchorRef]);
 
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
@@ -76,10 +61,14 @@ export default function NotificationTray({
     }
   }, [wallet, onRefresh]);
 
-  if (!open) return null;
-
   return (
-    <div className="absolute right-0 top-full z-[100] mt-2 w-[380px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl">
+    <AnchoredPortal
+      open={open}
+      onClose={onClose}
+      anchorRef={anchorRef}
+      align="end"
+      className="w-[380px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl"
+    >
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">Notifications</h2>
         {unreadCount > 0 && (
@@ -93,7 +82,7 @@ export default function NotificationTray({
         )}
       </div>
 
-      <div className="max-h-[520px] overflow-y-auto">
+      <div className="max-h-[min(520px,calc(100vh-8rem))] overflow-y-auto">
         {notifications.length === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-muted">
             No notifications yet
@@ -119,6 +108,6 @@ export default function NotificationTray({
           View all notifications →
         </Link>
       </div>
-    </div>
+    </AnchoredPortal>
   );
 }

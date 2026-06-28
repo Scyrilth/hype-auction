@@ -5,6 +5,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { ChevronDownIcon } from "@/components/icons";
+import AnchoredPortal from "@/components/ui/AnchoredPortal";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { shortenAddress } from "@/lib/format";
 
@@ -15,7 +16,7 @@ export default function WalletNav() {
 
   const [balance, setBalance] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!publicKey) {
@@ -47,16 +48,6 @@ export default function WalletNav() {
       connection.removeAccountChangeListener(subId);
     };
   }, [connection, publicKey]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   const handleConnect = useCallback(async () => {
     try {
@@ -123,11 +114,14 @@ export default function WalletNav() {
     balance !== null ? `${balance.toFixed(2)} SOL` : "— SOL";
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="shrink-0">
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setMenuOpen((open) => !open)}
         className="flex max-w-[7.5rem] items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] transition-colors hover:border-accent sm:max-w-none"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
       >
         <span className="shrink-0 font-medium text-white">{balanceLabel}</span>
         <span className="hidden text-border lg:inline">|</span>
@@ -137,46 +131,50 @@ export default function WalletNav() {
         <ChevronDownIcon className="h-3 w-3 shrink-0 text-muted" />
       </button>
 
-      {menuOpen && (
-        <div className="absolute right-0 top-full z-[100] mt-2 min-w-[200px] overflow-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg">
-          <div className="border-b border-border px-4 py-2.5">
-            <p className="text-[11px] text-muted">Balance</p>
-            <p className="text-sm font-semibold text-white">{balanceLabel}</p>
-            <p className="mt-1 truncate font-mono text-xs text-zinc-400">
-              {publicKey.toBase58()}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleCopyAddress}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
-          >
-            <i className="ti ti-copy text-base leading-none" aria-hidden />
-            Copy address
-          </button>
-
-          <div className="border-t border-border" />
-
-          <button
-            type="button"
-            onClick={() => void handleDisconnect()}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
-          >
-            <i className="ti ti-logout text-base leading-none" aria-hidden />
-            Disconnect Wallet
-          </button>
-
-          <button
-            type="button"
-            onClick={() => void handleSwitchWallet()}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
-          >
-            <i className="ti ti-switch-horizontal text-base leading-none" aria-hidden />
-            Switch wallet
-          </button>
+      <AnchoredPortal
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        anchorRef={triggerRef}
+        align="end"
+        className="min-w-[200px] overflow-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg"
+      >
+        <div className="border-b border-border px-4 py-2.5">
+          <p className="text-[11px] text-muted">Balance</p>
+          <p className="text-sm font-semibold text-white">{balanceLabel}</p>
+          <p className="mt-1 truncate font-mono text-xs text-zinc-400">
+            {publicKey.toBase58()}
+          </p>
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={handleCopyAddress}
+          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+        >
+          <i className="ti ti-copy text-base leading-none" aria-hidden />
+          Copy address
+        </button>
+
+        <div className="border-t border-border" />
+
+        <button
+          type="button"
+          onClick={() => void handleDisconnect()}
+          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
+        >
+          <i className="ti ti-logout text-base leading-none" aria-hidden />
+          Disconnect Wallet
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void handleSwitchWallet()}
+          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+        >
+          <i className="ti ti-switch-horizontal text-base leading-none" aria-hidden />
+          Switch wallet
+        </button>
+      </AnchoredPortal>
     </div>
   );
 }
