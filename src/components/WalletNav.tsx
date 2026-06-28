@@ -1,22 +1,52 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import {
+  useConnection,
+  useWallet,
+  type Wallet,
+} from "@solana/wallet-adapter-react";
+import { WalletReadyState, type WalletName } from "@solana/wallet-adapter-base";
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { ChevronDownIcon } from "@/components/icons";
 import AnchoredPortal from "@/components/ui/AnchoredPortal";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
-import { shortenAddress } from "@/lib/format";
+import { shortenAddress, truncateWalletAddress } from "@/lib/format";
+
+function isSelectableWallet(wallet: Wallet) {
+  return (
+    wallet.readyState === WalletReadyState.Installed ||
+    wallet.readyState === WalletReadyState.Loadable
+  );
+}
 
 export default function WalletNav() {
   const { connection } = useConnection();
-  const { publicKey, connected, connecting, disconnect } = useWallet();
+  const {
+    publicKey,
+    connected,
+    connecting,
+    disconnect,
+    wallets,
+    select,
+    connect,
+    wallet,
+  } = useWallet();
   const connectPhantom = usePhantomConnect();
 
   const [balance, setBalance] = useState<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switchMode, setSwitchMode] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const selectableWallets = wallets.filter(isSelectableWallet);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      setSwitchMode(false);
+    }
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!publicKey) {
@@ -69,19 +99,28 @@ export default function WalletNav() {
     } catch (error) {
       console.error("Wallet disconnect failed:", error);
     } finally {
+      setSwitchMode(false);
       setMenuOpen(false);
     }
   }, [disconnect]);
 
-  const handleSwitchWallet = useCallback(async () => {
-    setMenuOpen(false);
-    try {
-      await disconnect();
-      await connectPhantom();
-    } catch (error) {
-      console.error("Wallet switch failed:", error);
-    }
-  }, [connectPhantom, disconnect]);
+  const handleSelectWallet = useCallback(
+    async (walletName: WalletName) => {
+      try {
+        if (wallet?.adapter.name !== walletName) {
+          await disconnect();
+        }
+        select(walletName);
+        await connect();
+      } catch (error) {
+        console.error("Wallet selection failed:", error);
+      } finally {
+        setSwitchMode(false);
+        setMenuOpen(false);
+      }
+    },
+    [connect, disconnect, select, wallet?.adapter.name]
+  );
 
   if (!connected || !publicKey) {
     return (
@@ -105,7 +144,9 @@ export default function WalletNav() {
     );
   }
 
-  const address = shortenAddress(publicKey.toBase58());
+  const fullAddress = publicKey.toBase58();
+  const displayAddress = truncateWalletAddress(fullAddress);
+  const triggerAddress = shortenAddress(fullAddress);
   const balanceLabel =
     balance !== null ? `${balance.toFixed(2)} SOL` : "— SOL";
 
@@ -122,7 +163,7 @@ export default function WalletNav() {
         <span className="shrink-0 font-medium text-white">{balanceLabel}</span>
         <span className="hidden text-border lg:inline">|</span>
         <span className="hidden truncate font-mono text-zinc-300 lg:inline xl:max-w-[4.5rem]">
-          {address}
+          {triggerAddress}
         </span>
         <ChevronDownIcon className="h-3 w-3 shrink-0 text-muted" />
       </button>
@@ -132,44 +173,95 @@ export default function WalletNav() {
         onClose={() => setMenuOpen(false)}
         anchorRef={triggerRef}
         align="end"
-        className="min-w-0 overflow-hidden overflow-x-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg md:min-w-[200px] max-md:max-h-[80vh] max-md:overflow-y-auto"
+        className="pointer-events-auto min-w-0 overflow-hidden overflow-x-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg md:min-w-[200px] max-md:max-h-[80vh] max-md:overflow-y-auto"
       >
-        <div className="border-b border-border px-4 py-2.5">
-          <p className="text-[11px] text-muted">Balance</p>
-          <p className="text-sm font-semibold text-white">{balanceLabel}</p>
-          <p className="mt-1 break-all font-mono text-xs leading-relaxed text-zinc-400">
-            {publicKey.toBase58()}
-          </p>
-        </div>
+        {switchMode ? (
+          <div className="pointer-events-auto">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+              <p className="text-xs font-medium text-white">Select wallet</p>
+              <button
+                type="button"
+                onClick={() => setSwitchMode(false)}
+                className="touch-manipulation text-xs text-muted transition-colors hover:text-white"
+              >
+                Back
+              </button>
+            </div>
 
-        <button
-          type="button"
-          onClick={handleCopyAddress}
-          className="flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
-        >
-          <i className="ti ti-copy shrink-0 text-base leading-none" aria-hidden />
-          <span className="min-w-0">Copy address</span>
-        </button>
+            <div className="py-1">
+              {selectableWallets.map((walletOption) => (
+                <button
+                  key={walletOption.adapter.name}
+                  type="button"
+                  onClick={() => void handleSelectWallet(walletOption.adapter.name)}
+                  className="flex w-full touch-manipulation items-center gap-2.5 px-4 py-2.5 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+                >
+                  {walletOption.adapter.icon ? (
+                    <img
+                      src={walletOption.adapter.icon}
+                      alt=""
+                      className="h-5 w-5 shrink-0 rounded"
+                    />
+                  ) : (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-surface text-[10px] text-muted">
+                      W
+                    </span>
+                  )}
+                  <span className="min-w-0 whitespace-nowrap">
+                    {walletOption.adapter.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="pointer-events-auto">
+            <div className="border-b border-border px-4 py-2.5">
+              <p className="text-[11px] text-muted">Balance</p>
+              <p className="text-sm font-semibold text-white">{balanceLabel}</p>
+              <p
+                className="mt-1 truncate font-mono text-xs text-zinc-400"
+                title={fullAddress}
+              >
+                {displayAddress}
+              </p>
+            </div>
 
-        <div className="border-t border-border" />
+            <button
+              type="button"
+              onClick={handleCopyAddress}
+              className="flex w-full touch-manipulation items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+            >
+              <i className="ti ti-copy shrink-0 text-base leading-none" aria-hidden />
+              <span className="min-w-0 whitespace-nowrap">Copy address</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => void handleDisconnect()}
-          className="flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
-        >
-          <i className="ti ti-logout shrink-0 text-base leading-none" aria-hidden />
-          <span className="min-w-0 whitespace-nowrap">Disconnect Wallet</span>
-        </button>
+            <div className="border-t border-border" />
 
-        <button
-          type="button"
-          onClick={() => void handleSwitchWallet()}
-          className="flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
-        >
-          <i className="ti ti-switch-horizontal shrink-0 text-base leading-none" aria-hidden />
-          <span className="min-w-0 whitespace-nowrap">Switch wallet</span>
-        </button>
+            <button
+              type="button"
+              onClick={() => setSwitchMode(true)}
+              className="flex w-full touch-manipulation items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+            >
+              <i
+                className="ti ti-switch-horizontal shrink-0 text-base leading-none"
+                aria-hidden
+              />
+              <span className="min-w-0 whitespace-nowrap">Switch wallet</span>
+            </button>
+
+            <div className="border-t border-border" />
+
+            <button
+              type="button"
+              onClick={() => void handleDisconnect()}
+              className="flex w-full touch-manipulation items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
+            >
+              <i className="ti ti-logout shrink-0 text-base leading-none" aria-hidden />
+              <span className="min-w-0 whitespace-nowrap">Disconnect Wallet</span>
+            </button>
+          </div>
+        )}
       </AnchoredPortal>
     </div>
   );

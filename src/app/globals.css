@@ -62,6 +62,11 @@ body {
 
 .wallet-adapter-modal-wrapper {
   background: rgba(0, 0, 0, 0.75) !important;
+  z-index: 10000 !important;
+}
+
+.wallet-adapter-modal {
+  z-index: 10001 !important;
 }
 
 .wallet-adapter-modal-container {

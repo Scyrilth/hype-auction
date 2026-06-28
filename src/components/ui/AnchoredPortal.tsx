@@ -129,7 +129,7 @@ export default function AnchoredPortal({
   return createPortal(
     <div
       ref={panelRef}
-      className={`${TOPNAV_PORTAL_MOBILE_CLASS} ${className}`.trim()}
+      className={`pointer-events-auto ${TOPNAV_PORTAL_MOBILE_CLASS} ${className}`.trim()}
       style={panelStyle}
     >
       {children}

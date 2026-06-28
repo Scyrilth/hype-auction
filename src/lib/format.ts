@@ -12,6 +12,12 @@ export function shortenAddress(address: string, chars = 4) {
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
 }
 
+/** Wallet display: first 8 + ... + last 6 characters. */
+export function truncateWalletAddress(address: string) {
+  if (address.length <= 16) return address;
+  return `${address.slice(0, 8)}...${address.slice(-6)}`;
+}
+
 export function formatSol(amount: number) {
   return `${amount.toFixed(2)} SOL`;
 }
