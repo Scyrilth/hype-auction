@@ -32,7 +32,7 @@ const sidebarLegalLinks = [
 ] as const;
 
 function navLinkClass(active: boolean) {
-  return `flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm transition-colors ${
+  return `flex items-center gap-3 whitespace-nowrap rounded-lg px-2 py-2.5 text-sm transition-colors ${
     active
       ? "bg-accent/15 font-medium text-accent"
       : "text-zinc-300 hover:bg-surface-elevated hover:text-white"
@@ -40,7 +40,7 @@ function navLinkClass(active: boolean) {
 }
 
 function subLinkClass(active: boolean) {
-  return `flex items-center gap-2.5 rounded-lg py-2 pl-9 pr-2 text-xs transition-colors ${
+  return `flex items-center gap-2.5 whitespace-nowrap rounded-lg py-2 pl-9 pr-2 text-xs transition-colors ${
     active
       ? "font-medium text-accent"
       : "text-muted hover:bg-surface-elevated hover:text-white"
@@ -114,9 +114,9 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
     currentPath.startsWith("/collections/manage/");
 
   return (
-    <aside className="hidden h-[calc(100vh-3rem)] w-[13%] min-w-44 max-w-56 shrink-0 flex-col border-r border-border bg-surface px-3 py-5 sm:h-[calc(100vh-3.5rem)] md:flex lg:px-5 lg:py-6">
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-52 flex-col overflow-y-auto border-r border-border bg-surface px-3 py-5 md:flex lg:px-5 lg:py-6">
       <div className="mb-6">
-        <HypeAuctionLogo className="h-9 w-full max-w-[9.5rem]" showTagline />
+        <HypeAuctionLogo className="h-9 w-full max-w-[11rem]" showTagline />
       </div>
 
       <nav className="mb-4 flex flex-1 flex-col gap-1 border-b border-border pb-4">
@@ -180,7 +180,7 @@ export default function SidebarNav({ activePath }: { activePath?: string }) {
             <Link
               href="/admin"
               onClick={() => setViewMode("admin")}
-              className={`flex items-center gap-3 rounded-lg border px-2 py-2.5 text-sm transition-colors ${
+              className={`flex w-full items-center gap-3 whitespace-nowrap rounded-lg border px-2 py-2.5 text-sm transition-colors ${
                 isAdminActive
                   ? "border-accent/40 bg-accent/10 font-medium text-purple-200"
                   : "border-purple-900/50 text-zinc-400 hover:border-accent/30 hover:bg-purple-950/30 hover:text-purple-200"

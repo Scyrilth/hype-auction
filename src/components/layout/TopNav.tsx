@@ -96,10 +96,10 @@ export default function TopNav() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 flex h-12 shrink-0 flex-wrap items-center gap-3 border-b border-border bg-surface px-3 sm:h-14 sm:gap-4 sm:px-4 lg:gap-6 lg:px-5">
+    <header className="fixed top-0 right-0 z-50 flex h-12 shrink-0 flex-nowrap items-center gap-2 border-b border-border bg-surface px-3 left-0 sm:h-14 sm:gap-3 sm:px-4 md:left-52 lg:gap-4 lg:px-5">
       <HypeAuctionLogo className="h-8 w-auto shrink-0 md:hidden" />
 
-      <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:max-w-[40%] lg:max-w-xl">
+      <div className="relative min-w-0 flex-1 sm:max-w-[38%] lg:max-w-xl">
         <SearchSuggestionsDropdown
           value={query}
           onChange={setQuery}
@@ -124,7 +124,7 @@ export default function TopNav() {
         />
       </div>
 
-      <nav className="hidden items-center gap-4 lg:flex lg:gap-6">
+      <nav className="hidden shrink-0 items-center gap-4 whitespace-nowrap lg:flex lg:gap-6">
         {navLinks.map((link) => {
           const active = isLinkActive(link.href);
           const isLive = "live" in link && link.live;
@@ -151,7 +151,7 @@ export default function TopNav() {
         })}
       </nav>
 
-      <div className="ml-auto flex items-center gap-2 sm:gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         {isAdmin && <AdminViewSwitcher />}
 
         <WalletNav />

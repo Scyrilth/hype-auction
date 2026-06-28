@@ -15,17 +15,14 @@ export default function AppShell({
 }) {
   return (
     <div className={`min-h-screen ${shellClassName}`}>
+      <Sidebar activePath={activePath} />
       <TopNav />
 
-      <div className="flex min-h-[calc(100vh-3rem)] pt-12 sm:min-h-[calc(100vh-3.5rem)] sm:pt-14">
-        <Sidebar activePath={activePath} />
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <main className="flex flex-1 flex-col overflow-y-auto">
-            <div className={contentClassName}>{children}</div>
-            <SiteFooter />
-          </main>
-        </div>
+      <div className="min-h-screen pt-12 sm:pt-14 md:ml-52">
+        <main className="flex min-h-[calc(100vh-3rem)] flex-col sm:min-h-[calc(100vh-3.5rem)]">
+          <div className={contentClassName}>{children}</div>
+          <SiteFooter />
+        </main>
       </div>
     </div>
   );
