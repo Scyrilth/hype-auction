@@ -83,6 +83,7 @@ export default function MobileNavDrawer({
           activePath={activePath}
           onNavigate={onClose}
           showLogo={false}
+          showMobileNavLinks
           className="min-h-0 overflow-hidden"
         />
       </div>

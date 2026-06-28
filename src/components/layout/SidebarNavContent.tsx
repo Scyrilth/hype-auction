@@ -8,11 +8,13 @@ import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
 import {
   ChevronDownIcon,
   DashboardLayoutIcon,
+  GridIcon,
   HomeIcon,
   SettingsIcon,
   SolanaLogo,
   StarFilledIcon,
   StoreIcon,
+  TagIcon,
 } from "@/components/icons";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
@@ -30,6 +32,52 @@ export const sidebarLegalLinks = [
   { href: "/privacy", label: "Privacy Policy" },
   { href: "/faq", label: "FAQ" },
 ] as const;
+
+const mobileDrawerNavLinks = [
+  { href: "/live", label: "Live", live: true as const },
+  { href: "/browse", label: "Browse", icon: "grid" as const },
+  { href: "/collections", label: "Collections", icon: "layers" as const },
+  { href: "/vendors", label: "Vendors", icon: "store" as const },
+  { href: "/categories", label: "Categories", icon: "tag" as const },
+  { href: "/rewards", label: "Rewards", icon: "gift" as const },
+] as const;
+
+function isMobileDrawerNavLinkActive(pathname: string, href: string) {
+  if (href === "/live") {
+    return pathname === "/live" || pathname.startsWith("/live/");
+  }
+
+  if (href === "/collections") {
+    if (pathname === "/collections") return true;
+    if (!pathname.startsWith("/collections/")) return false;
+
+    const segment = pathname.slice("/collections/".length).split("/")[0];
+    return segment !== "manage" && segment !== "new";
+  }
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function MobileDrawerNavLinkIcon({
+  icon,
+}: {
+  icon: "grid" | "layers" | "store" | "tag" | "gift";
+}) {
+  switch (icon) {
+    case "grid":
+      return <GridIcon className="h-3 w-3 shrink-0" />;
+    case "layers":
+      return <i className="ti ti-layers-linked h-3 w-3 shrink-0 text-sm leading-none" />;
+    case "store":
+      return <StoreIcon className="h-3 w-3 shrink-0" />;
+    case "tag":
+      return <TagIcon className="h-3 w-3 shrink-0" />;
+    case "gift":
+      return <i className="ti ti-gift h-3 w-3 shrink-0 text-sm leading-none" />;
+    default:
+      return null;
+  }
+}
 
 function navLinkClass(active: boolean) {
   return `flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm transition-colors ${
@@ -51,11 +99,13 @@ export default function SidebarNavContent({
   activePath,
   onNavigate,
   showLogo = true,
+  showMobileNavLinks = false,
   className = "",
 }: {
   activePath?: string;
   onNavigate?: () => void;
   showLogo?: boolean;
+  showMobileNavLinks?: boolean;
   className?: string;
 }) {
   const pathname = usePathname();
@@ -188,6 +238,30 @@ export default function SidebarNavContent({
             <span>My Collections</span>
           </Link>
         )}
+
+        {showMobileNavLinks &&
+          mobileDrawerNavLinks.map((link) => {
+            const active = isMobileDrawerNavLinkActive(currentPath, link.href);
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={navLinkClass(active)}
+                onClick={onNavigate}
+              >
+                {"live" in link && link.live ? (
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-live-red opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-live-red" />
+                  </span>
+                ) : "icon" in link ? (
+                  <MobileDrawerNavLinkIcon icon={link.icon} />
+                ) : null}
+                <span>{link.label}</span>
+              </Link>
+            );
+          })}
 
         {isAdmin && (
           <div className="mt-auto border-t border-border/80 pt-1.5">

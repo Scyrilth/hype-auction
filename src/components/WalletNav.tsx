@@ -135,7 +135,7 @@ export default function WalletNav() {
         </button>
 
         <p
-          className="pointer-events-none absolute left-1/2 top-full z-[9999] mt-1 hidden w-max max-w-[12rem] -translate-x-1/2 rounded-md border border-border bg-surface-elevated px-2 py-1 text-center text-[10px] leading-snug text-muted opacity-0 shadow-lg transition-opacity group-hover:opacity-100 md:block"
+          className="pointer-events-none absolute right-full top-1/2 z-[9999] mr-2 hidden w-max max-w-[11rem] -translate-y-1/2 rounded-md border border-border bg-surface-elevated px-2 py-1 text-left text-[10px] leading-snug text-muted opacity-0 shadow-lg transition-opacity group-hover:opacity-100 md:block"
           role="tooltip"
         >
           Connect your Phantom wallet to start bidding
