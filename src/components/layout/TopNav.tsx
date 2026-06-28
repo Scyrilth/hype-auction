@@ -96,10 +96,10 @@ export default function TopNav() {
   };
 
   return (
-    <header className="fixed top-0 right-0 z-50 flex h-12 shrink-0 flex-nowrap items-center gap-2 border-b border-border bg-surface px-2.5 left-0 sm:gap-2.5 sm:px-3 md:left-44 lg:gap-3 lg:px-4">
-      <HypeAuctionLogo className="h-7 w-auto shrink-0 md:hidden" />
+    <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1.5 overflow-hidden border-b border-border bg-surface pl-2.5 pr-3 left-0 sm:gap-2 sm:pl-3 md:left-44 lg:gap-2 lg:pr-4">
+      <HypeAuctionLogo className="h-6 w-auto shrink-0 md:hidden" />
 
-      <div className="relative w-full min-w-[160px] max-w-[20rem] flex-[1_1_16rem]">
+      <div className="relative min-w-0 flex-1 max-w-[11rem] sm:max-w-[13rem] lg:max-w-[14rem] xl:max-w-[16rem]">
         <SearchSuggestionsDropdown
           value={query}
           onChange={setQuery}
@@ -110,21 +110,21 @@ export default function TopNav() {
           queryReady={queryReady}
           placeholder="Search items, users, categories..."
           listboxId="global-search-suggestions"
-          inputClassName="w-full rounded-full border border-border bg-background py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          inputClassName="w-full min-w-0 rounded-full border border-border bg-background py-1 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           leadingSlot={
             <button
               type="button"
               onClick={navigateToSearch}
-              className="absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-muted transition-colors hover:text-white"
+              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 text-muted transition-colors hover:text-white"
               aria-label="Search"
             >
-              <SearchIcon className="h-3.5 w-3.5" />
+              <SearchIcon className="h-3 w-3" />
             </button>
           }
         />
       </div>
 
-      <nav className="hidden shrink-0 items-center gap-3 whitespace-nowrap lg:flex lg:gap-4">
+      <nav className="hidden shrink-0 items-center gap-2 whitespace-nowrap lg:flex xl:gap-2.5">
         {navLinks.map((link) => {
           const active = isLinkActive(link.href);
           const isLive = "live" in link && link.live;
@@ -151,23 +151,23 @@ export default function TopNav() {
         })}
       </nav>
 
-      <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 pr-1 sm:gap-1.5 sm:pr-0">
         {isAdmin && <AdminViewSwitcher />}
 
         <WalletNav />
 
         {connected && wallet && (
-          <div ref={notificationAnchorRef} className="relative">
+          <div ref={notificationAnchorRef} className="relative shrink-0">
             <button
               type="button"
               onClick={() => setTrayOpen((open) => !open)}
-              className="relative flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
+              className="relative flex h-7 w-7 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
               aria-label="Notifications"
               aria-expanded={trayOpen}
             >
-              <i className="ti ti-bell text-[17px] leading-none" />
+              <i className="ti ti-bell text-[15px] leading-none" />
               {unreadCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-live-red px-1 text-[10px] font-bold text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-live-red px-0.5 text-[9px] font-bold text-white">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
@@ -188,12 +188,12 @@ export default function TopNav() {
         {connected && (
           <Link
             href="/messages"
-            className="relative flex h-8 w-8 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
+            className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
             aria-label="Messages"
           >
-            <i className="ti ti-mail text-[17px] leading-none" />
+            <i className="ti ti-mail text-[15px] leading-none" />
             {unreadMessages > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-live-red px-1 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-live-red px-0.5 text-[9px] font-bold text-white">
                 {unreadMessages > 9 ? "9+" : unreadMessages}
               </span>
             )}
@@ -203,7 +203,7 @@ export default function TopNav() {
         {connected && wallet && (
           <Link
             href={getProfileHref(username, wallet)}
-            className="hidden items-center gap-2 rounded-full py-0.5 pl-0.5 pr-1.5 transition-colors hover:bg-surface-elevated sm:flex"
+            className="flex shrink-0 items-center gap-1 rounded-full p-0.5 transition-colors hover:bg-surface-elevated"
             aria-label="My profile"
           >
             <UserAvatar
@@ -211,15 +211,15 @@ export default function TopNav() {
               avatarUrl={avatarUrl}
               alt={username ?? "My profile"}
               size="xs"
-              className="h-8 w-8 border-2 border-accent"
+              className="h-7 w-7 border border-accent"
             />
-            <span className="flex items-center gap-2">
+            <span className="hidden min-w-0 items-center gap-1.5 xl:flex">
               {isAdminRoute && (
-                <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-purple-300">
+                <span className="shrink-0 rounded-full bg-accent/20 px-1 py-0.5 text-[9px] font-bold tracking-wide text-purple-300">
                   ADMIN
                 </span>
               )}
-              <span className="bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-xs font-semibold uppercase tracking-widest text-transparent">
+              <span className="max-w-[5rem] truncate bg-gradient-to-r from-purple-400 to-violet-300 bg-clip-text text-[11px] font-semibold uppercase tracking-wide text-transparent 2xl:max-w-[7rem]">
                 {username?.replace(/^@+/, "").trim().toUpperCase() ||
                   shortenAddress(wallet).toUpperCase()}
               </span>

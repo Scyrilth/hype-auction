@@ -15,14 +15,14 @@ export default function AdminViewSwitcher() {
   const profileHref = getProfileHref(username, wallet);
 
   const pillClass = (mode: "admin" | "seller" | "buyer") =>
-    `rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+    `rounded-full px-1.5 py-px text-[10px] font-medium leading-tight transition-colors ${
       activePill === mode
         ? "bg-accent text-white"
         : "text-muted hover:bg-surface-elevated hover:text-white"
     }`;
 
   return (
-    <div className="flex items-center rounded-full border border-border bg-background p-0.5">
+    <div className="flex shrink-0 items-center rounded-full border border-border bg-background p-px">
       <Link
         href="/admin"
         className={pillClass("admin")}
