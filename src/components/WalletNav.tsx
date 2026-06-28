@@ -136,12 +136,12 @@ export default function WalletNav() {
         onClose={() => setMenuOpen(false)}
         anchorRef={triggerRef}
         align="end"
-        className="min-w-[200px] overflow-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg"
+        className="min-w-0 overflow-hidden overflow-x-hidden rounded-xl border border-border bg-surface-elevated py-1 shadow-lg md:min-w-[200px] max-md:max-h-[80vh] max-md:overflow-y-auto"
       >
         <div className="border-b border-border px-4 py-2.5">
           <p className="text-[11px] text-muted">Balance</p>
           <p className="text-sm font-semibold text-white">{balanceLabel}</p>
-          <p className="mt-1 truncate font-mono text-xs text-zinc-400">
+          <p className="mt-1 break-all font-mono text-xs leading-relaxed text-zinc-400">
             {publicKey.toBase58()}
           </p>
         </div>
@@ -149,10 +149,10 @@ export default function WalletNav() {
         <button
           type="button"
           onClick={handleCopyAddress}
-          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+          className="flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
         >
-          <i className="ti ti-copy text-base leading-none" aria-hidden />
-          Copy address
+          <i className="ti ti-copy shrink-0 text-base leading-none" aria-hidden />
+          <span className="min-w-0">Copy address</span>
         </button>
 
         <div className="border-t border-border" />
@@ -160,19 +160,19 @@ export default function WalletNav() {
         <button
           type="button"
           onClick={() => void handleDisconnect()}
-          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
+          className="flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left text-sm text-live-red transition-colors hover:bg-live-red/10"
         >
-          <i className="ti ti-logout text-base leading-none" aria-hidden />
-          Disconnect Wallet
+          <i className="ti ti-logout shrink-0 text-base leading-none" aria-hidden />
+          <span className="min-w-0 whitespace-nowrap">Disconnect Wallet</span>
         </button>
 
         <button
           type="button"
           onClick={() => void handleSwitchWallet()}
-          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
+          className="flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left text-sm text-zinc-300 transition-colors hover:bg-background hover:text-white"
         >
-          <i className="ti ti-switch-horizontal text-base leading-none" aria-hidden />
-          Switch wallet
+          <i className="ti ti-switch-horizontal shrink-0 text-base leading-none" aria-hidden />
+          <span className="min-w-0 whitespace-nowrap">Switch wallet</span>
         </button>
       </AnchoredPortal>
     </div>

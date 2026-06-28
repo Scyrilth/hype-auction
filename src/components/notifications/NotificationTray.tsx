@@ -67,7 +67,7 @@ export default function NotificationTray({
       onClose={onClose}
       anchorRef={anchorRef}
       align="end"
-      className="w-[380px] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl"
+      className="flex w-[380px] flex-col overflow-hidden overflow-x-hidden rounded-2xl border border-white/10 bg-[#1a1835] shadow-2xl max-md:max-h-[70vh] max-md:overflow-y-auto md:max-w-[calc(100vw-1rem)]"
     >
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <h2 className="text-sm font-semibold text-white">Notifications</h2>
@@ -75,14 +75,14 @@ export default function NotificationTray({
           <button
             type="button"
             onClick={() => void handleMarkAllRead()}
-            className="text-xs font-medium text-purple-300 transition-colors hover:text-accent"
+            className="shrink-0 text-xs font-medium text-purple-300 transition-colors hover:text-accent"
           >
             Mark all read
           </button>
         )}
       </div>
 
-      <div className="max-h-[min(520px,calc(100vh-8rem))] overflow-y-auto">
+      <div className="min-h-0 overflow-x-hidden overflow-y-auto max-md:max-h-none md:max-h-[min(520px,calc(100vh-8rem))]">
         {notifications.length === 0 ? (
           <p className="px-4 py-12 text-center text-sm text-muted">
             No notifications yet

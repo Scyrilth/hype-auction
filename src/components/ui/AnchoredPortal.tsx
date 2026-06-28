@@ -13,6 +13,13 @@ import { createPortal } from "react-dom";
 
 type Align = "end" | "start";
 
+const MOBILE_MAX_WIDTH = "(max-width: 767px)";
+const MOBILE_VIEWPORT_INSET_PX = 8;
+
+/** Shared mobile-safe panel classes for TopNav dropdowns. */
+export const TOPNAV_PORTAL_MOBILE_CLASS =
+  "max-md:max-w-[calc(100vw-2rem)] max-md:w-[calc(100vw-2rem)] max-md:overflow-x-hidden";
+
 export default function AnchoredPortal({
   open,
   onClose,
@@ -22,6 +29,7 @@ export default function AnchoredPortal({
   offset = 8,
   className = "",
   style,
+  viewportSafeOnMobile = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -31,10 +39,26 @@ export default function AnchoredPortal({
   offset?: number;
   className?: string;
   style?: CSSProperties;
+  viewportSafeOnMobile?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_MAX_WIDTH);
+    const updateIsMobile = () => setIsMobile(mediaQuery.matches);
+
+    updateIsMobile();
+    mediaQuery.addEventListener("change", updateIsMobile);
+
+    return () => mediaQuery.removeEventListener("change", updateIsMobile);
+  }, []);
 
   const updatePosition = useCallback(() => {
     const anchor = anchorRef.current;
@@ -46,10 +70,6 @@ export default function AnchoredPortal({
       left: align === "end" ? rect.right : rect.left,
     });
   }, [align, anchorRef, offset]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -82,18 +102,35 @@ export default function AnchoredPortal({
 
   if (!open || !mounted) return null;
 
-  return createPortal(
-    <div
-      ref={panelRef}
-      className={className}
-      style={{
+  const useMobileLayout = viewportSafeOnMobile && isMobile;
+
+  const panelStyle: CSSProperties = useMobileLayout
+    ? {
+        position: "fixed",
+        top: position.top,
+        right: MOBILE_VIEWPORT_INSET_PX,
+        left: "auto",
+        width: "calc(100vw - 2rem)",
+        maxWidth: "calc(100vw - 2rem)",
+        overflowX: "hidden",
+        zIndex: 9999,
+        ...style,
+      }
+    : {
         position: "fixed",
         top: position.top,
         left: position.left,
         transform: align === "end" ? "translateX(-100%)" : undefined,
+        maxWidth: "calc(100vw - 1rem)",
         zIndex: 9999,
         ...style,
-      }}
+      };
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      className={`${TOPNAV_PORTAL_MOBILE_CLASS} ${className}`.trim()}
+      style={panelStyle}
     >
       {children}
     </div>,
