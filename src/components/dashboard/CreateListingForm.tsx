@@ -30,7 +30,7 @@ import {
   AUCTION_CATEGORIES,
   AUCTION_CONDITIONS,
   AUCTION_DURATIONS,
-  createAuction,
+  createListingViaApi,
 } from "@/lib/seller";
 import { getVendorSettings } from "@/lib/vendors";
 
@@ -211,7 +211,7 @@ export default function CreateListingForm() {
         Object.assign(itemDetails, grading);
       }
 
-      const auction = await createAuction({
+      const auction = await createListingViaApi({
         sellerWallet: publicKey.toBase58(),
         title: form.title,
         description: form.description,

@@ -606,7 +606,7 @@ export async function getOrCreateAuctionThread(
   return createAuctionThread(auctionId, buyerWallet, sellerWallet, itemTitle);
 }
 
-export async function sendDirectMessage(
+export async function sendDirectMessageRecord(
   threadId: string,
   senderWallet: string,
   content: string
@@ -663,6 +663,36 @@ export async function sendDirectMessage(
   });
 
   return parseDirectMessage(data as Record<string, unknown>);
+}
+
+/** Client helper — sends a message via the rate-limited API route. */
+export async function sendDirectMessage(
+  threadId: string,
+  senderWallet: string,
+  content: string
+): Promise<DirectMessage> {
+  const response = await fetch("/api/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ threadId, senderWallet, content }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    message?: DirectMessage;
+  };
+
+  if (!response.ok) {
+    throw new Error(
+      payload.error ?? "Unable to send message. Please try again."
+    );
+  }
+
+  if (!payload.message) {
+    throw new Error("Unable to send message. Please try again.");
+  }
+
+  return payload.message;
 }
 
 export async function markThreadMessagesRead(

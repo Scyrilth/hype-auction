@@ -5,6 +5,7 @@ import {
   placeBidWithValidation,
 } from "@/lib/bid-placement";
 import { logSupabaseError } from "@/lib/errors";
+import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 
 type BidRequestBody = {
   auctionId?: unknown;
@@ -44,6 +45,10 @@ export async function POST(request: Request) {
       { error: "Wallet address is required." },
       { status: 400 }
     );
+  }
+
+  if (isRateLimited(bidderWallet, "bids")) {
+    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
   }
 
   try {

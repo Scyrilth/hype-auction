@@ -122,3 +122,44 @@ export async function createAuction({
 
   throw lastError ?? new Error("Failed to create auction.");
 }
+
+/** Client helper — creates a listing via the rate-limited API route. */
+export async function createListingViaApi(
+  params: Parameters<typeof createAuction>[0]
+): Promise<Auction> {
+  const response = await fetch("/api/listings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sellerWallet: params.sellerWallet,
+      title: params.title,
+      description: params.description,
+      category: params.category,
+      condition: params.condition,
+      startPrice: params.startPrice,
+      durationHours: params.durationHours,
+      imageUrl: params.imageUrl,
+      additionalImages: params.additionalImages,
+      itemDetails: params.itemDetails,
+      domesticShippingUsd: params.domesticShippingUsd,
+      internationalShippingUsd: params.internationalShippingUsd,
+    }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    error?: string;
+    auction?: Auction;
+  };
+
+  if (!response.ok) {
+    throw new Error(
+      payload.error ?? "Unable to create listing. Please try again."
+    );
+  }
+
+  if (!payload.auction) {
+    throw new Error("Unable to create listing. Please try again.");
+  }
+
+  return payload.auction;
+}
