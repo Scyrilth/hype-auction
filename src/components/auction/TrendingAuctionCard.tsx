@@ -4,8 +4,10 @@ import {
   AUCTION_CARD_MIN_WIDTH,
   AuctionCardBidPrice,
   AuctionCardContent,
+  AuctionCardFooterStats,
   AuctionCardImage,
   AuctionCardShippingLine,
+  AuctionCardTimeLeftLabel,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
@@ -32,10 +34,10 @@ export default function TrendingAuctionCard({
   return (
     <Link
       href={`/auction/${auction.id}`}
-      className="group flex h-full w-full min-w-[11.5rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
+      className="group flex h-full w-full min-w-[12rem] flex-col rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
-      <div className="relative w-full h-48 overflow-hidden bg-surface-elevated">
+      <div className="relative h-48 w-full overflow-hidden rounded-t-2xl bg-surface-elevated">
         <AuctionCardImage
           imageUrl={auction.image_url}
           title={auction.title}
@@ -77,20 +79,24 @@ export default function TrendingAuctionCard({
           </>
         }
         footer={
-          <div className="flex items-end justify-between gap-2">
-            <div className="shrink-0">
-              <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
-              <AuctionCardBidPrice amount={displayBid} />
-              <AuctionCardShippingLine
-                domesticShippingUsd={auction.domestic_shipping_usd}
-              />
-              <FiatValue solAmount={displayBid} />
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="whitespace-nowrap text-xs text-muted">Time left</p>
-              <CountdownTimer endTime={auction.end_time} compact />
-            </div>
-          </div>
+          <AuctionCardFooterStats
+            bidColumn={
+              <>
+                <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
+                <AuctionCardBidPrice amount={displayBid} />
+                <AuctionCardShippingLine
+                  domesticShippingUsd={auction.domestic_shipping_usd}
+                />
+                <FiatValue solAmount={displayBid} />
+              </>
+            }
+            timeColumn={
+              <>
+                <AuctionCardTimeLeftLabel />
+                <CountdownTimer endTime={auction.end_time} compact />
+              </>
+            }
+          />
         }
       />
     </Link>

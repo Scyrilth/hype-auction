@@ -102,7 +102,7 @@ body {
 /* 5-column carousel width — matches Live Auctions row (gap-3 = 4 × 0.75rem) */
 .carousel-row-scroll > .horizontal-scroll-item {
   width: calc((100% - 3rem) / var(--carousel-columns));
-  min-width: 0;
+  min-width: 12rem;
   flex-shrink: 0;
 }
 

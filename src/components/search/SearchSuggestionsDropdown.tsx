@@ -297,7 +297,7 @@ export default function SearchSuggestionsDropdown({
   let runningIndex = -1;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative w-full">
       {leadingSlot ?? (
         <SearchIcon
           className={

@@ -92,7 +92,7 @@ export function AuctionCardImage({
 }
 
 /** Minimum width for carousel/grid auction cards — keeps price + timer on one line. */
-export const AUCTION_CARD_MIN_WIDTH = "11.5rem";
+export const AUCTION_CARD_MIN_WIDTH = "12rem";
 
 export function AuctionCardContent({
   header,
@@ -105,11 +105,42 @@ export function AuctionCardContent({
 }) {
   return (
     <div
-      className={`flex flex-1 flex-col justify-between p-4 ${className}`.trim()}
+      className={`flex min-h-[10.5rem] flex-1 flex-col justify-between gap-3 p-4 pb-4 ${className}`.trim()}
     >
-      <div>{header}</div>
-      <div>{footer}</div>
+      <div className="min-h-0">{header}</div>
+      <div className="mt-auto shrink-0">{footer}</div>
     </div>
+  );
+}
+
+export function AuctionCardFooterStats({
+  bidColumn,
+  timeColumn,
+}: {
+  bidColumn: ReactNode;
+  timeColumn?: ReactNode;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-3 overflow-visible">
+      <div className="min-w-0 flex-1">{bidColumn}</div>
+      {timeColumn ? (
+        <div className="shrink-0 text-right min-w-[5.75rem]">{timeColumn}</div>
+      ) : null}
+    </div>
+  );
+}
+
+export function AuctionCardTimeLeftLabel({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <p
+      className={`whitespace-nowrap text-xs text-muted ${className}`.trim()}
+    >
+      Time left
+    </p>
   );
 }
 

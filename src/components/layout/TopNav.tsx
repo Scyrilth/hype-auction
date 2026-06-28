@@ -99,7 +99,7 @@ export default function TopNav() {
     <header className="fixed top-0 right-0 z-50 flex h-12 shrink-0 flex-nowrap items-center gap-2 border-b border-border bg-surface px-3 left-0 sm:h-14 sm:gap-3 sm:px-4 md:left-52 lg:gap-4 lg:px-5">
       <HypeAuctionLogo className="h-8 w-auto shrink-0 md:hidden" />
 
-      <div className="relative min-w-0 flex-1 sm:max-w-[38%] lg:max-w-xl">
+      <div className="relative w-full min-w-[200px] max-w-[24rem] flex-[1_1_20rem]">
         <SearchSuggestionsDropdown
           value={query}
           onChange={setQuery}
