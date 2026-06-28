@@ -201,6 +201,7 @@ export default function SearchSuggestionsDropdown({
   inputClassName,
   iconClassName,
   leadingSlot,
+  trailingSlot,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -214,6 +215,7 @@ export default function SearchSuggestionsDropdown({
   inputClassName: string;
   iconClassName?: string;
   leadingSlot?: ReactNode;
+  trailingSlot?: ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -322,6 +324,8 @@ export default function SearchSuggestionsDropdown({
         aria-controls={listboxId}
         className={inputClassName}
       />
+
+      {trailingSlot}
 
       {showDropdown && (
         <div

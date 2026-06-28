@@ -156,7 +156,7 @@ export default function WalletNav() {
         ref={triggerRef}
         type="button"
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex max-w-[7.5rem] items-center gap-1 rounded-full border border-border bg-background px-2 py-0.5 text-[11px] transition-colors hover:border-accent sm:max-w-none"
+        className="flex max-w-[5.5rem] items-center gap-1 rounded-full border border-border bg-background px-1.5 py-0.5 text-[11px] transition-colors hover:border-accent sm:max-w-none sm:px-2"
         aria-expanded={menuOpen}
         aria-haspopup="menu"
       >

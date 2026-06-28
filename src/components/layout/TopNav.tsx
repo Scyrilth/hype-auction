@@ -99,7 +99,7 @@ export default function TopNav() {
 
   return (
     <>
-      <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1.5 overflow-x-hidden overflow-y-visible border-b border-border bg-surface pl-2 pr-3 left-0 sm:gap-2 sm:pl-2.5 md:left-44 lg:gap-2 lg:pr-4">
+      <header className="fixed top-0 right-0 z-50 flex h-12 min-w-0 shrink-0 flex-nowrap items-center gap-1 overflow-x-hidden overflow-y-visible border-b border-border bg-surface pl-2 pr-2 left-0 sm:gap-1.5 sm:pr-3 md:left-44 md:gap-2 md:pl-2.5 md:pr-4">
         <button
           type="button"
           onClick={() => setMobileNavOpen(true)}
@@ -110,32 +110,44 @@ export default function TopNav() {
           <i className="ti ti-menu-2 text-lg leading-none" aria-hidden />
         </button>
 
-        <HypeAuctionLogo className="h-6 w-auto shrink-0 md:hidden" />
+        <HypeAuctionLogo className="h-5 w-[4.75rem] shrink-0 md:hidden" />
 
-      <div className="relative min-w-0 flex-1 max-w-[11rem] sm:max-w-[13rem] lg:max-w-[14rem] xl:max-w-[16rem]">
-        <SearchSuggestionsDropdown
-          value={query}
-          onChange={setQuery}
-          onSelect={handleSelect}
-          onEnterWithoutSelection={navigateToSearch}
-          suggestionGroups={suggestionGroups}
-          flatSuggestions={flatSuggestions}
-          queryReady={queryReady}
-          placeholder="Search items, users, categories..."
-          listboxId="global-search-suggestions"
-          inputClassName="w-full min-w-0 rounded-full border border-border bg-background py-1 pl-8 pr-2.5 text-xs text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
-          leadingSlot={
-            <button
-              type="button"
-              onClick={navigateToSearch}
-              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 text-muted transition-colors hover:text-white"
-              aria-label="Search"
-            >
-              <SearchIcon className="h-3 w-3" />
-            </button>
-          }
-        />
-      </div>
+        <div className="relative min-w-0 flex-1 md:max-w-[11rem] lg:max-w-[14rem] xl:max-w-[16rem]">
+          <SearchSuggestionsDropdown
+            value={query}
+            onChange={setQuery}
+            onSelect={handleSelect}
+            onEnterWithoutSelection={navigateToSearch}
+            suggestionGroups={suggestionGroups}
+            flatSuggestions={flatSuggestions}
+            queryReady={queryReady}
+            placeholder="Search items, users..."
+            listboxId="global-search-suggestions"
+            inputClassName="topnav-search-input w-full min-w-0 rounded-full border border-border bg-background py-1 pl-8 pr-8 text-xs text-white caret-white placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent sm:pl-9 md:pr-2.5"
+            leadingSlot={
+              <button
+                type="button"
+                onClick={navigateToSearch}
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 text-muted transition-colors hover:text-white"
+                aria-label="Search"
+              >
+                <SearchIcon className="h-3.5 w-3.5" />
+              </button>
+            }
+            trailingSlot={
+              query.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="absolute right-2 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-elevated hover:text-white md:hidden"
+                  aria-label="Clear search"
+                >
+                  <i className="ti ti-x text-sm leading-none" aria-hidden />
+                </button>
+              ) : null
+            }
+          />
+        </div>
 
       <nav className="hidden shrink-0 items-center gap-2 whitespace-nowrap lg:flex xl:gap-2.5">
         {navLinks.map((link) => {
@@ -164,7 +176,7 @@ export default function TopNav() {
         })}
       </nav>
 
-      <div className="relative z-10 ml-auto flex shrink-0 items-center gap-1 pr-1 sm:gap-1.5 sm:pr-0">
+      <div className="relative z-10 ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1 md:gap-1.5">
         {isAdmin && <AdminViewSwitcher />}
 
         <WalletNav />

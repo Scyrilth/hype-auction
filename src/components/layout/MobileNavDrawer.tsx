@@ -2,7 +2,10 @@
 
 import { useEffect } from "react";
 
+import AdminViewSwitcher from "@/components/admin/AdminViewSwitcher";
+import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
 import SidebarNavContent from "@/components/layout/SidebarNavContent";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 export default function MobileNavDrawer({
   open,
@@ -13,6 +16,8 @@ export default function MobileNavDrawer({
   onClose: () => void;
   activePath?: string;
 }) {
+  const { isAdmin } = useIsAdmin();
+
   useEffect(() => {
     if (!open) return;
 
@@ -58,21 +63,26 @@ export default function MobileNavDrawer({
         aria-modal="true"
         aria-label="Navigation menu"
       >
-        <div className="mb-3 flex shrink-0 items-center justify-end">
+        <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
+          <HypeAuctionLogo className="h-7 w-auto max-w-[8.5rem]" />
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 transition-colors hover:bg-surface-elevated hover:text-white"
             aria-label="Close menu"
           >
             <i className="ti ti-x text-lg leading-none" />
           </button>
         </div>
 
+        {isAdmin && (
+          <AdminViewSwitcher layout="drawer" onNavigate={onClose} />
+        )}
+
         <SidebarNavContent
           activePath={activePath}
           onNavigate={onClose}
-          showLogo
+          showLogo={false}
           className="min-h-0 overflow-hidden"
         />
       </div>
