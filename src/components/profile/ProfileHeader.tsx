@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { CopyIcon } from "@/components/icons";
 import UserAvatar from "@/components/ui/UserAvatar";
+import SpecialBadges from "@/components/ui/SpecialBadges";
 import { useToast } from "@/components/ui/Toast";
 import type { User } from "@/lib/database.types";
 import { shortenAddress } from "@/lib/format";
@@ -90,6 +91,7 @@ export default function ProfileHeader({
                 <h1 className="text-xl font-bold text-white sm:text-2xl">
                   {user.username ? `@${user.username.replace(/^@+/, "")}` : displayName}
                 </h1>
+                <SpecialBadges walletAddress={user.wallet_address} />
                 {typeof strikeCount === "number" && strikeCount > 0 && (
                   <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
                     {strikeCount} strike{strikeCount === 1 ? "" : "s"}

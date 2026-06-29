@@ -10,6 +10,7 @@ import FollowButton from "@/components/shop/FollowButton";
 import StarRating from "@/components/shop/StarRating";
 import FiatValue from "@/components/ui/FiatValue";
 import UserAvatar from "@/components/ui/UserAvatar";
+import SpecialBadges from "@/components/ui/SpecialBadges";
 import type { User, VendorShopStats } from "@/lib/database.types";
 import { formatSol, displaySocialHandle, shortenAddress } from "@/lib/format";
 
@@ -82,6 +83,7 @@ export default function ShopHeader({
                 <h1 className="text-xl font-bold text-white sm:text-2xl">
                   {displayName}
                 </h1>
+                <SpecialBadges walletAddress={vendor.wallet_address} />
                 {vendor.is_verified && <VerifiedBadge />}
               </div>
               {vendor.username && (
