@@ -12,6 +12,7 @@ import {
   validateImageFile,
 } from "@/lib/storage";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type { ImageUploadVariant } from "@/lib/image-crop";
 
@@ -34,6 +35,7 @@ export default function ImageUpload({
   walletAddress,
   showUrl = false,
   disabled = false,
+  client,
 }: {
   label: string;
   bucket: StorageBucket;
@@ -46,6 +48,7 @@ export default function ImageUpload({
   walletAddress?: string;
   showUrl?: boolean;
   disabled?: boolean;
+  client?: SupabaseClient;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export default function ImageUpload({
         path,
         file,
         onProgress: setProgress,
+        client,
       });
 
       setPreviewUrl(publicUrl);
@@ -91,6 +95,7 @@ export default function ImageUpload({
       await onUploaded?.(publicUrl);
     } catch (uploadError) {
       setPreviewUrl(value || null);
+      console.error("ImageUpload: upload failed", uploadError);
       logSupabaseError("ImageUpload", uploadError);
       setError(getErrorMessage(uploadError, "Upload failed. Please try again."));
     } finally {

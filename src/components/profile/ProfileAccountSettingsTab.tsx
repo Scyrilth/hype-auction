@@ -9,7 +9,6 @@ import { useToast } from "@/components/ui/Toast";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { updateBuyerProfileSettings } from "@/lib/profile";
-import { getImageExtension } from "@/lib/storage";
 import { upsertUser } from "@/lib/users";
 
 const inputClass =
@@ -57,6 +56,7 @@ export default function ProfileAccountSettingsTab({
       showToast("Profile settings saved.");
       router.refresh();
     } catch (error) {
+      console.error("ProfileAccountSettingsTab.save", error);
       logSupabaseError("ProfileAccountSettingsTab.save", error);
       showToast(getErrorMessage(error), "error");
     } finally {
@@ -80,9 +80,32 @@ export default function ProfileAccountSettingsTab({
           walletAddress={walletAddress}
           value={avatarUrl}
           onChange={setAvatarUrl}
-          buildPath={(file) =>
-            `${walletAddress}/avatar.${getImageExtension(file)}`
-          }
+          client={client}
+          buildPath={() => `${walletAddress}/avatar.jpg`}
+          onUploaded={async (url) => {
+            if (!publicKey) return;
+
+            try {
+              const wallet = publicKey.toBase58();
+              await upsertUser(wallet, client);
+              await updateBuyerProfileSettings(
+                wallet,
+                {
+                  username,
+                  bio: bio.slice(0, 160),
+                  avatarUrl: url,
+                },
+                client
+              );
+              setAvatarUrl(url);
+              showToast("Avatar uploaded!");
+              router.refresh();
+            } catch (error) {
+              console.error("ProfileAccountSettingsTab.avatarUpload", error);
+              logSupabaseError("ProfileAccountSettingsTab.avatarUpload", error);
+              throw error;
+            }
+          }}
           disabled={!publicKey}
         />
 

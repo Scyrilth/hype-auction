@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { supabase } from "@/lib/supabase";
 
 export type StorageBucket = "Avatars" | "Banners" | "Auction-images";
@@ -55,15 +57,17 @@ export async function uploadImageToStorage({
   path,
   file,
   onProgress,
+  client = supabase,
 }: {
   bucket: StorageBucket;
   path: string;
   file: File;
   onProgress?: (percent: number) => void;
+  client?: SupabaseClient;
 }): Promise<string> {
   onProgress?.(0);
 
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+  const { error } = await client.storage.from(bucket).upload(path, file, {
     cacheControl: "3600",
     upsert: true,
     contentType: file.type,
@@ -74,5 +78,7 @@ export async function uploadImageToStorage({
   }
 
   onProgress?.(100);
-  return getPublicStorageUrl(bucket, path);
+
+  const { data } = client.storage.from(bucket).getPublicUrl(path);
+  return data.publicUrl;
 }

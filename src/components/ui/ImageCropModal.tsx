@@ -15,8 +15,6 @@ import {
   IMAGE_CROP_PROFILES,
 } from "@/lib/image-crop";
 
-const CROP_PADDING_PX = 20;
-
 function centerAspectCrop(
   mediaWidth: number,
   mediaHeight: number,
@@ -40,26 +38,6 @@ function centerAspectCrop(
   );
 }
 
-function fitImageToContainer(
-  naturalWidth: number,
-  naturalHeight: number,
-  containerWidth: number,
-  containerHeight: number
-) {
-  const availableWidth = Math.max(containerWidth - CROP_PADDING_PX * 2, 1);
-  const availableHeight = Math.max(containerHeight - CROP_PADDING_PX * 2, 1);
-  const fitScale = Math.min(
-    availableWidth / naturalWidth,
-    availableHeight / naturalHeight,
-    1
-  );
-
-  return {
-    width: Math.max(1, Math.floor(naturalWidth * fitScale)),
-    height: Math.max(1, Math.floor(naturalHeight * fitScale)),
-  };
-}
-
 export default function ImageCropModal({
   open,
   imageSrc,
@@ -76,54 +54,17 @@ export default function ImageCropModal({
   onConfirm: (file: File) => void;
 }) {
   const profile = IMAGE_CROP_PROFILES[variant];
-  const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const [baseSize, setBaseSize] = useState<{ width: number; height: number } | null>(
-    null
-  );
   const [scale, setScale] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const applyImageFit = useCallback(
-    (img: HTMLImageElement) => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const fitted = fitImageToContainer(
-        img.naturalWidth,
-        img.naturalHeight,
-        container.clientWidth,
-        container.clientHeight
-      );
-
-      img.style.width = `${fitted.width}px`;
-      img.style.height = `${fitted.height}px`;
-      img.style.maxWidth = "none";
-      img.style.maxHeight = "none";
-      img.style.objectFit = "contain";
-
-      setBaseSize(fitted);
-      setScale(1);
-      setCrop(
-        centerAspectCrop(
-          fitted.width,
-          fitted.height,
-          profile.aspect,
-          profile.circular
-        )
-      );
-    },
-    [profile.aspect, profile.circular]
-  );
 
   useEffect(() => {
     if (!open) {
       setCrop(undefined);
       setCompletedCrop(undefined);
-      setBaseSize(null);
       setScale(1);
       setProcessing(false);
       setError(null);
@@ -143,28 +84,12 @@ export default function ImageCropModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onCancel, processing]);
 
-  useEffect(() => {
-    if (!open || !baseSize || !imgRef.current || !containerRef.current) return;
-
-    const img = imgRef.current;
-    const container = containerRef.current;
-    const maxWidth = container.clientWidth - CROP_PADDING_PX * 2;
-    const maxHeight = container.clientHeight - CROP_PADDING_PX * 2;
-    const zoomedWidth = baseSize.width * scale;
-    const zoomedHeight = baseSize.height * scale;
-    const clamp = Math.min(1, maxWidth / zoomedWidth, maxHeight / zoomedHeight);
-    const width = Math.max(1, Math.floor(zoomedWidth * clamp));
-    const height = Math.max(1, Math.floor(zoomedHeight * clamp));
-
-    img.style.width = `${width}px`;
-    img.style.height = `${height}px`;
-  }, [baseSize, open, scale]);
-
   const onImageLoad = useCallback(
     (event: React.SyntheticEvent<HTMLImageElement>) => {
-      applyImageFit(event.currentTarget);
+      const { width, height } = event.currentTarget;
+      setCrop(centerAspectCrop(width, height, profile.aspect, profile.circular));
     },
-    [applyImageFit]
+    [profile.aspect, profile.circular]
   );
 
   const handleWheel = (event: React.WheelEvent) => {
@@ -190,7 +115,7 @@ export default function ImageCropModal({
         completedCrop,
         profile,
         {
-          scale: 1,
+          scale,
           fileName: fileName.replace(/\.[^.]+$/, ".jpg"),
         }
       );
@@ -212,7 +137,7 @@ export default function ImageCropModal({
       role="presentation"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-y-auto rounded-2xl border border-border bg-surface shadow-2xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -228,35 +153,34 @@ export default function ImageCropModal({
         </div>
 
         <div
-          ref={containerRef}
-          className="image-crop-shell box-border h-[50vh] max-h-[50vh] w-full shrink-0 overflow-hidden bg-black/40"
-          style={{ padding: CROP_PADDING_PX }}
+          className="image-crop-shell w-full bg-black/40 p-4 sm:p-5"
           onWheel={handleWheel}
         >
-          <div className="flex h-full w-full items-center justify-center overflow-hidden">
-            <ReactCrop
-              crop={crop}
-              onChange={(_, percentCrop) => setCrop(percentCrop)}
-              onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
-              aspect={profile.aspect}
-              circularCrop={profile.circular}
-              minWidth={Math.min(profile.minWidth, 80)}
-              minHeight={Math.min(profile.minHeight, 80)}
-              className="max-h-full max-w-full"
-              style={{ maxHeight: "100%", maxWidth: "100%" }}
-            >
-              <img
-                ref={imgRef}
-                alt="Crop preview"
-                src={imageSrc}
-                onLoad={onImageLoad}
-                className="block object-contain"
-              />
-            </ReactCrop>
-          </div>
+          <ReactCrop
+            crop={crop}
+            onChange={(_, percentCrop) => setCrop(percentCrop)}
+            onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
+            aspect={profile.aspect}
+            circularCrop={profile.circular}
+            minWidth={Math.min(profile.minWidth, 80)}
+            minHeight={Math.min(profile.minHeight, 80)}
+            className="w-full"
+          >
+            <img
+              ref={imgRef}
+              alt="Crop preview"
+              src={imageSrc}
+              onLoad={onImageLoad}
+              className="block h-auto w-full"
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "center center",
+              }}
+            />
+          </ReactCrop>
         </div>
 
-        <div className="shrink-0 space-y-3 border-t border-border px-4 py-3 sm:space-y-4 sm:px-6 sm:py-4">
+        <div className="sticky bottom-0 z-10 shrink-0 space-y-3 border-t border-border bg-surface px-4 py-3 sm:space-y-4 sm:px-6 sm:py-4">
           <div>
             <label
               htmlFor="crop-zoom"
