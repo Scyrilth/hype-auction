@@ -10,6 +10,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
 import MessageContent from "@/components/messages/MessageContent";
 import NextBidderOfferTile from "@/components/messages/NextBidderOfferTile";
+import UploadTrackingCard from "@/components/messages/UploadTrackingCard";
 import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -245,6 +246,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const wallet = publicKey?.toBase58();
   const isArchived = thread?.status === "archived";
   const isBuyer = wallet === thread?.buyer_wallet;
+  const isSeller = wallet === thread?.seller_wallet;
   const statusBadge = thread ? getThreadStatusBadge(thread) : null;
 
   const scrollToBottom = useCallback(() => {
@@ -626,7 +628,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     otherParty.username ??
     shortenAddress(otherParty.wallet_address, 6);
 
-  const escrowState = thread.auction?.escrow_state;
+  const escrowState =
+    thread.escrow_status ?? thread.auction?.escrow_state ?? null;
+  const hasUploadedTracking = Boolean(
+    thread.tracking_number?.trim() || thread.auction?.tracking_number?.trim()
+  );
   const needsEscrowPayment =
     !escrowState || escrowState === "none" || escrowState === "pending";
 
@@ -663,6 +669,17 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     escrowState ?? ""
   );
 
+  const showUploadTracking =
+    isSeller &&
+    Boolean(thread.auction_id) &&
+    escrowState === "funded" &&
+    !hasUploadedTracking;
+
+  const showShippedConfirmation =
+    isSeller &&
+    Boolean(thread.auction_id) &&
+    (escrowState === "shipped" || hasUploadedTracking);
+
   const respondableOfferMessageId =
     wallet && thread.auction
       ? getLatestRespondableOfferMessageId(
@@ -689,7 +706,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col sm:h-[calc(100vh-8rem)]">
-      <div className="shrink-0 rounded-2xl border border-border bg-surface p-3 sm:p-4">
+      <div className="shrink-0 rounded-2xl border border-border bg-surface p-3 sm:p-3">
         <div className="flex items-start gap-2.5 sm:gap-3">
           <div className="relative hidden h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-elevated sm:block">
             <Image src={thumb} alt={title} fill className="object-cover" unoptimized />
@@ -731,7 +748,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         </div>
       )}
 
-      <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border bg-surface p-3 sm:mt-3 sm:space-y-3 sm:p-4">
+      <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface sm:mt-3">
+        <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 sm:space-y-3">
         {groupedMessages.map(({ message, showHeader, showTimestamp }) => {
           const isMine =
             !message.is_system && message.sender_wallet === wallet;
@@ -773,10 +791,32 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           );
         })}
         <div ref={bottomRef} />
+        </div>
       </div>
 
       {!isArchived && (
         <div className="mt-2 shrink-0 space-y-2 border-t border-border bg-background pt-2 sm:mt-3 sm:space-y-3 sm:border-t-0 sm:bg-transparent sm:pt-0">
+          {showUploadTracking && (
+            <UploadTrackingCard
+              threadId={threadId}
+              sellerWallet={wallet}
+              onSubmitted={() => void loadThread()}
+            />
+          )}
+
+          {showShippedConfirmation && !showUploadTracking && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-200">
+              Mark as Shipped ✅
+              {(thread.tracking_number || thread.auction?.tracking_number) &&
+                (thread.carrier || thread.auction?.tracking_courier) && (
+                <p className="mt-1 text-xs font-normal text-emerald-100/90">
+                  {thread.tracking_number ?? thread.auction?.tracking_number} via{" "}
+                  {thread.carrier ?? thread.auction?.tracking_courier}
+                </p>
+              )}
+            </div>
+          )}
+
           {showPayNow && (
             <div className="space-y-2">
               {paymentBreakdown && (
@@ -843,26 +883,26 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           )}
 
           <div className="rounded-2xl border border-border bg-surface p-2.5 sm:p-3">
-            <textarea
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  void handleSend();
-                }
-              }}
-              rows={2}
-              placeholder="Type a message..."
-              disabled={sending}
-              className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-accent disabled:opacity-60"
-            />
-            <div className="mt-2 flex justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    void handleSend();
+                  }
+                }}
+                rows={2}
+                placeholder="Type a message..."
+                disabled={sending}
+                className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2 text-sm text-white outline-none focus:border-accent disabled:opacity-60 sm:min-h-[2.75rem] sm:flex-1"
+              />
               <button
                 type="button"
                 onClick={() => void handleSend()}
                 disabled={sending || !input.trim()}
-                className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
+                className="w-full rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60 sm:w-auto sm:shrink-0"
               >
                 {sending ? "Sending..." : "Send"}
               </button>

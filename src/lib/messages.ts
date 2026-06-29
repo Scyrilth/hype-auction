@@ -24,6 +24,10 @@ export interface MessageThread {
   confirmed_at: string | null;
   archive_at: string | null;
   created_at: string;
+  escrow_status?: string | null;
+  tracking_number?: string | null;
+  carrier?: string | null;
+  shipped_at?: string | null;
 }
 
 export interface DirectMessage {
@@ -74,6 +78,10 @@ function parseThread(row: Record<string, unknown>): MessageThread {
     confirmed_at: (row.confirmed_at as string | null) ?? null,
     archive_at: (row.archive_at as string | null) ?? null,
     created_at: row.created_at as string,
+    escrow_status: (row.escrow_status as string | null) ?? null,
+    tracking_number: (row.tracking_number as string | null) ?? null,
+    carrier: (row.carrier as string | null) ?? null,
+    shipped_at: (row.shipped_at as string | null) ?? null,
   };
 }
 

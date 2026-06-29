@@ -8,7 +8,6 @@ import {
   insertThreadSystemMessage,
 } from "@/lib/messages";
 import {
-  getUserDisplayName,
   notifyItemShipped,
 } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
@@ -43,7 +42,7 @@ async function notifyBuyerShipment({
   courier: string;
   trackingNumber: string;
 }): Promise<void> {
-  const content = `📦 Your item has been shipped! Courier: ${courier}. Tracking number: ${trackingNumber}`;
+  const content = `📦 Seller has shipped the item. Tracking: ${trackingNumber} via ${courier}`;
 
   const { data: thread, error } = await supabase
     .from("message_threads")
@@ -69,10 +68,8 @@ async function notifyBuyerShipment({
 
   await insertThreadSystemMessage(threadId, content, sellerWallet);
 
-  const sellerDisplayName = await getUserDisplayName(sellerWallet);
   await notifyItemShipped({
     buyerWallet,
-    sellerDisplayName,
     auctionTitle,
     courier,
     trackingNumber,

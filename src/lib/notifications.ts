@@ -378,13 +378,16 @@ export async function notifyPaymentConfirmed({
   sellerWallet,
   auctionTitle,
   threadId,
+  amountSol,
 }: {
   buyerWallet: string;
   sellerWallet: string;
   auctionTitle: string;
   threadId: string;
+  amountSol: number;
 }): Promise<void> {
   const link = `/messages/${threadId}`;
+  const sol = formatSol(amountSol);
 
   await createNotification(
     buyerWallet,
@@ -397,22 +400,20 @@ export async function notifyPaymentConfirmed({
   await createNotification(
     sellerWallet,
     "payment_confirmed",
-    "Payment received",
-    `Payment for ${auctionTitle} has been secured in escrow.`,
+    "Payment secured! 💰",
+    `Buyer paid ${sol} for ${auctionTitle}. Ship the item and upload tracking to release your funds.`,
     link
   );
 }
 
 export async function notifyItemShipped({
   buyerWallet,
-  sellerDisplayName,
   auctionTitle,
   courier,
   trackingNumber,
   threadId,
 }: {
   buyerWallet: string;
-  sellerDisplayName: string;
   auctionTitle: string;
   courier: string;
   trackingNumber: string;
@@ -420,9 +421,9 @@ export async function notifyItemShipped({
 }): Promise<void> {
   await createNotification(
     buyerWallet,
-    "tracking_uploaded",
-    "Tracking uploaded",
-    `${sellerDisplayName} shipped ${auctionTitle} via ${courier}. Tracking: ${trackingNumber}`,
+    "item_shipped",
+    "Your item has been shipped!",
+    `${auctionTitle} is on its way. Tracking: ${trackingNumber} via ${courier}`,
     `/messages/${threadId}`
   );
 }

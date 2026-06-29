@@ -332,7 +332,17 @@ export async function initiatePayment(
           sellerWallet,
           auctionTitle: auctionRow.title as string,
           threadId,
+          amountSol: bidAmountSol,
         });
+
+        const { error: threadEscrowError } = await supabase
+          .from("message_threads")
+          .update({ escrow_status: "funded" })
+          .eq("id", threadId);
+
+        if (threadEscrowError) {
+          console.error("message_threads escrow_status update failed:", threadEscrowError);
+        }
       }
     } catch (notifyError) {
       console.error("Payment notification failed:", notifyError);

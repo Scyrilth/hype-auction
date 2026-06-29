@@ -56,13 +56,13 @@ export default function AuctionSummaryTile({
   const detailRows = getTopItemDetails(summary);
 
   return (
-    <div className="w-full overflow-visible rounded-xl border border-accent/40 bg-surface-elevated p-3">
-      <div className="border-b border-border/60 pb-3 sm:pb-3">
+    <div className="w-full overflow-visible rounded-xl border border-accent/40 bg-surface-elevated p-3 sm:p-2.5">
+      <div className="border-b border-border/60 pb-2 sm:pb-2">
         <h3 className="text-sm font-bold text-white">
           🎉 Congratulations, you won!
         </h3>
-        <p className="mt-0.5 hidden text-xs text-purple-300 sm:block">
-          Use this thread to coordinate shipping and delivery.
+        <p className="mt-0.5 hidden text-[11px] text-purple-300 sm:block">
+          Coordinate shipping and delivery in this thread.
         </p>
       </div>
 
@@ -159,23 +159,37 @@ export default function AuctionSummaryTile({
         )}
       </div>
 
-      {/* Desktop: full layout */}
+      {/* Desktop: compact summary */}
       <div className="mt-3 hidden sm:block">
         <div className="flex gap-3">
-          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-background">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-background">
             <Image
               src={imageSrc}
               alt={summary.title}
-              width={64}
-              height={64}
+              width={48}
+              height={48}
               className="h-full w-full object-cover object-center"
               unoptimized
             />
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-white">{summary.title}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-white">{summary.title}</p>
+                <p className="mt-0.5 text-xs font-semibold text-accent">
+                  Winning bid: {formatSol(summary.winning_bid)}
+                </p>
+              </div>
+              <Link
+                href={`/auction/${summary.auction_id}`}
+                className="shrink-0 text-xs font-semibold text-purple-300 transition-colors hover:text-accent"
+              >
+                View Auction →
+              </Link>
+            </div>
+
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               {summary.category && (
                 <span className="inline-block rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-medium text-purple-300">
                   {summary.category}
@@ -186,38 +200,13 @@ export default function AuctionSummaryTile({
                   {summary.condition}
                 </span>
               )}
+              {gradingBadge && (
+                <span className="inline-block rounded-md bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
+                  {gradingBadge}
+                </span>
+              )}
             </div>
-            {gradingBadge && (
-              <span className="mt-1.5 inline-block rounded-md bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-300">
-                {gradingBadge}
-              </span>
-            )}
-          </div>
-        </div>
 
-        {detailRows.length > 0 && (
-          <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-border/60 pt-3">
-            {detailRows.map((row) => (
-              <div key={row.key} className="min-w-0">
-                <p className="text-[10px] uppercase tracking-wide text-muted">
-                  {row.label}
-                </p>
-                <p className="break-words text-xs font-medium text-zinc-200">
-                  {row.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-border/60 pt-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-accent">
-              Winning Bid: {formatSol(summary.winning_bid)}
-            </p>
-            <div className="mt-0.5">
-              <FiatValue solAmount={summary.winning_bid} showTooltip={false} />
-            </div>
             {summary.reference_number && (
               <div className="mt-1.5">
                 <ReferenceNumber
@@ -227,13 +216,22 @@ export default function AuctionSummaryTile({
               </div>
             )}
           </div>
-          <Link
-            href={`/auction/${summary.auction_id}`}
-            className="shrink-0 self-end text-xs font-semibold text-purple-300 transition-colors hover:text-accent"
-          >
-            View Auction →
-          </Link>
         </div>
+
+        {detailRows.length > 0 && (
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-border/60 pt-2">
+            {detailRows.slice(0, 2).map((row) => (
+              <div key={row.key} className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wide text-muted">
+                  {row.label}
+                </p>
+                <p className="truncate text-xs font-medium text-zinc-200">
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
