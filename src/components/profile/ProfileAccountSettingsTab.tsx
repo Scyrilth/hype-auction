@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { updateBuyerProfileSettings } from "@/lib/profile";
+import { getImageExtension } from "@/lib/storage";
 import { upsertUser } from "@/lib/users";
 
 const inputClass =
@@ -21,7 +22,7 @@ export default function ProfileAccountSettingsTab({
   initialUsername,
   initialBio,
   initialAvatarUrl,
-  walletAddress,
+  walletAddress: _walletAddress,
 }: {
   initialUsername: string | null;
   initialBio: string | null;
@@ -77,11 +78,12 @@ export default function ProfileAccountSettingsTab({
           bucket="Avatars"
           variant="avatar"
           maxSizeMb={5}
-          walletAddress={walletAddress}
+          walletAddress={publicKey?.toBase58()}
           value={avatarUrl}
           onChange={setAvatarUrl}
-          client={client}
-          buildPath={() => `${walletAddress}/avatar.jpg`}
+          buildPath={(file) =>
+            `${publicKey!.toBase58()}/avatar.${getImageExtension(file)}`
+          }
           onUploaded={async (url) => {
             if (!publicKey) return;
 
