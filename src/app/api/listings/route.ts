@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
+import { sanitizeText } from "@/lib/sanitize";
 import { createAuction } from "@/lib/seller";
 
 type ListingRequestBody = {
@@ -25,7 +27,16 @@ function parseNumber(value: unknown): number {
   return NaN;
 }
 
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders(request.headers.get("origin")),
+  });
+}
+
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  const headers = corsHeaders(origin);
   let body: ListingRequestBody;
 
   try {
@@ -33,7 +44,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: "Invalid request body." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
@@ -43,17 +54,21 @@ export async function POST(request: Request) {
   if (!sellerWallet) {
     return NextResponse.json(
       { error: "Wallet address is required." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
   if (isRateLimited(sellerWallet, "listings")) {
-    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
+    return NextResponse.json(
+      { error: RATE_LIMIT_MESSAGE },
+      { status: 429, headers }
+    );
   }
 
-  const title = typeof body.title === "string" ? body.title : "";
+  const title =
+    typeof body.title === "string" ? sanitizeText(body.title) : "";
   const description =
-    typeof body.description === "string" ? body.description : "";
+    typeof body.description === "string" ? sanitizeText(body.description) : "";
   const category = typeof body.category === "string" ? body.category : "";
   const condition = typeof body.condition === "string" ? body.condition : "";
   const startPrice = parseNumber(body.startPrice);
@@ -70,34 +85,37 @@ export async function POST(request: Request) {
       : {};
 
   if (!title.trim()) {
-    return NextResponse.json({ error: "Title is required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Title is required." },
+      { status: 400, headers }
+    );
   }
 
   if (!category) {
     return NextResponse.json(
       { error: "Category is required." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
   if (!condition) {
     return NextResponse.json(
       { error: "Condition is required." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
   if (!Number.isFinite(startPrice) || startPrice <= 0) {
     return NextResponse.json(
       { error: "Start price must be a positive number." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
   if (!Number.isFinite(durationHours) || durationHours <= 0) {
     return NextResponse.json(
       { error: "Duration must be a positive number." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
@@ -117,12 +135,12 @@ export async function POST(request: Request) {
       internationalShippingUsd: parseNumber(body.internationalShippingUsd) || 0,
     });
 
-    return NextResponse.json({ success: true, auction });
+    return NextResponse.json({ success: true, auction }, { headers });
   } catch (error) {
     logSupabaseError("api/listings POST", error);
     return NextResponse.json(
       { error: "Unable to create listing. Please try again." },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }

@@ -4,6 +4,7 @@ import {
   BidPlacementError,
   placeBidWithValidation,
 } from "@/lib/bid-placement";
+import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 
@@ -13,7 +14,16 @@ type BidRequestBody = {
   amount?: unknown;
 };
 
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders(request.headers.get("origin")),
+  });
+}
+
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  const headers = corsHeaders(origin);
   let body: BidRequestBody;
 
   try {
@@ -21,7 +31,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json(
       { error: "Invalid request body." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
@@ -37,32 +47,41 @@ export async function POST(request: Request) {
         : NaN;
 
   if (!auctionId) {
-    return NextResponse.json({ error: "Auction is required." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Auction is required." },
+      { status: 400, headers }
+    );
   }
 
   if (!bidderWallet) {
     return NextResponse.json(
       { error: "Wallet address is required." },
-      { status: 400 }
+      { status: 400, headers }
     );
   }
 
   if (isRateLimited(bidderWallet, "bids")) {
-    return NextResponse.json({ error: RATE_LIMIT_MESSAGE }, { status: 429 });
+    return NextResponse.json(
+      { error: RATE_LIMIT_MESSAGE },
+      { status: 429, headers }
+    );
   }
 
   try {
     await placeBidWithValidation({ auctionId, bidderWallet, amount });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers });
   } catch (error) {
     if (error instanceof BidPlacementError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400, headers }
+      );
     }
 
     logSupabaseError("api/bids POST", error);
     return NextResponse.json(
       { error: "Unable to place bid. Please try again." },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }
