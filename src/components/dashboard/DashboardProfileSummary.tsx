@@ -69,7 +69,7 @@ export default function DashboardProfileSummary({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="relative h-28 bg-surface-elevated sm:h-32">
+      <div className="relative h-40 w-full bg-surface-elevated sm:h-48">
         {profile?.banner_image ? (
           <Image
             src={profile.banner_image}
@@ -81,31 +81,29 @@ export default function DashboardProfileSummary({
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-accent/50 via-purple-900/80 to-background" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       </div>
 
-      <div className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
-        <div className="-mt-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="relative px-5 pb-5 sm:px-6 sm:pb-6">
+        <div className="-mt-10 flex flex-col gap-4 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex min-w-0 items-end gap-4">
             <UserAvatar
               walletAddress={walletAddress}
               avatarUrl={profile?.avatar_url}
               alt={titleLine}
-              size="2xl"
+              size="3xl"
               rounded="xl"
               className="border-4 border-surface"
             />
             <div className="min-w-0 flex-1 pb-1">
-              <h1 className="break-words text-xl font-bold text-white">
+              <h1 className="break-words text-xl font-bold text-white sm:text-2xl">
                 {titleLine}
               </h1>
               {shopName && username ? (
-                <p className="mt-1 break-all text-sm text-muted">
-                  @{username}
-                </p>
+                <p className="mt-1 break-all text-sm text-muted">@{username}</p>
               ) : null}
               <div className="mt-1 flex flex-wrap items-center gap-2">
-                <p className="break-all font-mono text-xs text-muted">
+                <p className="break-all font-mono text-xs text-zinc-400">
                   {shortenAddress(walletAddress, 6)}
                 </p>
                 {showCopyWallet && (
