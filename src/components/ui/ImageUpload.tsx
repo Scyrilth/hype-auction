@@ -9,6 +9,7 @@ import {
   uploadImageToStorage,
   validateImageFile,
 } from "@/lib/storage";
+import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 
 export type ImageUploadVariant = "avatar" | "banner" | "auction";
 
@@ -88,9 +89,8 @@ export default function ImageUpload({
       await onUploaded?.(publicUrl);
     } catch (uploadError) {
       setPreviewUrl(value || null);
-      setError(
-        uploadError instanceof Error ? uploadError.message : "Upload failed."
-      );
+      logSupabaseError("ImageUpload", uploadError);
+      setError(getErrorMessage(uploadError, "Upload failed. Please try again."));
     } finally {
       setIsUploading(false);
       setProgress(null);

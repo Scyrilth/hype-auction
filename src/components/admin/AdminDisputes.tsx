@@ -7,6 +7,7 @@ import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
+import { getErrorMessage } from "@/lib/errors";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { useSolPrice } from "@/hooks/useSolPrice";
 import { fetchAdminThreadMessages, fetchDisputes } from "@/lib/admin/data";
@@ -68,7 +69,7 @@ export default function AdminDisputes() {
       setDialog(null);
       void load();
     } else {
-      showToast(result.error, "error");
+      showToast(getErrorMessage(result.error), "error");
     }
   };
 

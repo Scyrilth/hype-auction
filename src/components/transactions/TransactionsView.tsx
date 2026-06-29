@@ -13,6 +13,7 @@ import SummaryCards from "@/components/transactions/SummaryCards";
 import TransactionTable from "@/components/transactions/TransactionTable";
 import TransactionsSkeleton from "@/components/transactions/TransactionsSkeleton";
 import { useSolPrice } from "@/hooks/useSolPrice";
+import { DEFAULT_USER_ERROR_MESSAGE } from "@/lib/errors";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   buildBuyerSpendingSeries,
@@ -90,7 +91,8 @@ export default function TransactionsView() {
       const result = await fetchTransactionsData(wallet, rate, client);
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load transactions");
+      console.error("TransactionsView: load failed", err);
+      setError(DEFAULT_USER_ERROR_MESSAGE);
     } finally {
       setLoading(false);
     }

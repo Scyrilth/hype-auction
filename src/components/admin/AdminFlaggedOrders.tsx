@@ -8,6 +8,7 @@ import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
+import { getErrorMessage } from "@/lib/errors";
 import { fetchFlaggedOrders } from "@/lib/admin/data";
 import type { FlaggedOrder } from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
@@ -79,7 +80,7 @@ export default function AdminFlaggedOrders() {
       setDialog(null);
       void load();
     } else {
-      showToast(result.error, "error");
+      showToast(getErrorMessage(result.error), "error");
     }
   };
 

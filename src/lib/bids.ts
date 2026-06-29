@@ -1,4 +1,6 @@
 /** Client helper — places a bid via the server-validated API route. */
+import { getErrorMessage } from "@/lib/errors";
+
 export async function placeBid({
   auctionId,
   bidderWallet,
@@ -20,7 +22,7 @@ export async function placeBid({
 
   if (!response.ok) {
     throw new Error(
-      payload.error ?? "Unable to place bid. Please try again."
+      getErrorMessage(payload.error, "Unable to place bid. Please try again.")
     );
   }
 }

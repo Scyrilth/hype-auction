@@ -9,6 +9,7 @@ import {
 } from "@solana/web3.js";
 
 import { fetchSolUsdRate } from "@/lib/sol-price";
+import { getErrorMessage } from "@/lib/errors";
 import { getAuctionThreadId } from "@/lib/messages";
 import { notifyPaymentConfirmed } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
@@ -354,13 +355,14 @@ function parseEscrowStateValue(
 }
 
 function formatAnchorError(error: unknown): string {
-  if (error instanceof Error) {
-    if (error.message.includes("User rejected")) {
-      return "Transaction cancelled in wallet.";
-    }
-    return error.message;
+  if (error instanceof Error && error.message.includes("User rejected")) {
+    return "Transaction cancelled in wallet.";
   }
-  return "An unexpected escrow error occurred.";
+
+  return getErrorMessage(
+    error,
+    "Unable to complete escrow transaction. Please try again."
+  );
 }
 
 export async function getEscrowStatus(
@@ -635,7 +637,11 @@ export async function adminReleaseToSeller(
     .eq("id", auctionId);
 
   if (error) {
-    return { success: false, error: error.message };
+    console.error("adminReleaseEscrow: update failed", error);
+    return {
+      success: false,
+      error: "Unable to process your request. Please try again.",
+    };
   }
 
   return { success: true, txSignature: "admin-db-release" };

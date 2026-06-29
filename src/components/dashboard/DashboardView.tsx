@@ -12,7 +12,7 @@ import DashboardTabs, {
 import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
 import { getSellerDashboardData, type SellerDashboardData } from "@/lib/dashboard";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
-import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { logSupabaseError } from "@/lib/errors";
 
 const emptyData: SellerDashboardData = {
   profile: null,
@@ -48,7 +48,6 @@ export default function DashboardView() {
       setData(dashboard);
     } catch (error) {
       logSupabaseError("DashboardView", error);
-      console.error(getErrorMessage(error));
       setData(emptyData);
     } finally {
       setLoading(false);

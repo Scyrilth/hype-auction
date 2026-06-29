@@ -8,7 +8,6 @@ import {
   syncExpiredNextBidderOffers,
   type UnpaidAuctionAction,
 } from "@/lib/non-payment-resolution";
-import { getErrorMessage } from "@/lib/errors";
 
 export default function ActionRequiredSection({
   sellerWallet,
@@ -29,7 +28,7 @@ export default function ActionRequiredSection({
       console.log("[ActionRequiredSection] fetched actions:", items);
       setActions(items);
     } catch (error) {
-      console.error("[ActionRequiredSection] load failed:", getErrorMessage(error));
+      console.error("[ActionRequiredSection] load failed:", error);
       setActions([]);
     } finally {
       setLoading(false);

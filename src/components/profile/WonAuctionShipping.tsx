@@ -84,10 +84,7 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
       if (result.onChainSuccess) {
         showToast("✅ Receipt confirmed on-chain");
       } else if (result.onChainWarning) {
-        showToast(
-          `Receipt saved. On-chain release failed: ${result.onChainWarning}`,
-          "error"
-        );
+        showToast(`Receipt saved. ${result.onChainWarning}`, "error");
       } else {
         showToast("Receipt confirmed!");
       }

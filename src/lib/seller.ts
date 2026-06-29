@@ -1,6 +1,7 @@
 import { getCategoryLabels } from "@/lib/categories";
 import type { Auction } from "@/lib/database.types";
 import { AUCTION_CONDITIONS } from "@/lib/grading";
+import { logSupabaseError, getErrorMessage } from "@/lib/errors";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { generateReferenceNumber } from "@/lib/reference-number";
 import { supabase } from "@/lib/supabase";
@@ -117,10 +118,12 @@ export async function createAuction({
       continue;
     }
 
-    throw error;
+    logSupabaseError("createAuction", error);
+    throw new Error("Unable to create listing. Please try again.");
   }
 
-  throw lastError ?? new Error("Failed to create auction.");
+  logSupabaseError("createAuction", lastError);
+  throw new Error("Unable to create listing. Please try again.");
 }
 
 /** Client helper — creates a listing via the rate-limited API route. */
@@ -153,7 +156,7 @@ export async function createListingViaApi(
 
   if (!response.ok) {
     throw new Error(
-      payload.error ?? "Unable to create listing. Please try again."
+      getErrorMessage(payload.error, "Unable to create listing. Please try again.")
     );
   }
 

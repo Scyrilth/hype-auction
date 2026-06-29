@@ -3,6 +3,7 @@ import type { AnchorProvider } from "@coral-xyz/anchor";
 import type { Auction } from "@/lib/database.types";
 import { confirmReceiptOnChain } from "@/lib/escrow";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
+import { logSupabaseError, getErrorMessage } from "@/lib/errors";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import {
   getUserDisplayName,
@@ -642,7 +643,10 @@ export async function sendDirectMessageRecord(
     .eq("id", threadId)
     .single();
 
-  if (threadError) throw threadError;
+  if (threadError) {
+    logSupabaseError("sendDirectMessageRecord: thread", threadError);
+    throw new Error("Unable to send message. Please try again.");
+  }
   if (thread.status === "archived") {
     throw new Error("This conversation has been archived.");
   }
@@ -669,7 +673,10 @@ export async function sendDirectMessageRecord(
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) {
+    logSupabaseError("sendDirectMessageRecord: insert", error);
+    throw new Error("Unable to send message. Please try again.");
+  }
 
   const recipientWallet =
     thread.buyer_wallet === senderWallet
@@ -706,7 +713,7 @@ export async function sendDirectMessage(
 
   if (!response.ok) {
     throw new Error(
-      payload.error ?? "Unable to send message. Please try again."
+      getErrorMessage(payload.error, "Unable to send message. Please try again.")
     );
   }
 
@@ -831,7 +838,10 @@ export async function confirmReceipt(
         console.error("On-chain release failed:", onChainResult.error);
         result = {
           onChainSuccess: false,
-          onChainWarning: onChainResult.error,
+          onChainWarning: getErrorMessage(
+            onChainResult.error,
+            "On-chain release failed."
+          ),
         };
       }
     }

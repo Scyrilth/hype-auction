@@ -399,7 +399,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         showToast("✅ Receipt confirmed on-chain");
       } else if (result.onChainWarning) {
         showToast(
-          `Receipt saved. On-chain release failed: ${result.onChainWarning}`,
+          `Receipt saved. ${result.onChainWarning}`,
           "error"
         );
       } else {
@@ -480,7 +480,9 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       );
 
       if (!result.success) {
-        setPaymentError(result.error);
+        setPaymentError(
+          getErrorMessage(result.error, "Unable to process payment. Please try again.")
+        );
         return;
       }
 
@@ -567,7 +569,9 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       );
 
       if (!result.success) {
-        setPaymentError(result.error);
+        setPaymentError(
+          getErrorMessage(result.error, "Unable to process payment. Please try again.")
+        );
         showToast("Offer accepted. Complete payment with Pay Now below.");
         await loadThread();
         return;

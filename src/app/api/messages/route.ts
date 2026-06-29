@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { logSupabaseError } from "@/lib/errors";
+import { logSupabaseError, isSafeUserFacingMessage } from "@/lib/errors";
 import { sendDirectMessageRecord } from "@/lib/messages";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 
@@ -56,11 +56,12 @@ export async function POST(request: Request) {
     const message = await sendDirectMessageRecord(threadId, senderWallet, content);
     return NextResponse.json({ success: true, message });
   } catch (error) {
-    if (error instanceof Error) {
+    logSupabaseError("api/messages POST", error);
+
+    if (error instanceof Error && isSafeUserFacingMessage(error.message)) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    logSupabaseError("api/messages POST", error);
     return NextResponse.json(
       { error: "Unable to send message. Please try again." },
       { status: 500 }

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { SendIcon, SmileIcon } from "@/components/icons";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import UserAvatar from "@/components/ui/UserAvatar";
-import { getErrorMessage, logSupabaseError } from "@/lib/errors";
+import { logSupabaseError } from "@/lib/errors";
 import { getProfileHref } from "@/lib/profile-links";
 import {
   type ChatMessage,
@@ -114,7 +114,6 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
       setInput("");
     } catch (error) {
       logSupabaseError("LiveChat: send message", error);
-      console.error(getErrorMessage(error));
     } finally {
       setSending(false);
     }

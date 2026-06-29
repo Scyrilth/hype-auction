@@ -6,6 +6,7 @@ import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
+import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
   fetchRecentUsers,
   fetchUserStrikes,
@@ -86,7 +87,8 @@ export default function AdminUserManagement() {
       const refreshed = await searchAdminUser(user.wallet_address);
       if (refreshed) setUser(refreshed);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Action failed", "error");
+      logSupabaseError("AdminUserManagement.action", err);
+      showToast(getErrorMessage(err, "Action failed."), "error");
     } finally {
       setActionLoading(false);
       setPendingAction(null);
