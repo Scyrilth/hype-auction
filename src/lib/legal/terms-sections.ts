@@ -10,6 +10,10 @@ export const termsSections: LegalSectionData[] = [
     body: "Hype Auction is a live auction marketplace for collectibles, sneakers and streetwear built on the Solana blockchain. By connecting your wallet you agree to these terms. We reserve the right to update these terms at any time.",
   },
   {
+    title: "Cryptocurrency & Regulatory Notice",
+    body: "Hype Auction operates using Solana (SOL) cryptocurrency for payments and escrow. The use of cryptocurrency may be restricted or regulated in certain jurisdictions. It is your responsibility to ensure that your use of this platform complies with all applicable laws and regulations in your country or region. Hype Auction does not provide financial, legal, or tax advice. By using this platform, you confirm that cryptocurrency transactions are lawful in your jurisdiction.",
+  },
+  {
     title: "2. Eligibility",
     bullets: [
       "Must be 18 years or older",
@@ -143,8 +147,8 @@ export const termsSections: LegalSectionData[] = [
     ],
   },
   {
-    title: "15. Governing Law",
-    body: "These terms are governed by applicable law. Disputes regarding these terms shall be resolved through good faith negotiation first.",
+    title: "Governing Law & Jurisdiction",
+    body: "These Terms are governed by and construed in accordance with applicable laws. Any disputes arising from your use of Hype Auction shall be subject to the exclusive jurisdiction of the courts of the Republic of Maldives. If any provision of these Terms is found to be unenforceable, the remaining provisions will continue in full force.",
   },
   {
     title: "16. Contact",
