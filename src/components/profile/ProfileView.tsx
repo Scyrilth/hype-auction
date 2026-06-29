@@ -8,6 +8,7 @@ import ProfileStrikeBanner from "@/components/profile/ProfileStrikeBanner";
 import ProfileBidActivityList from "@/components/profile/ProfileBidActivityList";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import ProfileReviewsGivenList from "@/components/profile/ProfileReviewsGivenList";
+import ProfileAccountSettingsTab from "@/components/profile/ProfileAccountSettingsTab";
 import ProfileSettingsTab from "@/components/profile/ProfileSettingsTab";
 import ProfileShippingTab from "@/components/profile/ProfileShippingTab";
 import ProfileStatsRow from "@/components/profile/ProfileStatsRow";
@@ -28,6 +29,7 @@ type ProfileTab =
   | "transactions"
   | "watchlist"
   | "collections"
+  | "account"
   | "settings"
   | "shipping";
 
@@ -62,6 +64,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
 
     if (isOwner) {
       items.push(
+        { id: "account", label: "Settings" },
         { id: "settings", label: "Privacy" },
         { id: "shipping", label: "Shipping" }
       );
@@ -173,6 +176,15 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
           <ProfileCollectionsTab
             profileWallet={profile.user.wallet_address}
             isOwner={isOwner}
+          />
+        )}
+
+        {activeTab === "account" && isOwner && (
+          <ProfileAccountSettingsTab
+            initialUsername={profile.user.username}
+            initialBio={profile.user.bio}
+            initialAvatarUrl={profile.user.avatar_url}
+            walletAddress={profile.user.wallet_address}
           />
         )}
 

@@ -429,3 +429,13 @@ body {
   background: rgb(124 58 237 / 0.28);
   color: rgb(233 213 255);
 }
+
+.image-crop-shell .ReactCrop__crop-selection {
+  border-color: rgb(168 85 247 / 0.9);
+  box-shadow: 0 0 0 9999em rgb(0 0 0 / 0.55);
+}
+
+.image-crop-shell .ReactCrop__drag-handle::after {
+  background-color: rgb(168 85 247);
+  border-color: rgb(255 255 255 / 0.8);
+}

@@ -3,7 +3,9 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 
+import ImageCropModal from "@/components/ui/ImageCropModal";
 import { resolveAvatarUrl } from "@/lib/avatars";
+import type { ImageUploadVariant } from "@/lib/image-crop";
 import {
   type StorageBucket,
   uploadImageToStorage,
@@ -11,7 +13,7 @@ import {
 } from "@/lib/storage";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 
-export type ImageUploadVariant = "avatar" | "banner" | "auction";
+export type { ImageUploadVariant } from "@/lib/image-crop";
 
 const labelClass =
   "mb-1.5 block text-xs font-medium uppercase tracking-wider text-muted";
@@ -50,6 +52,8 @@ export default function ImageUpload({
   const [progress, setProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [pendingFileName, setPendingFileName] = useState("image.jpg");
 
   const displayUrl = previewUrl || value;
   const avatarFallback =
@@ -57,17 +61,15 @@ export default function ImageUpload({
       ? resolveAvatarUrl(null, walletAddress)
       : null;
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    const validationError = validateImageFile(file, maxSizeMb);
-    if (validationError) {
-      setError(validationError);
-      return;
+  const closeCropModal = () => {
+    if (cropSource) {
+      URL.revokeObjectURL(cropSource);
     }
+    setCropSource(null);
+    setPendingFileName("image.jpg");
+  };
 
+  const uploadFile = async (file: File) => {
     setError(null);
     setIsUploading(true);
     setProgress(0);
@@ -96,6 +98,27 @@ export default function ImageUpload({
       setProgress(null);
       URL.revokeObjectURL(localPreview);
     }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateImageFile(file, maxSizeMb);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError(null);
+    setPendingFileName(file.name);
+    setCropSource(URL.createObjectURL(file));
+  };
+
+  const handleCropConfirm = async (file: File) => {
+    closeCropModal();
+    await uploadFile(file);
   };
 
   const openPicker = () => {
@@ -218,6 +241,17 @@ export default function ImageUpload({
       )}
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+
+      {cropSource && (
+        <ImageCropModal
+          open
+          imageSrc={cropSource}
+          variant={variant}
+          fileName={pendingFileName}
+          onCancel={closeCropModal}
+          onConfirm={(file) => void handleCropConfirm(file)}
+        />
+      )}
     </div>
   );
 }

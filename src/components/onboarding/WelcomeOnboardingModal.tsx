@@ -4,10 +4,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage } from "@/lib/errors";
 import { isOnboarded, markOnboarded } from "@/lib/onboarding";
+import { updateBuyerProfileSettings } from "@/lib/profile";
+import { getImageExtension } from "@/lib/storage";
 import { createUserRecord, getUserByWallet, type OnboardingIntent } from "@/lib/users";
 
 type WelcomeOnboardingModalProps = {
@@ -53,6 +56,7 @@ export default function WelcomeOnboardingModal({
   const [loading, setLoading] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [ageError, setAgeError] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState("");
 
   const handleChoice = useCallback(
     async (intent: OnboardingIntent) => {
@@ -67,6 +71,9 @@ export default function WelcomeOnboardingModal({
       setLoading(true);
       try {
         await createUserRecord(wallet, intent, client);
+        if (avatarUrl) {
+          await updateBuyerProfileSettings(wallet, { avatarUrl }, client);
+        }
         markOnboarded(wallet);
         onClose();
 
@@ -82,13 +89,14 @@ export default function WelcomeOnboardingModal({
         setLoading(false);
       }
     },
-    [ageConfirmed, client, loading, onClose, publicKey, router, showToast]
+    [ageConfirmed, avatarUrl, client, loading, onClose, publicKey, router, showToast]
   );
 
   useEffect(() => {
     if (!open) {
       setAgeConfirmed(false);
       setAgeError(false);
+      setAvatarUrl("");
       return;
     }
 
@@ -140,6 +148,22 @@ export default function WelcomeOnboardingModal({
             You must be 18 or older to use Hype Auction
           </p>
         )}
+
+        <div className="mt-6 flex justify-center">
+          <ImageUpload
+            label="Profile photo (optional)"
+            bucket="Avatars"
+            variant="avatar"
+            maxSizeMb={5}
+            walletAddress={publicKey?.toBase58()}
+            value={avatarUrl}
+            onChange={setAvatarUrl}
+            buildPath={(file) =>
+              `${publicKey!.toBase58()}/avatar.${getImageExtension(file)}`
+            }
+            disabled={!publicKey || loading}
+          />
+        </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <OptionCard

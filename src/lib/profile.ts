@@ -81,6 +81,27 @@ export async function updateProfilePrivacy(
   if (error) throw error;
 }
 
+export async function updateBuyerProfileSettings(
+  walletAddress: string,
+  settings: {
+    username?: string;
+    bio?: string;
+    avatarUrl?: string;
+  },
+  client: SupabaseClient = supabase
+): Promise<void> {
+  const { error } = await client
+    .from("users")
+    .update({
+      username: settings.username?.trim() || null,
+      bio: settings.bio?.trim() || null,
+      avatar_url: settings.avatarUrl?.trim() || null,
+    })
+    .eq("wallet_address", walletAddress);
+
+  if (error) throw error;
+}
+
 async function getReviewsByReviewer(
   reviewerWallet: string
 ): Promise<ReviewWithVendor[]> {
