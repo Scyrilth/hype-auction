@@ -1,11 +1,12 @@
 import type { Auction } from "@/lib/database.types";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export async function getWatchlistAuctionIds(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<string[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("watchlist")
     .select("auction_id")
     .eq("wallet_address", walletAddress)
@@ -16,9 +17,10 @@ export async function getWatchlistAuctionIds(
 }
 
 export async function getWatchlistAuctions(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<Auction[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("watchlist")
     .select("auction_id, created_at, auctions(*)")
     .eq("wallet_address", walletAddress)
@@ -40,9 +42,10 @@ export async function getWatchlistAuctions(
 
 export async function addToWatchlist(
   walletAddress: string,
-  auctionId: string
+  auctionId: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase.from("watchlist").insert({
+  const { error } = await client.from("watchlist").insert({
     wallet_address: walletAddress,
     auction_id: auctionId,
   });
@@ -52,9 +55,10 @@ export async function addToWatchlist(
 
 export async function removeFromWatchlist(
   walletAddress: string,
-  auctionId: string
+  auctionId: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await client
     .from("watchlist")
     .delete()
     .eq("wallet_address", walletAddress)

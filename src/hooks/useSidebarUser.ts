@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
-import { supabase } from "@/lib/supabase";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 
 export function useSidebarUser() {
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const wallet = publicKey?.toBase58() ?? null;
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export function useSidebarUser() {
 
     void (async () => {
       try {
-        const { data } = await supabase
+        const { data } = await client
           .from("users")
           .select("username, avatar_url, is_vendor")
           .eq("wallet_address", wallet)
@@ -45,7 +46,7 @@ export function useSidebarUser() {
     return () => {
       cancelled = true;
     };
-  }, [connected, wallet]);
+  }, [client, connected, wallet]);
 
   return { connected, wallet, username, avatarUrl, isVendor, loading };
 }

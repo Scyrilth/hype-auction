@@ -1,7 +1,7 @@
 import { logSupabaseError } from "@/lib/errors";
 import { formatSol, shortenAddress } from "@/lib/format";
 import { getProfileHref } from "@/lib/profile-links";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export type NotificationType =
   | "bid_placed"
@@ -128,8 +128,11 @@ export async function createNotification(
   }
 }
 
-export async function markAsRead(notificationId: string): Promise<void> {
-  const { error } = await supabase
+export async function markAsRead(
+  notificationId: string,
+  client: SupabaseClient = supabase
+): Promise<void> {
+  const { error } = await client
     .from("notifications")
     .update({ is_read: true })
     .eq("id", notificationId);
@@ -137,8 +140,11 @@ export async function markAsRead(notificationId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function markAllAsRead(wallet: string): Promise<void> {
-  const { error } = await supabase
+export async function markAllAsRead(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<void> {
+  const { error } = await client
     .from("notifications")
     .update({ is_read: true })
     .eq("wallet_address", wallet)
@@ -147,8 +153,11 @@ export async function markAllAsRead(wallet: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function getNotifications(wallet: string): Promise<Notification[]> {
-  const { data, error } = await supabase
+export async function getNotifications(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<Notification[]> {
+  const { data, error } = await client
     .from("notifications")
     .select("*")
     .eq("wallet_address", wallet)
@@ -172,8 +181,11 @@ export async function getNotifications(wallet: string): Promise<Notification[]> 
     .filter((item): item is Notification => item !== null);
 }
 
-export async function getUnreadCount(wallet: string): Promise<number> {
-  const { count, error } = await supabase
+export async function getUnreadCount(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<number> {
+  const { count, error } = await client
     .from("notifications")
     .select("id", { count: "exact", head: true })
     .eq("wallet_address", wallet)

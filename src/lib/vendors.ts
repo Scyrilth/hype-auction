@@ -14,7 +14,7 @@ import {
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { getTopFeaturedAuctionIds, type AuctionLabelMaps } from "@/lib/auction-labels";
 import { normalizeSocialHandle } from "@/lib/format";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export function parseUser(row: Record<string, unknown>): User {
   return {
@@ -197,9 +197,10 @@ export interface VendorSettingsInput {
 
 export async function updateVendorSettings(
   walletAddress: string,
-  settings: VendorSettingsInput
+  settings: VendorSettingsInput,
+  client: SupabaseClient = supabase
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("users")
     .upsert(
       {
@@ -237,11 +238,12 @@ const USER_VENDOR_COLUMNS =
 const USER_PROFILE_COLUMNS = `${USER_IDENTITY_COLUMNS}, ${USER_VENDOR_COLUMNS}`;
 
 async function fetchUserProfile(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<{ data: Record<string, unknown> | null; error: unknown }> {
   const wallet = walletAddress.trim();
 
-  const full = await supabase
+  const full = await client
     .from("users")
     .select("*")
     .eq("wallet_address", wallet)
@@ -258,7 +260,7 @@ async function fetchUserProfile(
     full.error
   );
 
-  const extended = await supabase
+  const extended = await client
     .from("users")
     .select(USER_PROFILE_COLUMNS)
     .eq("wallet_address", wallet)
@@ -275,7 +277,7 @@ async function fetchUserProfile(
     extended.error
   );
 
-  const identity = await supabase
+  const identity = await client
     .from("users")
     .select(USER_IDENTITY_COLUMNS)
     .eq("wallet_address", wallet)
@@ -287,7 +289,7 @@ async function fetchUserProfile(
     return { data: identity.data as Record<string, unknown> | null, error: null };
   }
 
-  const base = await supabase
+  const base = await client
     .from("users")
     .select(USER_BASE_COLUMNS)
     .eq("wallet_address", wallet)
@@ -302,9 +304,10 @@ async function fetchUserProfile(
 }
 
 export async function getVendorSettings(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<User | null> {
-  const { data, error } = await fetchUserProfile(walletAddress);
+  const { data, error } = await fetchUserProfile(walletAddress, client);
 
   if (error) throw error;
   return data ? parseUser(data) : null;

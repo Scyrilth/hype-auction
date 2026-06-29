@@ -1,6 +1,6 @@
 import type { ShippingAddress, ShippingAddressInput } from "@/lib/database.types";
 import { logSupabaseError } from "@/lib/errors";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 function parseShippingAddress(row: Record<string, unknown>): ShippingAddress {
   return {
@@ -26,16 +26,18 @@ export function isShippingAddressLocked(address: ShippingAddress): boolean {
 }
 
 export async function getDefaultShippingAddress(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<ShippingAddress | null> {
-  const addresses = await getShippingAddresses(walletAddress);
+  const addresses = await getShippingAddresses(walletAddress, client);
   return addresses.find((address) => address.is_default) ?? addresses[0] ?? null;
 }
 
 export async function getShippingAddresses(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<ShippingAddress[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("shipping_addresses")
     .select("*")
     .eq("wallet_address", walletAddress)
@@ -48,8 +50,12 @@ export async function getShippingAddresses(
   );
 }
 
-async function clearDefaultAddresses(walletAddress: string, exceptId?: string) {
-  let query = supabase
+async function clearDefaultAddresses(
+  walletAddress: string,
+  client: SupabaseClient,
+  exceptId?: string
+) {
+  let query = client
     .from("shipping_addresses")
     .update({ is_default: false })
     .eq("wallet_address", walletAddress)
@@ -65,13 +71,14 @@ async function clearDefaultAddresses(walletAddress: string, exceptId?: string) {
 
 export async function createShippingAddress(
   walletAddress: string,
-  input: ShippingAddressInput
+  input: ShippingAddressInput,
+  client: SupabaseClient = supabase
 ): Promise<ShippingAddress> {
   if (input.is_default) {
-    await clearDefaultAddresses(walletAddress);
+    await clearDefaultAddresses(walletAddress, client);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("shipping_addresses")
     .insert({
       wallet_address: walletAddress,
@@ -100,9 +107,10 @@ export async function createShippingAddress(
 export async function updateShippingAddress(
   walletAddress: string,
   addressId: string,
-  input: ShippingAddressInput
+  input: ShippingAddressInput,
+  client: SupabaseClient = supabase
 ): Promise<ShippingAddress> {
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing, error: fetchError } = await client
     .from("shipping_addresses")
     .select("*")
     .eq("id", addressId)
@@ -116,10 +124,10 @@ export async function updateShippingAddress(
   }
 
   if (input.is_default) {
-    await clearDefaultAddresses(walletAddress, addressId);
+    await clearDefaultAddresses(walletAddress, client, addressId);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("shipping_addresses")
     .update({
       nickname: input.nickname.trim(),
@@ -148,9 +156,10 @@ export async function updateShippingAddress(
 
 export async function deleteShippingAddress(
   walletAddress: string,
-  addressId: string
+  addressId: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing, error: fetchError } = await client
     .from("shipping_addresses")
     .select("used_for_auction_id")
     .eq("id", addressId)
@@ -163,7 +172,7 @@ export async function deleteShippingAddress(
     throw new Error("This address was used for a won auction and cannot be deleted.");
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from("shipping_addresses")
     .delete()
     .eq("id", addressId)

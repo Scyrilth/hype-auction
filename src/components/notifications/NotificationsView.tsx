@@ -8,6 +8,7 @@ import NotificationRow from "@/components/notifications/NotificationRow";
 import NotificationsEmptyState from "@/components/notifications/NotificationsEmptyState";
 import BackButton from "@/components/ui/BackButton";
 import { useNotifications } from "@/hooks/useNotifications";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   markAllAsRead,
   markAsRead,
@@ -39,6 +40,7 @@ function getDateGroup(iso: string): string {
 export default function NotificationsView() {
   const router = useRouter();
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const {
     notifications,
     unreadCount,
@@ -69,18 +71,18 @@ export default function NotificationsView() {
     const wallet = publicKey?.toBase58();
     if (!wallet) return;
     try {
-      await markAllAsRead(wallet);
+      await markAllAsRead(wallet, client);
       await refresh();
     } catch {
       // keep list visible
     }
-  }, [publicKey, refresh]);
+  }, [client, publicKey, refresh]);
 
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
       if (!notification.is_read) {
         try {
-          await markAsRead(notification.id);
+          await markAsRead(notification.id, client);
           await refresh();
         } catch {
           // navigation still proceeds
@@ -91,7 +93,7 @@ export default function NotificationsView() {
         router.push(href);
       }
     },
-    [refresh, router]
+    [client, refresh, router]
   );
 
   if (!mounted) {

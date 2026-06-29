@@ -14,6 +14,7 @@ import ProfileStatsRow from "@/components/profile/ProfileStatsRow";
 import ProfileCollectionsTab from "@/components/profile/ProfileCollectionsTab";
 import ProfileWatchlistTab from "@/components/profile/ProfileWatchlistTab";
 import type { BuyerProfileData } from "@/lib/profile";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   fetchActiveBuyerStrikes,
   summarizeBuyerStrikes,
@@ -32,6 +33,7 @@ type ProfileTab =
 
 export default function ProfileView({ profile }: { profile: BuyerProfileData }) {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const [activeTab, setActiveTab] = useState<ProfileTab>("activity");
   const [strikeSummary, setStrikeSummary] = useState<BuyerStrikeSummary | null>(
     null
@@ -82,7 +84,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
 
     let cancelled = false;
 
-    void fetchActiveBuyerStrikes(publicKey.toBase58())
+    void fetchActiveBuyerStrikes(publicKey.toBase58(), client)
       .then((strikes) => {
         if (!cancelled) {
           setStrikeSummary(summarizeBuyerStrikes(strikes));
@@ -95,7 +97,7 @@ export default function ProfileView({ profile }: { profile: BuyerProfileData }) 
     return () => {
       cancelled = true;
     };
-  }, [isOwner, publicKey]);
+  }, [client, isOwner, publicKey]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">

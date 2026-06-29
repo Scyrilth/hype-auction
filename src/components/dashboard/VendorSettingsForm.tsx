@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import ImageUpload from "@/components/ui/ImageUpload";
 import SellerProfileSetupBanner from "@/components/dashboard/SellerProfileSetupBanner";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { displaySocialHandle, shortenAddress } from "@/lib/format";
 import { getImageExtension } from "@/lib/storage";
@@ -26,6 +27,7 @@ const labelClass =
 
 export default function VendorSettingsForm() {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -52,8 +54,8 @@ export default function VendorSettingsForm() {
     async function load() {
       setIsLoading(true);
       try {
-        await upsertUser(publicKey!.toBase58());
-        const data = await getVendorSettings(publicKey!.toBase58());
+        await upsertUser(publicKey!.toBase58(), client);
+        const data = await getVendorSettings(publicKey!.toBase58(), client);
         if (cancelled || !data) return;
 
         setProfile(data);
@@ -81,7 +83,7 @@ export default function VendorSettingsForm() {
     return () => {
       cancelled = true;
     };
-  }, [publicKey, showToast]);
+  }, [client, publicKey, showToast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +99,7 @@ export default function VendorSettingsForm() {
     try {
       const walletAddress = publicKey.toBase58();
 
-      await upsertUser(walletAddress);
+      await upsertUser(walletAddress, client);
 
       const updated = await updateVendorSettings(walletAddress, {
         username,
@@ -112,7 +114,7 @@ export default function VendorSettingsForm() {
         showCopyWallet,
         country,
         shipsInternationally,
-      });
+      }, client);
 
       setProfile(updated);
       showToast("Shop settings saved!");
@@ -258,7 +260,7 @@ export default function VendorSettingsForm() {
               showCopyWallet,
               country,
               shipsInternationally,
-            });
+            }, client);
             setProfile(updated);
             showToast("Avatar uploaded!");
           }}
@@ -290,7 +292,7 @@ export default function VendorSettingsForm() {
               showCopyWallet,
               country,
               shipsInternationally,
-            });
+            }, client);
             setProfile(updated);
             showToast("Banner uploaded!");
           }}

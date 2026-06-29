@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getUnreadMessageCount } from "@/lib/messages";
 
 export function useUnreadMessageCount() {
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const [count, setCount] = useState(0);
 
   const refresh = useCallback(async () => {
@@ -16,12 +18,12 @@ export function useUnreadMessageCount() {
     }
 
     try {
-      const unread = await getUnreadMessageCount(publicKey.toBase58());
+      const unread = await getUnreadMessageCount(publicKey.toBase58(), client);
       setCount(unread);
     } catch {
       setCount(0);
     }
-  }, [connected, publicKey]);
+  }, [client, connected, publicKey]);
 
   useEffect(() => {
     void refresh();

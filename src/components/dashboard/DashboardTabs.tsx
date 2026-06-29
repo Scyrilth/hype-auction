@@ -18,6 +18,7 @@ import ReviewCard from "@/components/reviews/ReviewCard";
 import FiatValue from "@/components/ui/FiatValue";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type {
   DashboardActivityItem,
   SellerAuctionWithStats,
@@ -47,6 +48,7 @@ function ActiveAuctionCard({
 }) {
   const router = useRouter();
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [ending, setEnding] = useState(false);
 
@@ -60,7 +62,7 @@ function ActiveAuctionCard({
     if (!publicKey || ending) return;
     setEnding(true);
     try {
-      await endSellerAuction(auction.id, publicKey.toBase58());
+      await endSellerAuction(auction.id, publicKey.toBase58(), client);
       showToast("Auction ended.");
       onEnded();
     } catch (error) {

@@ -11,6 +11,7 @@ import {
   resolveShippingUsd,
 } from "@/lib/auction-shipping";
 import type { Auction, User } from "@/lib/database.types";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getDefaultShippingAddress } from "@/lib/shipping";
 
 export default function AuctionShippingInfo({
@@ -23,6 +24,7 @@ export default function AuctionShippingInfo({
   onShippingBlockedChange?: (blocked: boolean) => void;
 }) {
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const [buyerCountry, setBuyerCountry] = useState<string | null>(null);
   const [loadingAddress, setLoadingAddress] = useState(false);
 
@@ -56,7 +58,7 @@ export default function AuctionShippingInfo({
     let cancelled = false;
     setLoadingAddress(true);
 
-    void getDefaultShippingAddress(publicKey.toBase58())
+    void getDefaultShippingAddress(publicKey.toBase58(), client)
       .then((address) => {
         if (!cancelled) {
           setBuyerCountry(address?.country ?? null);
@@ -69,7 +71,7 @@ export default function AuctionShippingInfo({
     return () => {
       cancelled = true;
     };
-  }, [connected, publicKey]);
+  }, [client, connected, publicKey]);
 
   const personalizedShippingUsd =
     connected && buyerCountry

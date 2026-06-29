@@ -33,6 +33,7 @@ import PortalInfoTooltip from "@/components/ui/PortalInfoTooltip";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type {
   Collection,
   CollectionComment,
@@ -68,6 +69,7 @@ export default function CollectionDetailView({
 }) {
   const { publicKey, connected, wallets } = useWallet();
   const connectPhantom = usePhantomConnect();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const wallet = publicKey?.toBase58();
 
@@ -160,7 +162,8 @@ export default function CollectionDetailView({
       try {
         const following = await isFollowing(
           wallet,
-          collection.owner.wallet_address
+          collection.owner.wallet_address,
+          client
         );
         if (!cancelled) {
           setInitialFollowing(following);
@@ -176,7 +179,7 @@ export default function CollectionDetailView({
     return () => {
       cancelled = true;
     };
-  }, [collection, wallet]);
+  }, [client, collection, wallet]);
 
   useEffect(() => {
     if (!collection || viewsIncremented) return;

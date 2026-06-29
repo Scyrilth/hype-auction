@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export interface BuyerStrikeRecord {
   id: string;
@@ -30,9 +30,10 @@ function isStrikeActive(strike: BuyerStrikeRecord, now = Date.now()): boolean {
 }
 
 export async function fetchActiveBuyerStrikes(
-  walletAddress: string
+  walletAddress: string,
+  client: SupabaseClient = supabase
 ): Promise<BuyerStrikeRecord[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("buyer_strikes")
     .select("*")
     .eq("wallet_address", walletAddress)

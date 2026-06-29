@@ -1,13 +1,14 @@
 import { logSupabaseError } from "@/lib/errors";
 import { notifyNewFollower } from "@/lib/notifications";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
 export async function isFollowing(
   followerWallet: string,
-  followingWallet: string
+  followingWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("follows")
     .select("follower_wallet")
     .eq("follower_wallet", followerWallet)
@@ -20,15 +21,16 @@ export async function isFollowing(
 
 export async function toggleFollow(
   followerWallet: string,
-  followingWallet: string
+  followingWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<{ isFollowing: boolean; followersCount: number }> {
   if (followerWallet === followingWallet) {
     throw new Error("You cannot follow yourself.");
   }
 
-  await upsertUser(followerWallet);
+  await upsertUser(followerWallet, client);
 
-  const { data: rpcResult, error: rpcError } = await supabase.rpc(
+  const { data: rpcResult, error: rpcError } = await client.rpc(
     "toggle_follow",
     {
       p_follower: followerWallet,
@@ -37,7 +39,7 @@ export async function toggleFollow(
   );
 
   if (!rpcError) {
-    const { data: vendor, error: vendorError } = await supabase
+    const { data: vendor, error: vendorError } = await client
       .from("users")
       .select("followers_count")
       .eq("wallet_address", followingWallet)
@@ -45,8 +47,8 @@ export async function toggleFollow(
 
     if (vendorError) throw vendorError;
 
-    const isFollowing = Boolean(rpcResult);
-    if (isFollowing) {
+    const isFollowingNow = Boolean(rpcResult);
+    if (isFollowingNow) {
       await notifyNewFollower({
         followingWallet,
         followerWallet,
@@ -54,17 +56,21 @@ export async function toggleFollow(
     }
 
     return {
-      isFollowing,
+      isFollowing: isFollowingNow,
       followersCount: Number(vendor.followers_count ?? 0),
     };
   }
 
   logSupabaseError("toggleFollow.rpc", rpcError);
 
-  const alreadyFollowing = await isFollowing(followerWallet, followingWallet);
+  const alreadyFollowing = await isFollowing(
+    followerWallet,
+    followingWallet,
+    client
+  );
 
   if (alreadyFollowing) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await client
       .from("follows")
       .delete()
       .eq("follower_wallet", followerWallet)
@@ -72,7 +78,7 @@ export async function toggleFollow(
 
     if (deleteError) throw deleteError;
 
-    const { data: vendor, error: fetchError } = await supabase
+    const { data: vendor, error: fetchError } = await client
       .from("users")
       .select("followers_count")
       .eq("wallet_address", followingWallet)
@@ -82,7 +88,7 @@ export async function toggleFollow(
 
     const nextCount = Math.max(Number(vendor.followers_count ?? 0) - 1, 0);
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await client
       .from("users")
       .update({ followers_count: nextCount })
       .eq("wallet_address", followingWallet);
@@ -92,14 +98,14 @@ export async function toggleFollow(
     return { isFollowing: false, followersCount: nextCount };
   }
 
-  const { error: insertError } = await supabase.from("follows").insert({
+  const { error: insertError } = await client.from("follows").insert({
     follower_wallet: followerWallet,
     following_wallet: followingWallet,
   });
 
   if (insertError) throw insertError;
 
-  const { data: vendor, error: fetchError } = await supabase
+  const { data: vendor, error: fetchError } = await client
     .from("users")
     .select("followers_count")
     .eq("wallet_address", followingWallet)
@@ -109,7 +115,7 @@ export async function toggleFollow(
 
   const nextCount = Number(vendor.followers_count ?? 0) + 1;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("users")
     .update({ followers_count: nextCount })
     .eq("wallet_address", followingWallet);

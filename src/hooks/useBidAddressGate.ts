@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import type { ShippingAddress } from "@/lib/database.types";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getShippingAddresses } from "@/lib/shipping";
 
 const SESSION_KEY = "bid_address_confirmed";
@@ -17,6 +18,7 @@ function markSessionConfirmed(): void {
 }
 
 export function useBidAddressGate(wallet: string | null) {
+  const { client } = useSupabaseClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [addresses, setAddresses] = useState<ShippingAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
@@ -38,7 +40,7 @@ export function useBidAddressGate(wallet: string | null) {
 
       setLoadingAddresses(true);
       try {
-        const saved = await getShippingAddresses(wallet);
+        const saved = await getShippingAddresses(wallet, client);
         setAddresses(saved);
 
         if (saved.length === 0) {
@@ -53,7 +55,7 @@ export function useBidAddressGate(wallet: string | null) {
         setLoadingAddresses(false);
       }
     },
-    [wallet]
+    [client, wallet]
   );
 
   const handleContinue = useCallback(async () => {

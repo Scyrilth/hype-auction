@@ -11,6 +11,7 @@ import {
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
   addToWatchlist,
@@ -30,6 +31,7 @@ const WatchlistContext = createContext<WatchlistContextValue | null>(null);
 
 export function WatchlistProvider({ children }: { children: React.ReactNode }) {
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +47,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     async function load() {
       setIsLoading(true);
       try {
-        const ids = await getWatchlistAuctionIds(publicKey!.toBase58());
+        const ids = await getWatchlistAuctionIds(publicKey!.toBase58(), client);
         if (!cancelled) {
           setWatchedIds(new Set(ids));
         }
@@ -60,7 +62,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [connected, publicKey]);
+  }, [client, connected, publicKey]);
 
   const toggleWatchlist = useCallback(
     async (auctionId: string) => {
@@ -70,10 +72,10 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
       const isWatching = watchedIds.has(auctionId);
 
       try {
-        await upsertUser(wallet);
+        await upsertUser(wallet, client);
 
         if (isWatching) {
-          await removeFromWatchlist(wallet, auctionId);
+          await removeFromWatchlist(wallet, auctionId, client);
           setWatchedIds((current) => {
             const next = new Set(current);
             next.delete(auctionId);
@@ -81,7 +83,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
           });
           showToast("Removed from watchlist");
         } else {
-          await addToWatchlist(wallet, auctionId);
+          await addToWatchlist(wallet, auctionId, client);
           setWatchedIds((current) => new Set(current).add(auctionId));
           showToast("Added to watchlist");
         }
@@ -90,7 +92,7 @@ export function WatchlistProvider({ children }: { children: React.ReactNode }) {
         showToast(getErrorMessage(error), "error");
       }
     },
-    [connected, publicKey, showToast, watchedIds]
+    [client, connected, publicKey, showToast, watchedIds]
   );
 
   const value = useMemo(

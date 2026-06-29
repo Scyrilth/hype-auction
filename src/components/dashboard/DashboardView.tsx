@@ -11,6 +11,7 @@ import DashboardTabs, {
 } from "@/components/dashboard/DashboardTabs";
 import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
 import { getSellerDashboardData, type SellerDashboardData } from "@/lib/dashboard";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 
 const emptyData: SellerDashboardData = {
@@ -33,6 +34,7 @@ const emptyData: SellerDashboardData = {
 
 export default function DashboardView() {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const [data, setData] = useState<SellerDashboardData>(emptyData);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +44,7 @@ export default function DashboardView() {
     setLoading(true);
     try {
       await checkAndEndExpiredAuctions();
-      const dashboard = await getSellerDashboardData(publicKey.toBase58());
+      const dashboard = await getSellerDashboardData(publicKey.toBase58(), client);
       setData(dashboard);
     } catch (error) {
       logSupabaseError("DashboardView", error);
@@ -51,7 +53,7 @@ export default function DashboardView() {
     } finally {
       setLoading(false);
     }
-  }, [publicKey]);
+  }, [client, publicKey]);
 
   useEffect(() => {
     loadDashboard();

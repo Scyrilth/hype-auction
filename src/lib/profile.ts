@@ -2,7 +2,7 @@ import type { Auction, Review, User } from "@/lib/database.types";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { parseReviewRow } from "@/lib/reviews";
 import { getProfileSlug } from "@/lib/profile-links";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { getVendorBySlug } from "@/lib/vendors";
 import { getWatchlistAuctions } from "@/lib/watchlist";
 
@@ -70,9 +70,10 @@ function getBidActivityStatus(
 
 export async function updateProfilePrivacy(
   walletAddress: string,
-  showWonAuctions: boolean
+  showWonAuctions: boolean,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await client
     .from("users")
     .update({ show_won_auctions: showWonAuctions })
     .eq("wallet_address", walletAddress);

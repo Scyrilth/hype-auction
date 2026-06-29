@@ -13,6 +13,7 @@ import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import { useBidAddressGate } from "@/hooks/useBidAddressGate";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
 import { getProfileSlug } from "@/lib/profile-links";
@@ -53,6 +54,7 @@ export default function AuctionBidSidebar({
   const connectPhantom = usePhantomConnect();
   const { publicKey, connected, connecting } = useWallet();
   const { username } = useSidebarUser();
+  const { client } = useSupabaseClient();
   const wallet = publicKey?.toBase58() ?? null;
   const {
     modalOpen,
@@ -119,7 +121,7 @@ export default function AuctionBidSidebar({
 
     let cancelled = false;
 
-    void fetchActiveBuyerStrikes(wallet)
+    void fetchActiveBuyerStrikes(wallet, client)
       .then((strikes) => {
         if (!cancelled) setStrikeSummary(summarizeBuyerStrikes(strikes));
       })
@@ -130,7 +132,7 @@ export default function AuctionBidSidebar({
     return () => {
       cancelled = true;
     };
-  }, [wallet]);
+  }, [client, wallet]);
 
   const isWalletConnected = connected && Boolean(publicKey);
 

@@ -4,7 +4,7 @@ import type {
   User,
 } from "@/lib/database.types";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 import { getVendorReviews, getVendorSettings } from "@/lib/vendors";
 
@@ -66,10 +66,13 @@ export interface SellerDashboardData {
   activity: DashboardActivityItem[];
 }
 
-async function getBidCounts(auctionIds: string[]): Promise<Map<string, number>> {
+async function getBidCounts(
+  auctionIds: string[],
+  client: SupabaseClient
+): Promise<Map<string, number>> {
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id")
     .in("auction_id", auctionIds);
@@ -85,11 +88,12 @@ async function getBidCounts(auctionIds: string[]): Promise<Map<string, number>> 
 }
 
 async function getWinnerWallets(
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient
 ): Promise<Map<string, string | null>> {
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id, bidder_wallet, amount")
     .in("auction_id", auctionIds)
@@ -128,8 +132,8 @@ async function loadSellerReviews(wallet: string): Promise<ReviewWithReviewer[]> 
   }
 }
 
-async function loadRecentFollows(wallet: string) {
-  const response = await supabase
+async function loadRecentFollows(wallet: string, client: SupabaseClient) {
+  const response = await client
     .from("follows")
     .select("follower_wallet, created_at")
     .eq("following_wallet", wallet)
@@ -145,19 +149,20 @@ async function loadRecentFollows(wallet: string) {
 }
 
 export async function getSellerDashboardData(
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<SellerDashboardData> {
   const wallet = sellerWallet.trim();
 
   let profile: User | null = null;
   try {
-    const rawProfile = await supabase
+    const rawProfile = await client
       .from("users")
       .select("shop_name")
       .eq("wallet_address", wallet)
       .maybeSingle();
 
-    profile = await getVendorSettings(wallet);
+    profile = await getVendorSettings(wallet, client);
 
     if (
       profile &&
@@ -178,28 +183,28 @@ export async function getSellerDashboardData(
 
   if (!profile) {
     try {
-      await upsertUser(wallet);
-      profile = await getVendorSettings(wallet);
+      await upsertUser(wallet, client);
+      profile = await getVendorSettings(wallet, client);
     } catch (error) {
       console.error("[getSellerDashboardData] profile upsert/fetch failed", error);
       throw error;
     }
   }
 
-  const auctionsResponse = await supabase
+  const auctionsResponse = await client
     .from("auctions")
     .select("*")
     .eq("seller_wallet", wallet)
     .order("created_at", { ascending: false });
 
-  const bidsResponse = await supabase
+  const bidsResponse = await client
     .from("bids")
     .select("id, auction_id, bidder_wallet, amount, created_at")
     .order("created_at", { ascending: false })
     .limit(200);
 
   const [followRows, reviews] = await Promise.all([
-    loadRecentFollows(wallet),
+    loadRecentFollows(wallet, client),
     loadSellerReviews(wallet),
   ]);
 
@@ -213,8 +218,8 @@ export async function getSellerDashboardData(
   const auctionTitleById = new Map(auctions.map((a) => [a.id, a.title]));
 
   const [bidCounts, winners] = await Promise.all([
-    getBidCounts([...auctionIds]),
-    getWinnerWallets([...auctionIds]),
+    getBidCounts([...auctionIds], client),
+    getWinnerWallets([...auctionIds], client),
   ]);
 
   const enriched = enrichAuctions(auctions, bidCounts, winners);
@@ -299,9 +304,10 @@ export async function getSellerDashboardData(
 
 export async function endSellerAuction(
   auctionId: string,
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await client
     .from("auctions")
     .update({
       status: "ended",

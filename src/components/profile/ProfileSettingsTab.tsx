@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { updateProfilePrivacy } from "@/lib/profile";
 import { upsertUser } from "@/lib/users";
@@ -16,6 +17,7 @@ export default function ProfileSettingsTab({
 }) {
   const router = useRouter();
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [showWonAuctions, setShowWonAuctions] = useState(initialShowWonAuctions);
   const [saving, setSaving] = useState(false);
@@ -26,8 +28,8 @@ export default function ProfileSettingsTab({
     setSaving(true);
     try {
       const wallet = publicKey.toBase58();
-      await upsertUser(wallet);
-      await updateProfilePrivacy(wallet, showWonAuctions);
+      await upsertUser(wallet, client);
+      await updateProfilePrivacy(wallet, showWonAuctions, client);
       showToast("Privacy settings saved.");
       router.refresh();
     } catch (error) {

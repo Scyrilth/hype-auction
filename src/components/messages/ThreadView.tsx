@@ -14,6 +14,7 @@ import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
 import { getErrorMessage } from "@/lib/errors";
 import {
@@ -26,7 +27,6 @@ import {
   type EnrichedDirectMessage,
   type ThreadDetail,
 } from "@/lib/messages";
-import { supabase } from "@/lib/supabase";
 import {
   isShippingExemptAuction,
   resolveShippingUsd,
@@ -223,6 +223,7 @@ function MessageBubble({
 export default function ThreadView({ threadId }: { threadId: string }) {
   const router = useRouter();
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const { showToast } = useToast();
@@ -253,13 +254,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     if (!wallet) return;
     setLoading(true);
     try {
-      const data = await getThreadDetail(threadId, wallet);
+      const data = await getThreadDetail(threadId, wallet, client);
       if (!data) {
         router.replace("/messages");
         return;
       }
       setThread(data);
-      await markThreadMessagesRead(threadId, wallet);
+      await markThreadMessagesRead(threadId, wallet, client);
       void refreshUnreadCount();
     } catch (error) {
       console.error("Failed to load thread:", error);
@@ -267,7 +268,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [threadId, wallet, router, showToast, refreshUnreadCount]);
+  }, [client, threadId, wallet, router, showToast, refreshUnreadCount]);
 
   useEffect(() => {
     if (!connected || !wallet) {
@@ -293,12 +294,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           latestOffer?.status === "accepted"
             ? latestOffer.amount_sol
             : getEffectiveBid(auction);
-        const { data: seller } = await supabase
+        const { data: seller } = await client
           .from("users")
           .select("country, ships_internationally")
           .eq("wallet_address", thread.seller_wallet)
           .maybeSingle();
-        const defaultAddress = await getDefaultShippingAddress(wallet).catch(
+        const defaultAddress = await getDefaultShippingAddress(wallet, client).catch(
           () => null
         );
         const isExempt = isShippingExemptAuction(auction);
@@ -321,12 +322,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [thread, wallet]);
+  }, [client, thread, wallet]);
 
   useEffect(() => {
     if (!wallet) return;
 
-    const channel = supabase
+    const channel = client
       .channel(`direct_messages:${threadId}`)
       .on(
         "postgres_changes",
@@ -343,9 +344,9 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
-  }, [threadId, wallet, loadThread]);
+  }, [client, threadId, wallet, loadThread]);
 
   useEffect(() => {
     if (thread?.messages.length) scrollToBottom();
@@ -391,7 +392,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
               sellerWallet: thread.seller_wallet,
               platformWallet: PLATFORM_WALLET,
             }
-          : undefined
+          : undefined,
+        client
       );
       if (result.onChainSuccess) {
         showToast("✅ Receipt confirmed on-chain");
@@ -434,12 +436,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     setPaymentError(null);
 
     try {
-      const { data: seller } = await supabase
+      const { data: seller } = await client
         .from("users")
         .select("country, ships_internationally")
         .eq("wallet_address", thread.seller_wallet)
         .maybeSingle();
-      const defaultAddress = await getDefaultShippingAddress(wallet).catch(
+      const defaultAddress = await getDefaultShippingAddress(wallet, client).catch(
         () => null
       );
       const isExempt = isShippingExemptAuction(thread.auction);
@@ -518,12 +520,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         threadId,
       });
 
-      const { data: seller } = await supabase
+      const { data: seller } = await client
         .from("users")
         .select("country, ships_internationally")
         .eq("wallet_address", thread.seller_wallet)
         .maybeSingle();
-      const defaultAddress = await getDefaultShippingAddress(wallet).catch(
+      const defaultAddress = await getDefaultShippingAddress(wallet, client).catch(
         () => null
       );
       const isExempt = isShippingExemptAuction(thread.auction);

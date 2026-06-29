@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage } from "@/lib/errors";
 import { isPhantomWalletAvailable } from "@/lib/wallet-detection";
 import {
@@ -33,6 +34,7 @@ export default function MessageThreadButton({
   const router = useRouter();
   const { publicKey, connected, wallets } = useWallet();
   const connectPhantom = usePhantomConnect();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -76,7 +78,7 @@ export default function MessageThreadButton({
       let threadId: string;
 
       if (variant === "general") {
-        const thread = await createGeneralInquiryThread(wallet, sellerWallet);
+        const thread = await createGeneralInquiryThread(wallet, sellerWallet, client);
         threadId = thread.id;
       } else {
         if (!auctionId || !auctionTitle) {
@@ -91,7 +93,9 @@ export default function MessageThreadButton({
           auctionId,
           buyer,
           sellerWallet,
-          auctionTitle
+          auctionTitle,
+          undefined,
+          client
         );
         threadId = thread.id;
       }

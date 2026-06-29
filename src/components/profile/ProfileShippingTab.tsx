@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { COUNTRIES } from "@/lib/countries";
 import type { ShippingAddress, ShippingAddressInput } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
@@ -247,6 +248,7 @@ export default function ProfileShippingTab({
   walletAddress: string;
 }) {
   const { showToast } = useToast();
+  const { client } = useSupabaseClient();
   const [addresses, setAddresses] = useState<ShippingAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -256,7 +258,7 @@ export default function ProfileShippingTab({
   const loadAddresses = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getShippingAddresses(walletAddress);
+      const data = await getShippingAddresses(walletAddress, client);
       setAddresses(data);
     } catch (error) {
       logSupabaseError("ProfileShippingTab: load", error);
@@ -264,7 +266,7 @@ export default function ProfileShippingTab({
     } finally {
       setLoading(false);
     }
-  }, [walletAddress, showToast]);
+  }, [client, walletAddress, showToast]);
 
   useEffect(() => {
     void loadAddresses();
@@ -273,7 +275,7 @@ export default function ProfileShippingTab({
   const handleCreate = async (values: ShippingAddressInput) => {
     setSaving(true);
     try {
-      await createShippingAddress(walletAddress, values);
+      await createShippingAddress(walletAddress, values, client);
       showToast("Address saved.");
       setShowAddForm(false);
       await loadAddresses();
@@ -288,7 +290,7 @@ export default function ProfileShippingTab({
   const handleUpdate = async (addressId: string, values: ShippingAddressInput) => {
     setSaving(true);
     try {
-      await updateShippingAddress(walletAddress, addressId, values);
+      await updateShippingAddress(walletAddress, addressId, values, client);
       showToast("Address updated.");
       setEditingId(null);
       await loadAddresses();
@@ -306,7 +308,7 @@ export default function ProfileShippingTab({
 
     setSaving(true);
     try {
-      await deleteShippingAddress(walletAddress, address.id);
+      await deleteShippingAddress(walletAddress, address.id, client);
       showToast("Address deleted.");
       if (editingId === address.id) setEditingId(null);
       await loadAddresses();

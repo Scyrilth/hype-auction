@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage } from "@/lib/errors";
 import { isOnboarded, markOnboarded } from "@/lib/onboarding";
 import { createUserRecord, getUserByWallet, type OnboardingIntent } from "@/lib/users";
@@ -47,6 +48,7 @@ export default function WelcomeOnboardingModal({
 }: WelcomeOnboardingModalProps) {
   const router = useRouter();
   const { showToast } = useToast();
+  const { client } = useSupabaseClient();
   const { publicKey } = useWallet();
   const [loading, setLoading] = useState(false);
 
@@ -57,7 +59,7 @@ export default function WelcomeOnboardingModal({
       const wallet = publicKey.toBase58();
       setLoading(true);
       try {
-        await createUserRecord(wallet, intent);
+        await createUserRecord(wallet, intent, client);
         markOnboarded(wallet);
         onClose();
 
@@ -73,7 +75,7 @@ export default function WelcomeOnboardingModal({
         setLoading(false);
       }
     },
-    [loading, onClose, publicKey, router, showToast]
+    [client, loading, onClose, publicKey, router, showToast]
   );
 
   useEffect(() => {
@@ -139,6 +141,7 @@ export default function WelcomeOnboardingModal({
 
 export function WelcomeOnboardingGate() {
   const { connected, publicKey, connecting } = useWallet();
+  const { client } = useSupabaseClient();
   const [open, setOpen] = useState(false);
   const [checked, setChecked] = useState(false);
 
@@ -158,7 +161,7 @@ export function WelcomeOnboardingGate() {
 
     let cancelled = false;
 
-    void getUserByWallet(wallet)
+    void getUserByWallet(wallet, client)
       .then((user) => {
         if (cancelled) return;
         if (user) {
@@ -176,7 +179,7 @@ export function WelcomeOnboardingGate() {
     return () => {
       cancelled = true;
     };
-  }, [connected, connecting, publicKey]);
+  }, [client, connected, connecting, publicKey]);
 
   if (!checked && connected) return null;
 

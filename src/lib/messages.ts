@@ -8,7 +8,7 @@ import {
   getUserDisplayName,
   notifyNewMessage,
 } from "@/lib/notifications";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
 export type ThreadStatus = "active" | "archived";
@@ -211,9 +211,11 @@ export async function getAuctionThreadId(
   return (data?.id as string | undefined) ?? null;
 }
 
-export async function checkAndArchiveThreads(): Promise<void> {
+export async function checkAndArchiveThreads(
+  client: SupabaseClient = supabase
+): Promise<void> {
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { error } = await client
     .from("message_threads")
     .update({ status: "archived" })
     .eq("status", "active")
@@ -223,8 +225,11 @@ export async function checkAndArchiveThreads(): Promise<void> {
   if (error) throw error;
 }
 
-export async function getUnreadMessageCount(wallet: string): Promise<number> {
-  const { data: threads, error: threadsError } = await supabase
+export async function getUnreadMessageCount(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<number> {
+  const { data: threads, error: threadsError } = await client
     .from("message_threads")
     .select("id")
     .or(`buyer_wallet.eq.${wallet},seller_wallet.eq.${wallet}`);
@@ -233,7 +238,7 @@ export async function getUnreadMessageCount(wallet: string): Promise<number> {
   if (!threads?.length) return 0;
 
   const threadIds = threads.map((row) => row.id as string);
-  const { count, error } = await supabase
+  const { count, error } = await client
     .from("direct_messages")
     .select("*", { count: "exact", head: true })
     .in("thread_id", threadIds)
@@ -245,11 +250,12 @@ export async function getUnreadMessageCount(wallet: string): Promise<number> {
 }
 
 async function fetchParticipants(
-  wallets: string[]
+  wallets: string[],
+  client: SupabaseClient = supabase
 ): Promise<Map<string, ThreadParticipant>> {
   if (!wallets.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("users")
     .select("wallet_address, username, avatar_url")
     .in("wallet_address", wallets);
@@ -270,7 +276,8 @@ async function fetchParticipants(
 
 async function enrichThreadRows(
   threads: MessageThread[],
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<ThreadListItem[]> {
   if (!threads.length) return [];
 
@@ -294,15 +301,15 @@ async function enrichThreadRows(
     { data: auctionRows, error: auctionsError },
     participants,
   ] = await Promise.all([
-    supabase
+    client
       .from("direct_messages")
       .select("*")
       .in("thread_id", threadIds)
       .order("created_at", { ascending: false }),
     auctionIds.length
-      ? supabase.from("auctions").select("*").in("id", auctionIds)
+      ? client.from("auctions").select("*").in("id", auctionIds)
       : Promise.resolve({ data: [], error: null }),
-    fetchParticipants(partyWallets),
+    fetchParticipants(partyWallets, client),
   ]);
 
   if (messagesError) throw messagesError;
@@ -360,11 +367,12 @@ async function enrichThreadRows(
 
 export async function getThreadsForWallet(
   wallet: string,
-  tab: MessagesTab
+  tab: MessagesTab,
+  client: SupabaseClient = supabase
 ): Promise<ThreadListItem[]> {
-  await checkAndArchiveThreads();
+  await checkAndArchiveThreads(client);
 
-  let query = supabase.from("message_threads").select("*");
+  let query = client.from("message_threads").select("*");
 
   if (tab === "buying") {
     query = query.eq("buyer_wallet", wallet).eq("status", "active");
@@ -383,7 +391,7 @@ export async function getThreadsForWallet(
     parseThread(row as Record<string, unknown>)
   );
 
-  const enriched = await enrichThreadRows(threads, wallet);
+  const enriched = await enrichThreadRows(threads, wallet, client);
 
   return enriched.sort((a, b) => {
     const aTime = a.last_message?.created_at ?? a.created_at;
@@ -394,11 +402,12 @@ export async function getThreadsForWallet(
 
 export async function getThreadDetail(
   threadId: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<ThreadDetail | null> {
-  await checkAndArchiveThreads();
+  await checkAndArchiveThreads(client);
 
-  const { data: threadRow, error: threadError } = await supabase
+  const { data: threadRow, error: threadError } = await client
     .from("message_threads")
     .select("*")
     .eq("id", threadId)
@@ -414,12 +423,12 @@ export async function getThreadDetail(
 
   const [{ data: messageRows, error: messagesError }, participants] =
     await Promise.all([
-      supabase
+      client
         .from("direct_messages")
         .select("*")
         .eq("thread_id", threadId)
         .order("created_at", { ascending: true }),
-      fetchParticipants([thread.buyer_wallet, thread.seller_wallet]),
+      fetchParticipants([thread.buyer_wallet, thread.seller_wallet], client),
     ]);
 
   if (messagesError) throw messagesError;
@@ -429,12 +438,12 @@ export async function getThreadDetail(
   if (thread.auction_id) {
     const [{ data: auctionRow, error: auctionError }, { data: topBid, error: topBidError }] =
       await Promise.all([
-        supabase
+        client
           .from("auctions")
           .select("*")
           .eq("id", thread.auction_id)
           .maybeSingle(),
-        supabase
+        client
           .from("bids")
           .select("bidder_wallet")
           .eq("auction_id", thread.auction_id)
@@ -483,9 +492,10 @@ export async function getThreadDetail(
 export async function insertThreadSystemMessage(
   threadId: string,
   content: string,
-  senderWallet: string
+  senderWallet: string,
+  client: SupabaseClient = supabase
 ) {
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await client
     .from("direct_messages")
     .select("id")
     .eq("thread_id", threadId)
@@ -496,7 +506,7 @@ export async function insertThreadSystemMessage(
   if (existingError) throw existingError;
   if (existing) return;
 
-  const { error } = await supabase.from("direct_messages").insert({
+  const { error } = await client.from("direct_messages").insert({
     thread_id: threadId,
     sender_wallet: senderWallet,
     content,
@@ -512,14 +522,15 @@ export async function createAuctionThread(
   buyerWallet: string,
   sellerWallet: string,
   itemTitle: string,
-  options?: { skipWelcomeMessage?: boolean }
+  options?: { skipWelcomeMessage?: boolean },
+  client: SupabaseClient = supabase
 ): Promise<MessageThread> {
   await Promise.all([
-    upsertUser(buyerWallet),
-    upsertUser(sellerWallet),
+    upsertUser(buyerWallet, client),
+    upsertUser(sellerWallet, client),
   ]);
 
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await client
     .from("message_threads")
     .select("*")
     .eq("auction_id", auctionId)
@@ -529,7 +540,7 @@ export async function createAuctionThread(
   if (existingError) throw existingError;
   if (existing) return parseThread(existing as Record<string, unknown>);
 
-  const { data: thread, error } = await supabase
+  const { data: thread, error } = await client
     .from("message_threads")
     .insert({
       auction_id: auctionId,
@@ -547,7 +558,8 @@ export async function createAuctionThread(
     await insertThreadSystemMessage(
       parsed.id,
       `🎉 Congratulations! You won ${itemTitle}. Use this thread to coordinate shipping and delivery with the seller.`,
-      sellerWallet
+      sellerWallet,
+      client
     );
   }
 
@@ -556,14 +568,15 @@ export async function createAuctionThread(
 
 export async function createGeneralInquiryThread(
   buyerWallet: string,
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<MessageThread> {
   await Promise.all([
-    upsertUser(buyerWallet),
-    upsertUser(sellerWallet),
+    upsertUser(buyerWallet, client),
+    upsertUser(sellerWallet, client),
   ]);
 
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await client
     .from("message_threads")
     .select("*")
     .eq("buyer_wallet", buyerWallet)
@@ -574,7 +587,7 @@ export async function createGeneralInquiryThread(
   if (existingError) throw existingError;
   if (existing) return parseThread(existing as Record<string, unknown>);
 
-  const { data: thread, error } = await supabase
+  const { data: thread, error } = await client
     .from("message_threads")
     .insert({
       auction_id: null,
@@ -591,7 +604,8 @@ export async function createGeneralInquiryThread(
   await insertThreadSystemMessage(
     parsed.id,
     "General inquiry started. Use this thread to ask questions before you bid.",
-    sellerWallet
+    sellerWallet,
+    client
   );
 
   return parsed;
@@ -601,9 +615,17 @@ export async function getOrCreateAuctionThread(
   auctionId: string,
   buyerWallet: string,
   sellerWallet: string,
-  itemTitle: string
+  itemTitle: string,
+  client: SupabaseClient = supabase
 ): Promise<MessageThread> {
-  return createAuctionThread(auctionId, buyerWallet, sellerWallet, itemTitle);
+  return createAuctionThread(
+    auctionId,
+    buyerWallet,
+    sellerWallet,
+    itemTitle,
+    undefined,
+    client
+  );
 }
 
 export async function sendDirectMessageRecord(
@@ -697,9 +719,10 @@ export async function sendDirectMessage(
 
 export async function markThreadMessagesRead(
   threadId: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await client
     .from("direct_messages")
     .update({ is_read: true })
     .eq("thread_id", threadId)
@@ -710,8 +733,11 @@ export async function markThreadMessagesRead(
 }
 
 /** Marks non-system messages from others as read across all user threads. */
-export async function markAllThreadMessagesRead(wallet: string): Promise<void> {
-  const { data: threads, error: threadsError } = await supabase
+export async function markAllThreadMessagesRead(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<void> {
+  const { data: threads, error: threadsError } = await client
     .from("message_threads")
     .select("id")
     .or(`buyer_wallet.eq.${wallet},seller_wallet.eq.${wallet}`);
@@ -720,7 +746,7 @@ export async function markAllThreadMessagesRead(wallet: string): Promise<void> {
   if (!threads?.length) return;
 
   const threadIds = threads.map((row) => row.id as string);
-  const { error } = await supabase
+  const { error } = await client
     .from("direct_messages")
     .update({ is_read: true })
     .in("thread_id", threadIds)
@@ -746,13 +772,14 @@ export interface ConfirmReceiptResult {
 export async function confirmReceipt(
   threadId: string,
   buyerWallet: string,
-  onChain?: ConfirmReceiptOnChainParams
+  onChain?: ConfirmReceiptOnChainParams,
+  client: SupabaseClient = supabase
 ): Promise<ConfirmReceiptResult> {
   const archiveAt = new Date(
     Date.now() + 3 * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  const { data: thread, error: threadError } = await supabase
+  const { data: thread, error: threadError } = await client
     .from("message_threads")
     .update({
       confirmed_at: new Date().toISOString(),
@@ -768,13 +795,14 @@ export async function confirmReceipt(
   await insertThreadSystemMessage(
     threadId,
     "Buyer confirmed receipt. This thread will be archived in 3 days.",
-    buyerWallet
+    buyerWallet,
+    client
   );
 
   let result: ConfirmReceiptResult = {};
 
   if (thread.auction_id) {
-    const { error: auctionError } = await supabase
+    const { error: auctionError } = await client
       .from("auctions")
       .update({
         status: "completed",

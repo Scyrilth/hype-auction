@@ -13,6 +13,7 @@ import GradeSelect from "@/components/dashboard/GradeSelect";
 import ImageUpload from "@/components/ui/ImageUpload";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Auction } from "@/lib/database.types";
 import {
   FREE_SHIPPING_WARNING,
@@ -80,6 +81,7 @@ function FieldError({ message }: { message?: string }) {
 export default function CreateListingForm() {
   const router = useRouter();
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [form, setForm] = useState<ListingFormState>(initialForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -97,7 +99,7 @@ export default function CreateListingForm() {
     let cancelled = false;
     setSettingsLoading(true);
 
-    void getVendorSettings(publicKey.toBase58())
+    void getVendorSettings(publicKey.toBase58(), client)
       .then((profile) => {
         if (cancelled) return;
         setSellerCountry(profile?.country ?? null);
@@ -110,7 +112,7 @@ export default function CreateListingForm() {
     return () => {
       cancelled = true;
     };
-  }, [publicKey]);
+  }, [client, publicKey]);
 
   const updateForm = <K extends keyof ListingFormState>(
     key: K,

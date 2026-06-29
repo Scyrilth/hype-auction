@@ -5,6 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { toggleFollow } from "@/lib/follows";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { isPhantomWalletAvailable } from "@/lib/wallet-detection";
@@ -21,6 +22,7 @@ export default function FollowButton({
 }) {
   const { publicKey, connected, wallets } = useWallet();
   const connectPhantom = usePhantomConnect();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +48,7 @@ export default function FollowButton({
     setIsLoading(true);
 
     try {
-      const result = await toggleFollow(publicKey.toBase58(), vendorWallet);
+      const result = await toggleFollow(publicKey.toBase58(), vendorWallet, client);
       setIsFollowing(result.isFollowing);
       onFollowersChange?.(result.followersCount);
       showToast(result.isFollowing ? "Following!" : "Unfollowed.");

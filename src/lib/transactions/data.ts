@@ -1,5 +1,5 @@
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { supabase } from "@/lib/supabase";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
 import type { Auction } from "@/lib/database.types";
 
 import { computeTransactionAmounts } from "./amounts";
@@ -18,11 +18,12 @@ const AUCTION_TX_COLUMNS =
   "id, title, reference_number, seller_wallet, current_bid, start_price, end_time, created_at, status, category, escrow_state, escrow_tx_signature, escrow_amount_lamports, domestic_shipping_usd, international_shipping_usd, sol_usd_rate_at_payment, payment_completed_at";
 
 async function getTopBidderByAuction(
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient
 ): Promise<Map<string, string>> {
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id, bidder_wallet, amount")
     .in("auction_id", auctionIds)
@@ -104,23 +105,24 @@ function buildBuyerRow(
 
 export async function fetchTransactionsData(
   wallet: string,
-  currentRateFallback: number
+  currentRateFallback: number,
+  client: SupabaseClient = supabase
 ): Promise<TransactionsData> {
   const normalizedWallet = wallet.trim();
 
   const [sellerResponse, buyerBidsResponse, listingCountResponse] =
     await Promise.all([
-      supabase
+      client
         .from("auctions")
         .select(AUCTION_TX_COLUMNS)
         .eq("seller_wallet", normalizedWallet)
         .eq("status", "ended")
         .order("end_time", { ascending: false }),
-      supabase
+      client
         .from("bids")
         .select("auction_id")
         .eq("bidder_wallet", normalizedWallet),
-      supabase
+      client
         .from("auctions")
         .select("id", { count: "exact", head: true })
         .eq("seller_wallet", normalizedWallet),
@@ -147,7 +149,7 @@ export async function fetchTransactionsData(
 
   let buyerAuctions: Auction[] = [];
   if (buyerAuctionIds.length) {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("auctions")
       .select(AUCTION_TX_COLUMNS)
       .in("id", buyerAuctionIds)
@@ -165,7 +167,7 @@ export async function fetchTransactionsData(
       ...buyerAuctions.map((a) => a.id),
     ]),
   ];
-  const topBidders = await getTopBidderByAuction(allIds);
+  const topBidders = await getTopBidderByAuction(allIds, client);
 
   const sellerRowsMap = new Map<string, SellerTransactionRow>();
   for (const auction of sellerAuctions) {

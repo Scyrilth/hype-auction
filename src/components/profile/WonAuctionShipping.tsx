@@ -8,6 +8,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import TrackingCopyButton from "@/components/ui/TrackingCopyButton";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
 import { createEscrowProvider, PLATFORM_WALLET } from "@/lib/escrow";
@@ -23,6 +24,7 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const { showToast } = useToast();
+  const { client } = useSupabaseClient();
   const [confirming, setConfirming] = useState(false);
   const [messaging, setMessaging] = useState(false);
   const [localStatus, setLocalStatus] = useState(auction.shipping_status);
@@ -41,7 +43,9 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
         auction.id,
         wallet,
         auction.seller_wallet,
-        auction.title
+        auction.title,
+        undefined,
+        client
       );
       router.push(`/messages/${thread.id}`);
     } catch (error) {
@@ -73,7 +77,8 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
               sellerWallet: auction.seller_wallet,
               platformWallet: PLATFORM_WALLET,
             }
-          : undefined
+          : undefined,
+        client
       );
       setLocalStatus("delivered");
       if (result.onChainSuccess) {

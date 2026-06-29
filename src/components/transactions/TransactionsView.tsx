@@ -13,6 +13,7 @@ import SummaryCards from "@/components/transactions/SummaryCards";
 import TransactionTable from "@/components/transactions/TransactionTable";
 import TransactionsSkeleton from "@/components/transactions/TransactionsSkeleton";
 import { useSolPrice } from "@/hooks/useSolPrice";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   buildBuyerSpendingSeries,
   buildBuyerStatusBreakdown,
@@ -61,6 +62,7 @@ const EMPTY_BUYER_SUMMARY: BuyerSummary = {
 
 export default function TransactionsView() {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const searchParams = useSearchParams();
   const { solPrice } = useSolPrice();
 
@@ -85,14 +87,14 @@ export default function TransactionsView() {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchTransactionsData(wallet, rate);
+      const result = await fetchTransactionsData(wallet, rate, client);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load transactions");
     } finally {
       setLoading(false);
     }
-  }, [wallet, rate]);
+  }, [client, wallet, rate]);
 
   useEffect(() => {
     void loadData();

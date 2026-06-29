@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   getNotifications,
   getUnreadCount,
   parseNotification,
   type Notification,
 } from "@/lib/notifications";
-import { supabase } from "@/lib/supabase";
 
 type RefreshOptions = {
   silent?: boolean;
@@ -17,6 +17,7 @@ type RefreshOptions = {
 
 export function useNotifications() {
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -54,8 +55,8 @@ export function useNotifications() {
 
       try {
         const [items, count] = await Promise.all([
-          getNotifications(wallet),
-          getUnreadCount(wallet),
+          getNotifications(wallet, client),
+          getUnreadCount(wallet, client),
         ]);
         setNotifications(items);
         setUnreadCount(count);
@@ -73,14 +74,14 @@ export function useNotifications() {
         }
       }
     },
-    [connected, mounted, wallet]
+    [client, connected, mounted, wallet]
   );
 
   const refreshUnreadCount = useCallback(async () => {
     if (!mounted || !connected || !wallet) return;
 
     try {
-      const count = await getUnreadCount(wallet);
+      const count = await getUnreadCount(wallet, client);
       const countChanged = unreadCountRef.current !== count;
 
       setUnreadCount(count);
@@ -92,7 +93,7 @@ export function useNotifications() {
     } catch {
       // Polling is best-effort
     }
-  }, [connected, mounted, refresh, wallet]);
+  }, [client, connected, mounted, refresh, wallet]);
 
   const prependNotification = useCallback((row: Record<string, unknown>) => {
     try {
@@ -126,10 +127,10 @@ export function useNotifications() {
     if (!mounted || !wallet) return;
 
     // Ensure notifications table has Realtime enabled in Supabase Dashboard → Database → Replication
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let channel: ReturnType<typeof client.channel> | null = null;
 
     try {
-      channel = supabase
+      channel = client
         .channel(`notifications:${wallet}`)
         .on(
           "postgres_changes",
@@ -170,10 +171,10 @@ export function useNotifications() {
 
     return () => {
       if (channel) {
-        supabase.removeChannel(channel);
+        client.removeChannel(channel);
       }
     };
-  }, [mounted, wallet, prependNotification, refresh]);
+  }, [client, mounted, wallet, prependNotification, refresh]);
 
   useEffect(() => {
     if (!mounted || !wallet) return;

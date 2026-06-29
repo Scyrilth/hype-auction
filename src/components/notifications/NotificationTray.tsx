@@ -6,6 +6,7 @@ import { useCallback, type RefObject } from "react";
 
 import NotificationRow from "@/components/notifications/NotificationRow";
 import AnchoredPortal from "@/components/ui/AnchoredPortal";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   markAllAsRead,
   markAsRead,
@@ -31,12 +32,13 @@ export default function NotificationTray({
   onRefresh: () => Promise<void>;
 }) {
   const router = useRouter();
+  const { client } = useSupabaseClient();
 
   const handleNotificationClick = useCallback(
     async (notification: Notification) => {
       if (!notification.is_read) {
         try {
-          await markAsRead(notification.id);
+          await markAsRead(notification.id, client);
           await onRefresh();
         } catch {
           // navigation still proceeds
@@ -49,17 +51,17 @@ export default function NotificationTray({
         router.push(href);
       }
     },
-    [onClose, onRefresh, router]
+    [client, onClose, onRefresh, router]
   );
 
   const handleMarkAllRead = useCallback(async () => {
     try {
-      await markAllAsRead(wallet);
+      await markAllAsRead(wallet, client);
       await onRefresh();
     } catch {
       // ignore
     }
-  }, [wallet, onRefresh]);
+  }, [client, wallet, onRefresh]);
 
   return (
     <AnchoredPortal

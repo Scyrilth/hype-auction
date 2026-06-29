@@ -9,6 +9,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
 import { useUnreadMessageCount } from "@/hooks/useUnreadMessageCount";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   formatMessagePreview,
   formatOrderRef,
@@ -119,6 +120,7 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
 export default function MessagesView() {
   const router = useRouter();
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const { refresh: refreshUnreadCount } = useUnreadMessageCount();
   const [activeTab, setActiveTab] = useState<MessagesTab>("buying");
@@ -132,7 +134,8 @@ export default function MessagesView() {
     try {
       const data = await getThreadsForWallet(
         publicKey.toBase58(),
-        activeTab
+        activeTab,
+        client
       );
       setThreads(data);
     } catch (error) {
@@ -141,7 +144,7 @@ export default function MessagesView() {
     } finally {
       setLoading(false);
     }
-  }, [publicKey, activeTab]);
+  }, [activeTab, client, publicKey]);
 
   useEffect(() => {
     if (!connected || !publicKey) {
@@ -155,7 +158,7 @@ export default function MessagesView() {
     if (!publicKey || markingAllRead) return;
     setMarkingAllRead(true);
     try {
-      await markAllThreadMessagesRead(publicKey.toBase58());
+      await markAllThreadMessagesRead(publicKey.toBase58(), client);
       await loadThreads();
       void refreshUnreadCount();
       showToast("Marked all as read");
