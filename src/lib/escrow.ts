@@ -8,6 +8,7 @@ import {
   type VersionedTransaction,
 } from "@solana/web3.js";
 
+import { getSolanaRpcUrl, isSolanaDevnet } from "@/lib/solana-config";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
 import { getAuctionThreadId } from "@/lib/messages";
@@ -18,11 +19,7 @@ const PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_PROGRAM_ID ??
     "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs"
 );
-const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK || "devnet";
-const RPC_URL =
-  NETWORK === "devnet"
-    ? "https://api.devnet.solana.com"
-    : "https://api.mainnet-beta.solana.com";
+const RPC_URL = getSolanaRpcUrl();
 
 export const PLATFORM_WALLET =
   process.env.NEXT_PUBLIC_PLATFORM_WALLET ??
@@ -270,12 +267,12 @@ export function getEscrowPDA(auctionId: string): [PublicKey, number] {
 }
 
 export function getExplorerTxUrl(signature: string): string {
-  const cluster = NETWORK === "devnet" ? "?cluster=devnet" : "";
+  const cluster = isSolanaDevnet() ? "?cluster=devnet" : "";
   return `https://explorer.solana.com/tx/${signature}${cluster}`;
 }
 
 export function getExplorerAccountUrl(address: string): string {
-  const cluster = NETWORK === "devnet" ? "?cluster=devnet" : "";
+  const cluster = isSolanaDevnet() ? "?cluster=devnet" : "";
   return `https://explorer.solana.com/address/${address}${cluster}`;
 }
 
