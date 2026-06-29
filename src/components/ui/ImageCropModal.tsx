@@ -94,6 +94,7 @@ function exportCroppedJpegFile(
 export default function ImageCropModal({
   open,
   imageSrc,
+  originalFile,
   variant,
   fileName,
   onCancel,
@@ -101,6 +102,7 @@ export default function ImageCropModal({
 }: {
   open: boolean;
   imageSrc: string;
+  originalFile: File;
   variant: ImageUploadVariant;
   fileName: string;
   onCancel: () => void;
@@ -149,6 +151,12 @@ export default function ImageCropModal({
       const next = current + (event.deltaY < 0 ? 0.08 : -0.08);
       return Math.min(3, Math.max(1, Number(next.toFixed(2))));
     });
+  };
+
+  const handleUploadAsIs = () => {
+    setProcessing(true);
+    setError(null);
+    onConfirm(originalFile);
   };
 
   const handleConfirm = async () => {
@@ -262,6 +270,14 @@ export default function ImageCropModal({
               className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-white transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleUploadAsIs}
+              disabled={processing}
+              className="rounded-full border border-border bg-transparent px-5 py-2.5 text-sm font-medium text-white transition-colors hover:border-accent/50 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Upload as-is
             </button>
             <button
               type="button"

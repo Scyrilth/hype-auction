@@ -56,7 +56,7 @@ export default function ImageUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cropSource, setCropSource] = useState<string | null>(null);
-  const [pendingFileName, setPendingFileName] = useState("image.jpg");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const displayUrl = previewUrl || value;
   const avatarFallback =
@@ -69,7 +69,7 @@ export default function ImageUpload({
       URL.revokeObjectURL(cropSource);
     }
     setCropSource(null);
-    setPendingFileName("image.jpg");
+    setPendingFile(null);
   };
 
   const uploadFile = async (file: File) => {
@@ -117,7 +117,7 @@ export default function ImageUpload({
     }
 
     setError(null);
-    setPendingFileName(file.name);
+    setPendingFile(file);
     setCropSource(URL.createObjectURL(file));
   };
 
@@ -247,12 +247,13 @@ export default function ImageUpload({
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
-      {cropSource && (
+      {cropSource && pendingFile && (
         <ImageCropModal
           open
           imageSrc={cropSource}
+          originalFile={pendingFile}
           variant={variant}
-          fileName={pendingFileName}
+          fileName={pendingFile.name}
           onCancel={closeCropModal}
           onConfirm={(file) => void handleCropConfirm(file)}
         />
