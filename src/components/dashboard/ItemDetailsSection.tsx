@@ -222,7 +222,7 @@ export default function ItemDetailsSection({
       <div className="space-y-3">
         {rows.map((row, index) => (
           <div
-            key={`${row.key || "custom"}-${index}`}
+            key={row.isCustom ? `custom-${index}` : row.key}
             className="rounded-xl border border-border bg-background/40 p-3"
           >
             {row.isCustom ? (

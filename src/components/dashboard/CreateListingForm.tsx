@@ -13,6 +13,7 @@ import GradeSelect from "@/components/dashboard/GradeSelect";
 import ImageUpload from "@/components/ui/ImageUpload";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
+import { useSolPrice } from "@/hooks/useSolPrice";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Auction } from "@/lib/database.types";
 import {
@@ -83,6 +84,7 @@ export default function CreateListingForm() {
   const { publicKey } = useWallet();
   const { client } = useSupabaseClient();
   const { showToast } = useToast();
+  const { solPrice } = useSolPrice();
   const [form, setForm] = useState<ListingFormState>(initialForm);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,6 +131,14 @@ export default function CreateListingForm() {
       return { ...current, additionalImages: next };
     });
   };
+
+  const parsedStartPrice = parseFloat(form.startPrice);
+  const startPriceUsd =
+    solPrice != null &&
+    !Number.isNaN(parsedStartPrice) &&
+    parsedStartPrice > 0
+      ? parsedStartPrice * solPrice
+      : null;
 
   const validateForm = (): FieldErrors => {
     const errors: FieldErrors = {};
@@ -562,6 +572,11 @@ export default function CreateListingForm() {
                 placeholder="1.00"
                 className={fieldErrors.startPrice ? inputErrorClass : inputClass}
               />
+              {startPriceUsd != null && (
+                <p className="mt-1 text-xs text-muted">
+                  ~${startPriceUsd.toFixed(2)} USD
+                </p>
+              )}
               <FieldError message={fieldErrors.startPrice} />
             </div>
 
