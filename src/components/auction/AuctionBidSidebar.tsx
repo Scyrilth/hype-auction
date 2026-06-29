@@ -63,7 +63,7 @@ export default function AuctionBidSidebar({
     gateBid,
     handleContinue,
     closeModal,
-  } = useBidAddressGate(wallet);
+  } = useBidAddressGate();
   const profilePath = wallet
     ? `/profile/${getProfileSlug(username, wallet)}`
     : "/profile";

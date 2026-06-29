@@ -17,8 +17,8 @@ function markSessionConfirmed(): void {
   sessionStorage.setItem(SESSION_KEY, "true");
 }
 
-export function useBidAddressGate(wallet: string | null) {
-  const { client } = useSupabaseClient();
+export function useBidAddressGate() {
+  const { client, walletAddress } = useSupabaseClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [addresses, setAddresses] = useState<ShippingAddress[]>([]);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
@@ -28,7 +28,7 @@ export function useBidAddressGate(wallet: string | null) {
 
   const gateBid = useCallback(
     async (bidFn: () => Promise<void>) => {
-      if (!wallet) {
+      if (!walletAddress) {
         await bidFn();
         return;
       }
@@ -40,7 +40,7 @@ export function useBidAddressGate(wallet: string | null) {
 
       setLoadingAddresses(true);
       try {
-        const saved = await getShippingAddresses(wallet, client);
+        const saved = await getShippingAddresses(walletAddress, client);
         setAddresses(saved);
 
         if (saved.length === 0) {
@@ -55,7 +55,7 @@ export function useBidAddressGate(wallet: string | null) {
         setLoadingAddresses(false);
       }
     },
-    [client, wallet]
+    [client, walletAddress]
   );
 
   const handleContinue = useCallback(async () => {

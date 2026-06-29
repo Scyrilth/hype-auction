@@ -12,7 +12,7 @@ import {
   notifyBidPlaced,
 } from "@/lib/notifications";
 import { getDefaultShippingAddress } from "@/lib/shipping";
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedClient, supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
 export const MAX_BID_AMOUNT_SOL = 10_000;
@@ -129,9 +129,12 @@ export async function placeBidWithValidation({
     seller_wallet: auction.seller_wallet as string,
   });
 
-  const defaultAddress = await getDefaultShippingAddress(bidderWallet).catch(
-    () => null
-  );
+  const authClient = getAuthenticatedClient(bidderWallet);
+
+  const defaultAddress = await getDefaultShippingAddress(
+    bidderWallet,
+    authClient
+  ).catch(() => null);
 
   if (!isExempt && !defaultAddress) {
     throw new BidPlacementError(
