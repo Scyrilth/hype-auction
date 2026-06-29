@@ -51,10 +51,17 @@ export default function WelcomeOnboardingModal({
   const { client } = useSupabaseClient();
   const { publicKey } = useWallet();
   const [loading, setLoading] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [ageError, setAgeError] = useState(false);
 
   const handleChoice = useCallback(
     async (intent: OnboardingIntent) => {
       if (!publicKey || loading) return;
+
+      if (!ageConfirmed) {
+        setAgeError(true);
+        return;
+      }
 
       const wallet = publicKey.toBase58();
       setLoading(true);
@@ -75,11 +82,15 @@ export default function WelcomeOnboardingModal({
         setLoading(false);
       }
     },
-    [client, loading, onClose, publicKey, router, showToast]
+    [ageConfirmed, client, loading, onClose, publicKey, router, showToast]
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setAgeConfirmed(false);
+      setAgeError(false);
+      return;
+    }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -108,6 +119,27 @@ export default function WelcomeOnboardingModal({
           Welcome to Hype Auction
         </h2>
         <p className="mt-2 text-sm text-muted">What brings you here?</p>
+
+        <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface-elevated px-4 py-3">
+          <input
+            type="checkbox"
+            checked={ageConfirmed}
+            onChange={(event) => {
+              setAgeConfirmed(event.target.checked);
+              if (event.target.checked) setAgeError(false);
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-border accent-accent"
+          />
+          <span className="text-sm text-muted">
+            I confirm that I am 18 years of age or older. Hype Auction is only
+            available to users aged 18+.
+          </span>
+        </label>
+        {ageError && (
+          <p className="mt-2 text-xs text-red-400">
+            You must be 18 or older to use Hype Auction
+          </p>
+        )}
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <OptionCard

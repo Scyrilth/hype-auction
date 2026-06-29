@@ -16,6 +16,11 @@ export default function TermsPage() {
         subtitle="Last updated: June 2026"
         current="tos"
       >
+        <p className="mb-6 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-muted">
+          Hype Auction is intended for users aged 18 and over. By using this
+          platform, you confirm that you are at least 18 years old.
+        </p>
+
         {termsSections.map((section) => (
           <LegalSection
             key={section.title}
