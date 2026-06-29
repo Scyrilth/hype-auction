@@ -12,8 +12,11 @@ export default async function MessageThreadPage({
   const { threadId } = await params;
 
   return (
-    <AppShell contentClassName="flex-1 overflow-y-auto p-3 sm:p-4">
-      <BackButton label="Back to Messages" className="mb-3" />
+    <AppShell
+      hideFooter
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-3 sm:overflow-visible sm:p-4"
+    >
+      <BackButton label="Back to Messages" className="mb-2 shrink-0 sm:mb-3" />
       <ThreadView threadId={threadId} />
     </AppShell>
   );

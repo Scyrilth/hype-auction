@@ -7,11 +7,13 @@ export default function AppShell({
   activePath,
   shellClassName = "bg-background",
   contentClassName = "flex-1 p-2.5 sm:p-3 lg:p-4",
+  hideFooter = false,
 }: {
   children: React.ReactNode;
   activePath?: string;
   shellClassName?: string;
   contentClassName?: string;
+  hideFooter?: boolean;
 }) {
   return (
     <div className={`min-h-screen ${shellClassName}`}>
@@ -21,7 +23,7 @@ export default function AppShell({
       <div className="min-h-screen pt-12 md:ml-44">
         <main className="flex min-h-[calc(100vh-3rem)] flex-col">
           <div className={contentClassName}>{children}</div>
-          <SiteFooter />
+          {!hideFooter && <SiteFooter />}
         </main>
       </div>
     </div>
