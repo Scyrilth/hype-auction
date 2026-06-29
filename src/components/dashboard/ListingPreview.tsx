@@ -78,10 +78,6 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
             className="object-cover"
             unoptimized
           />
-          <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-md bg-live-red px-2 py-0.5 text-xs font-bold uppercase text-white">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
-            Live
-          </span>
           <span className="absolute bottom-2 left-2 rounded-md bg-black/50 px-2 py-1 text-xs text-white/60">
             Listing preview
           </span>

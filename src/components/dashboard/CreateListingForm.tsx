@@ -275,14 +275,7 @@ export default function CreateListingForm() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <Link
-        href="/dashboard"
-        className="inline-flex items-center gap-1 text-sm text-muted transition-colors hover:text-white"
-      >
-        ← Back to Dashboard
-      </Link>
-
-      <header className="mt-4">
+      <header>
         <h1 className="text-xl font-bold text-white sm:text-2xl">
           Create New Listing
         </h1>
