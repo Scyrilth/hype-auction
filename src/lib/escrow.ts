@@ -9,15 +9,19 @@ import {
 } from "@solana/web3.js";
 
 import { createSolanaConnection, isSolanaDevnet } from "@/lib/solana-config";
+import { HYPE_ESCROW_IDL } from "@/lib/hype-escrow-idl";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
 import { getAuctionThreadId } from "@/lib/messages";
 import { notifyPaymentConfirmed } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 
+const DEVNET_PROGRAM_ID = "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs";
+const MAINNET_PROGRAM_ID = "DWvYLFF7iYYsZF97mYP7EhkEXXf1FPxs6SieTfgT5dYT";
+
 const PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_PROGRAM_ID ??
-    "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs"
+    (isSolanaDevnet() ? DEVNET_PROGRAM_ID : MAINNET_PROGRAM_ID)
 );
 
 export const PLATFORM_WALLET =
@@ -44,185 +48,6 @@ export type EscrowPaymentResult =
 export type EscrowTxResult =
   | { success: true; txSignature: string }
   | { success: false; error: string };
-
-const IDL = {
-  address: "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs",
-  metadata: {
-    name: "hype_escrow",
-    version: "0.1.0",
-    spec: "0.1.0",
-  },
-  instructions: [
-    {
-      name: "initialize_escrow",
-      discriminator: [243, 160, 77, 153, 11, 92, 48, 209],
-      accounts: [
-        { name: "buyer", writable: true, signer: true },
-        { name: "seller" },
-        { name: "platform_wallet" },
-        { name: "escrow", writable: true },
-        { name: "system_program", address: "11111111111111111111111111111111" },
-      ],
-      args: [
-        { name: "auction_id", type: { array: ["u8", 32] } },
-        { name: "seller", type: "pubkey" },
-        { name: "platform_wallet", type: "pubkey" },
-        { name: "amount_lamports", type: "u64" },
-        { name: "shipping_lamports", type: "u64" },
-        { name: "platform_fee_bps", type: "u16" },
-        { name: "attempt_number", type: "u8" },
-      ],
-    },
-    {
-      name: "deposit",
-      discriminator: [242, 35, 198, 137, 82, 225, 242, 182],
-      accounts: [
-        { name: "buyer", writable: true, signer: true },
-        { name: "escrow", writable: true },
-        { name: "system_program", address: "11111111111111111111111111111111" },
-      ],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-    {
-      name: "expire_escrow",
-      discriminator: [49, 150, 54, 201, 45, 106, 39, 175],
-      accounts: [{ name: "escrow", writable: true }],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-    {
-      name: "buy_now",
-      discriminator: [242, 42, 184, 77, 133, 152, 118, 204],
-      accounts: [
-        { name: "buyer", writable: true, signer: true },
-        { name: "seller" },
-        { name: "platform_wallet" },
-        { name: "escrow", writable: true },
-        { name: "system_program", address: "11111111111111111111111111111111" },
-      ],
-      args: [
-        { name: "auction_id", type: { array: ["u8", 32] } },
-        { name: "seller", type: "pubkey" },
-        { name: "platform_wallet", type: "pubkey" },
-        { name: "amount_lamports", type: "u64" },
-        { name: "shipping_lamports", type: "u64" },
-        { name: "platform_fee_bps", type: "u16" },
-      ],
-    },
-    {
-      name: "confirm_shipping",
-      discriminator: [201, 210, 238, 231, 90, 157, 77, 124],
-      accounts: [
-        { name: "seller", signer: true },
-        { name: "escrow", writable: true },
-      ],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-    {
-      name: "release",
-      discriminator: [253, 249, 15, 206, 28, 127, 193, 241],
-      accounts: [
-        { name: "buyer", signer: true },
-        { name: "seller", writable: true },
-        { name: "platform_wallet", writable: true },
-        { name: "escrow", writable: true },
-        { name: "system_program", address: "11111111111111111111111111111111" },
-      ],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-    {
-      name: "open_dispute",
-      discriminator: [137, 25, 99, 119, 23, 223, 161, 42],
-      accounts: [
-        { name: "buyer", signer: true },
-        { name: "escrow", writable: true },
-      ],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-    {
-      name: "resolve_dispute",
-      discriminator: [231, 6, 202, 6, 96, 103, 12, 230],
-      accounts: [
-        { name: "platform_wallet", writable: true, signer: true },
-        { name: "buyer", writable: true },
-        { name: "seller", writable: true },
-        { name: "escrow", writable: true },
-        { name: "system_program", address: "11111111111111111111111111111111" },
-      ],
-      args: [
-        { name: "auction_id", type: { array: ["u8", 32] } },
-        { name: "release_to_seller", type: "bool" },
-      ],
-    },
-    {
-      name: "auto_refund",
-      discriminator: [64, 219, 182, 3, 234, 13, 10, 209],
-      accounts: [
-        { name: "buyer", writable: true },
-        { name: "escrow", writable: true },
-        { name: "system_program", address: "11111111111111111111111111111111" },
-      ],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-    {
-      name: "cancel",
-      discriminator: [232, 219, 223, 41, 219, 236, 220, 190],
-      accounts: [
-        { name: "platform_wallet", signer: true },
-        { name: "buyer", writable: true },
-        { name: "escrow", writable: true },
-      ],
-      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
-    },
-  ],
-  accounts: [
-    {
-      name: "EscrowAccount",
-      discriminator: [36, 69, 48, 18, 128, 225, 125, 135],
-    },
-  ],
-  types: [
-    {
-      name: "EscrowAccount",
-      type: {
-        kind: "struct",
-        fields: [
-          { name: "auction_id", type: { array: ["u8", 32] } },
-          { name: "buyer", type: "pubkey" },
-          { name: "seller", type: "pubkey" },
-          { name: "platform_wallet", type: "pubkey" },
-          { name: "amount_lamports", type: "u64" },
-          { name: "shipping_lamports", type: "u64" },
-          { name: "platform_fee_bps", type: "u16" },
-          { name: "state", type: { defined: { name: "EscrowState" } } },
-          { name: "attempt_number", type: "u8" },
-          { name: "payment_deadline", type: "i64" },
-          { name: "funded_at", type: "i64" },
-          { name: "shipped_at", type: "i64" },
-          { name: "dispute_opened_at", type: "i64" },
-          { name: "bump", type: "u8" },
-        ],
-      },
-    },
-    {
-      name: "EscrowState",
-      type: {
-        kind: "enum",
-        variants: [
-          { name: "Pending" },
-          { name: "Funded" },
-          { name: "Shipped" },
-          { name: "Complete" },
-          { name: "Disputed" },
-          { name: "Refunded" },
-          { name: "Cancelled" },
-          { name: "Expired" },
-        ],
-      },
-    },
-  ],
-} as const satisfies Idl;
-
-type HypeEscrowProgram = Program<typeof IDL>;
 
 export type EscrowWallet = {
   publicKey: PublicKey;
@@ -275,8 +100,34 @@ export function getExplorerAccountUrl(address: string): string {
   return `https://explorer.solana.com/address/${address}${cluster}`;
 }
 
-function getProgram(provider: AnchorProvider): HypeEscrowProgram {
-  return new Program(IDL, provider);
+function getProgram(provider: AnchorProvider): Program {
+  const idl = {
+    ...HYPE_ESCROW_IDL,
+    address: PROGRAM_ID.toBase58(),
+  } as unknown as Idl;
+
+  try {
+    const program = new Program(idl, provider);
+    const methods = Object.keys(program.methods ?? {});
+
+    if (!methods.includes("initializeEscrow")) {
+      console.error("[escrow] Program loaded without initializeEscrow method", {
+        programId: PROGRAM_ID.toBase58(),
+        availableMethods: methods,
+      });
+      throw new Error(
+        "Escrow program failed to load instruction methods. Check NEXT_PUBLIC_PROGRAM_ID and IDL."
+      );
+    }
+
+    return program;
+  } catch (error) {
+    console.error("[escrow] Failed to initialize Anchor program", {
+      programId: PROGRAM_ID.toBase58(),
+      error,
+    });
+    throw error;
+  }
 }
 
 async function fetchSolUsdFromBinance(): Promise<number> {
@@ -374,7 +225,11 @@ export async function getEscrowStatus(
       commitment: "confirmed",
     });
     const program = getProgram(provider);
-    const account = await program.account.EscrowAccount.fetch(escrowPda);
+    const accountClient = program.account as Record<
+      string,
+      { fetch: (address: PublicKey) => Promise<{ state: unknown }> }
+    >;
+    const account = await accountClient.escrowAccount.fetch(escrowPda);
     return parseEscrowStateValue(account.state as Record<string, unknown>);
   } catch {
     return "not_found";
@@ -407,7 +262,7 @@ export async function initiatePayment(
     const platformPk = new PublicKey(platformWallet);
 
     await program.methods
-      .initialize_escrow(
+      .initializeEscrow(
         auctionIdArg,
         sellerPk,
         platformPk,
@@ -419,7 +274,7 @@ export async function initiatePayment(
       .accounts({
         buyer: wallet.publicKey,
         seller: sellerPk,
-        platform_wallet: platformPk,
+        platformWallet: platformPk,
         escrow: escrowPda,
       })
       .rpc();
@@ -511,7 +366,7 @@ export async function confirmReceiptOnChain(
       .accounts({
         buyer: wallet.publicKey,
         seller: new PublicKey(sellerWallet),
-        platform_wallet: new PublicKey(platformWallet),
+        platformWallet: new PublicKey(platformWallet),
         escrow: escrowPda,
       })
       .rpc()) as TransactionSignature;
@@ -538,8 +393,7 @@ export async function resolveDisputeOnChain(
   provider: AnchorProvider,
   sellerWallet: string,
   buyerWallet: string,
-  releaseToSeller: boolean,
-  platformWallet: string = PLATFORM_WALLET
+  releaseToSeller: boolean
 ): Promise<EscrowTxResult> {
   try {
     const auctionIdArg = auctionIdToBytes(auctionId);
@@ -547,9 +401,9 @@ export async function resolveDisputeOnChain(
     const program = getProgram(provider);
 
     const txSignature = (await program.methods
-      .resolve_dispute(auctionIdArg, releaseToSeller)
+      .resolveDispute(auctionIdArg, releaseToSeller)
       .accounts({
-        platform_wallet: wallet.publicKey,
+        platformWallet: wallet.publicKey,
         buyer: new PublicKey(buyerWallet),
         seller: new PublicKey(sellerWallet),
         escrow: escrowPda,
@@ -584,7 +438,7 @@ export async function autoRefundOnChain(
     const program = getProgram(provider);
 
     const txSignature = (await program.methods
-      .auto_refund(auctionIdArg)
+      .autoRefund(auctionIdArg)
       .accounts({
         buyer: new PublicKey(buyerWallet),
         escrow: escrowPda,
@@ -654,7 +508,7 @@ export async function confirmShippingOnChain(
     const program = getProgram(provider);
 
     const txSignature = (await program.methods
-      .confirm_shipping(auctionIdArg)
+      .confirmShipping(auctionIdArg)
       .accounts({
         seller: wallet.publicKey,
         escrow: escrowPda,
