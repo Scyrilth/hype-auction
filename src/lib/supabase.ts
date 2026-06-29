@@ -9,4 +9,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseConfig = {
+  url: supabaseUrl,
+  anonKey: supabaseAnonKey,
+};
+
+export const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+
+export function getAuthenticatedClient(walletAddress: string) {
+  return createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+    global: {
+      headers: {
+        "x-wallet-address": walletAddress,
+      },
+    },
+  });
+}
