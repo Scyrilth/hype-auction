@@ -127,32 +127,30 @@ export default function ImageCropModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-3 sm:p-4"
       onClick={() => {
         if (!processing) onCancel();
       }}
       role="presentation"
     >
       <div
-        className="flex w-full max-w-3xl flex-col rounded-2xl border border-border bg-surface p-5 shadow-2xl sm:p-6"
+        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="image-crop-title"
       >
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 id="image-crop-title" className="text-lg font-semibold text-white">
-              Crop image
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              Drag to reposition. Scroll or use the slider to zoom.
-            </p>
-          </div>
+        <div className="shrink-0 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
+          <h2 id="image-crop-title" className="text-base font-semibold text-white sm:text-lg">
+            Crop image
+          </h2>
+          <p className="mt-1 text-xs text-muted sm:text-sm">
+            Drag to reposition. Scroll or use the slider to zoom.
+          </p>
         </div>
 
         <div
-          className="image-crop-shell max-h-[55vh] overflow-auto rounded-xl border border-border bg-black/40 p-3"
+          className="image-crop-shell flex min-h-0 max-h-[60vh] flex-1 items-center justify-center overflow-hidden bg-black/40 p-3 sm:p-4"
           onWheel={handleWheel}
         >
           <ReactCrop
@@ -163,58 +161,63 @@ export default function ImageCropModal({
             circularCrop={profile.circular}
             minWidth={Math.min(profile.minWidth, 120)}
             minHeight={Math.min(profile.minHeight, 120)}
-            className="mx-auto max-w-full"
+            className="max-h-full max-w-full"
           >
             <img
               ref={imgRef}
               alt="Crop preview"
               src={imageSrc}
               onLoad={onImageLoad}
-              className="mx-auto max-h-[48vh] max-w-full object-contain"
-              style={{ transform: `scale(${scale})`, transformOrigin: "center center" }}
+              className="block max-h-full max-w-full object-contain"
+              style={{
+                transform: `scale(${scale})`,
+                transformOrigin: "center center",
+              }}
             />
           </ReactCrop>
         </div>
 
-        <div className="mt-4">
-          <label
-            htmlFor="crop-zoom"
-            className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted"
-          >
-            Zoom
-          </label>
-          <input
-            id="crop-zoom"
-            type="range"
-            min={1}
-            max={3}
-            step={0.05}
-            value={scale}
-            onChange={(event) => setScale(Number(event.target.value))}
-            className="w-full accent-accent"
-            disabled={processing}
-          />
-        </div>
+        <div className="shrink-0 space-y-3 border-t border-border px-4 py-3 sm:space-y-4 sm:px-6 sm:py-4">
+          <div>
+            <label
+              htmlFor="crop-zoom"
+              className="mb-2 block text-xs font-medium uppercase tracking-wider text-muted"
+            >
+              Zoom
+            </label>
+            <input
+              id="crop-zoom"
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={scale}
+              onChange={(event) => setScale(Number(event.target.value))}
+              className="w-full accent-accent"
+              disabled={processing}
+            />
+          </div>
 
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onCancel}
-            disabled={processing}
-            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-white transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleConfirm()}
-            disabled={processing}
-            className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {processing ? "Processing..." : "Crop & Upload"}
-          </button>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={processing}
+              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-white transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleConfirm()}
+              disabled={processing}
+              className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {processing ? "Processing..." : "Crop & Upload"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
