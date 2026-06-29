@@ -8,7 +8,7 @@ import {
   type VersionedTransaction,
 } from "@solana/web3.js";
 
-import { getSolanaRpcUrl, isSolanaDevnet } from "@/lib/solana-config";
+import { createSolanaConnection, isSolanaDevnet } from "@/lib/solana-config";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
 import { getAuctionThreadId } from "@/lib/messages";
@@ -19,7 +19,6 @@ const PROGRAM_ID = new PublicKey(
   process.env.NEXT_PUBLIC_PROGRAM_ID ??
     "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs"
 );
-const RPC_URL = getSolanaRpcUrl();
 
 export const PLATFORM_WALLET =
   process.env.NEXT_PUBLIC_PLATFORM_WALLET ??
@@ -246,7 +245,7 @@ export function createEscrowProvider(
 }
 
 export function getEscrowConnection(): Connection {
-  return new Connection(RPC_URL, "confirmed");
+  return createSolanaConnection();
 }
 
 export function auctionIdToBytes(auctionId: string): number[] {

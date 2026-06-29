@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  useConnection,
   useWallet,
   type Wallet,
 } from "@solana/wallet-adapter-react";
@@ -12,6 +11,7 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { ChevronDownIcon } from "@/components/icons";
 import AnchoredPortal from "@/components/ui/AnchoredPortal";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { createSolanaConnection } from "@/lib/solana-config";
 import { shortenAddress, truncateWalletAddress } from "@/lib/format";
 
 function isSelectableWallet(wallet: Wallet) {
@@ -22,7 +22,7 @@ function isSelectableWallet(wallet: Wallet) {
 }
 
 export default function WalletNav() {
-  const { connection } = useConnection();
+  const connection = useMemo(() => createSolanaConnection(), []);
   const {
     publicKey,
     connected,

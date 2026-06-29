@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAnchorWallet } from "@solana/wallet-adapter-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
@@ -41,6 +41,7 @@ import {
   type PaymentBreakdown,
 } from "@/lib/escrow";
 import { formatSol, shortenAddress } from "@/lib/format";
+import { createSolanaConnection } from "@/lib/solana-config";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import {
   acceptNextBidderOffer,
@@ -225,7 +226,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const { publicKey, connected } = useWallet();
   const { client } = useSupabaseClient();
   const anchorWallet = useAnchorWallet();
-  const { connection } = useConnection();
+  const connection = useMemo(() => createSolanaConnection(), []);
   const { showToast } = useToast();
   const { refresh: refreshUnreadCount } = useUnreadMessageCount();
   const [thread, setThread] = useState<ThreadDetail | null>(null);
@@ -687,15 +688,15 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   });
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col">
-      <div className="shrink-0 rounded-2xl border border-border bg-surface p-4">
-        <div className="flex items-start gap-3">
-          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-elevated">
+    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col sm:h-[calc(100vh-8rem)]">
+      <div className="shrink-0 rounded-2xl border border-border bg-surface p-3 sm:p-4">
+        <div className="flex items-start gap-2.5 sm:gap-3">
+          <div className="relative hidden h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-elevated sm:block">
             <Image src={thumb} alt={title} fill className="object-cover" unoptimized />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-lg font-bold text-white">{title}</h1>
+              <h1 className="text-base font-bold text-white sm:text-lg">{title}</h1>
               {statusBadge && (
                 <span
                   className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase ${statusBadge.className}`}
@@ -708,14 +709,14 @@ export default function ThreadView({ threadId }: { threadId: string }) {
               {formatOrderRef(thread.auction_id)} · with {otherLabel}
             </p>
             {thread.auction?.reference_number && (
-              <div className="mt-1.5">
+              <div className="mt-1 sm:mt-1.5">
                 <ReferenceNumber referenceNumber={thread.auction.reference_number} />
               </div>
             )}
             {thread.auction_id && (
               <Link
                 href={`/auction/${thread.auction_id}`}
-                className="mt-1 inline-block text-xs font-medium text-accent hover:text-purple-300"
+                className="mt-1 hidden text-xs font-medium text-accent hover:text-purple-300 sm:inline-block"
               >
                 View auction →
               </Link>
@@ -725,12 +726,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       </div>
 
       {isArchived && (
-        <div className="mt-3 rounded-xl border border-border bg-background/60 px-4 py-3 text-center text-sm text-muted">
+        <div className="mt-2 shrink-0 rounded-xl border border-border bg-background/60 px-4 py-2 text-center text-sm text-muted sm:mt-3 sm:py-3">
           This conversation has been archived.
         </div>
       )}
 
-      <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto rounded-2xl border border-border bg-surface p-4">
+      <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-2xl border border-border bg-surface p-3 sm:mt-3 sm:space-y-3 sm:p-4">
         {groupedMessages.map(({ message, showHeader, showTimestamp }) => {
           const isMine =
             !message.is_system && message.sender_wallet === wallet;
@@ -775,7 +776,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       </div>
 
       {!isArchived && (
-        <div className="mt-3 shrink-0 space-y-3">
+        <div className="mt-2 shrink-0 space-y-2 border-t border-border bg-background pt-2 sm:mt-3 sm:space-y-3 sm:border-t-0 sm:bg-transparent sm:pt-0">
           {showPayNow && (
             <div className="space-y-2">
               {paymentBreakdown && (
@@ -841,7 +842,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             </button>
           )}
 
-          <div className="rounded-2xl border border-border bg-surface p-3">
+          <div className="rounded-2xl border border-border bg-surface p-2.5 sm:p-3">
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
