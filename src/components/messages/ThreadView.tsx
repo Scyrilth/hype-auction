@@ -798,8 +798,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         <div className="mt-2 shrink-0 space-y-2 border-t border-border bg-background pt-2 sm:mt-3 sm:space-y-3 sm:border-t-0 sm:bg-transparent sm:pt-0">
           {showUploadTracking && (
             <UploadTrackingCard
-              threadId={threadId}
-              sellerWallet={wallet}
+              threadId={thread.id}
+              sellerWallet={thread.seller_wallet}
               onSubmitted={() => void loadThread()}
             />
           )}

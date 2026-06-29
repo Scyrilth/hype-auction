@@ -5,11 +5,8 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage } from "@/lib/errors";
-import { createEscrowProvider } from "@/lib/escrow";
-import {
-  submitThreadShippingTracking,
-  THREAD_SHIPPING_CARRIERS,
-} from "@/lib/seller-orders";
+import { confirmShippingOnChain, createEscrowProvider } from "@/lib/escrow";
+import { THREAD_SHIPPING_CARRIERS } from "@/lib/seller-orders";
 
 export default function UploadTrackingCard({
   threadId,
@@ -29,21 +26,49 @@ export default function UploadTrackingCard({
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async () => {
-    if (submitting || submitted) return;
+    if (submitting || submitted || !threadId.trim()) return;
     setSubmitting(true);
-    try {
-      const provider =
-        anchorWallet && connection
-          ? createEscrowProvider(connection, anchorWallet)
-          : undefined;
 
-      await submitThreadShippingTracking({
-        threadId,
-        sellerWallet,
-        carrier,
-        trackingNumber,
-        onChain: provider ? { provider } : undefined,
+    const resolvedThreadId = threadId.trim();
+    console.log("threadId:", resolvedThreadId);
+
+    try {
+      const response = await fetch("/api/messages/tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          threadId: resolvedThreadId,
+          sellerWallet,
+          carrier,
+          trackingNumber,
+        }),
       });
+
+      const payload = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        auctionId?: string | null;
+      };
+
+      if (!response.ok) {
+        throw new Error(
+          getErrorMessage(
+            payload.error,
+            "Unable to upload tracking. Please try again."
+          )
+        );
+      }
+
+      if (anchorWallet && connection && payload.auctionId) {
+        const provider = createEscrowProvider(connection, anchorWallet);
+        const onChainResult = await confirmShippingOnChain(
+          payload.auctionId,
+          anchorWallet,
+          provider
+        );
+        if (!onChainResult.success) {
+          console.error("On-chain confirm_shipping failed:", onChainResult.error);
+        }
+      }
 
       setSubmitted(true);
       showToast("Tracking uploaded — buyer notified.");

@@ -183,11 +183,13 @@ export async function submitThreadShippingTracking({
     .from("message_threads")
     .select("*")
     .eq("id", threadId)
-    .eq("seller_wallet", sellerWallet)
     .maybeSingle();
 
   if (threadError) throw threadError;
   if (!threadRow) throw new Error("Thread not found.");
+  if (threadRow.seller_wallet !== sellerWallet) {
+    throw new Error("Only the seller can upload tracking for this order.");
+  }
   if (!threadRow.auction_id) {
     throw new Error("Tracking can only be uploaded for auction orders.");
   }
@@ -199,11 +201,13 @@ export async function submitThreadShippingTracking({
     .from("auctions")
     .select("*")
     .eq("id", auctionId)
-    .eq("seller_wallet", sellerWallet)
     .maybeSingle();
 
   if (auctionError) throw auctionError;
   if (!auctionRow) throw new Error("Auction not found.");
+  if (auctionRow.seller_wallet !== sellerWallet) {
+    throw new Error("Only the seller can upload tracking for this order.");
+  }
 
   const auction = parseAuctionRow(auctionRow as Record<string, unknown>);
   const escrowStatus = resolveEscrowStatus(thread, auction);

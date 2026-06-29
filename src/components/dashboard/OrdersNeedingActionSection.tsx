@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   fetchSellerOrdersNeedingAction,
   getOrderThumbnail,
@@ -16,13 +17,14 @@ export default function OrdersNeedingActionSection({
 }: {
   sellerWallet: string;
 }) {
+  const { client } = useSupabaseClient();
   const [orders, setOrders] = useState<SellerOrderNeedingAction[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await fetchSellerOrdersNeedingAction(sellerWallet);
+      const items = await fetchSellerOrdersNeedingAction(sellerWallet, client);
       setOrders(items);
     } catch (error) {
       console.error("[OrdersNeedingActionSection] load failed:", error);
@@ -30,7 +32,7 @@ export default function OrdersNeedingActionSection({
     } finally {
       setLoading(false);
     }
-  }, [sellerWallet]);
+  }, [client, sellerWallet]);
 
   useEffect(() => {
     void load();
