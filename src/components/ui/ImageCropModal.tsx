@@ -3,17 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactCrop, {
   centerCrop,
+  convertToPixelCrop,
+  cropToCanvas,
   makeAspectCrop,
   type Crop,
-  type PixelCrop,
 } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 
 import type { ImageUploadVariant } from "@/lib/image-crop";
-import {
-  getCroppedImageFile,
-  IMAGE_CROP_PROFILES,
-} from "@/lib/image-crop";
+import { IMAGE_CROP_PROFILES, type ImageCropProfile } from "@/lib/image-crop";
 
 function centerAspectCrop(
   mediaWidth: number,
@@ -38,6 +36,50 @@ function centerAspectCrop(
   );
 }
 
+async function exportCroppedJpegFile(
+  image: HTMLImageElement,
+  crop: Crop,
+  profile: ImageCropProfile,
+  scale: number,
+  fileName: string
+): Promise<File> {
+  const pixelCrop = convertToPixelCrop(crop, image.width, image.height);
+
+  const cropCanvas = document.createElement("canvas");
+  await cropToCanvas(image, cropCanvas, pixelCrop, scale, 0);
+
+  const outputCanvas = document.createElement("canvas");
+  outputCanvas.width = profile.minWidth;
+  outputCanvas.height = profile.minHeight;
+
+  const ctx = outputCanvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("No 2d context");
+  }
+
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(cropCanvas, 0, 0, outputCanvas.width, outputCanvas.height);
+
+  return new Promise((resolve, reject) => {
+    outputCanvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Failed to crop image"));
+          return;
+        }
+
+        resolve(
+          new File([blob], fileName, {
+            type: "image/jpeg",
+          })
+        );
+      },
+      "image/jpeg",
+      0.9
+    );
+  });
+}
+
 export default function ImageCropModal({
   open,
   imageSrc,
@@ -56,7 +98,6 @@ export default function ImageCropModal({
   const profile = IMAGE_CROP_PROFILES[variant];
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [scale, setScale] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +105,6 @@ export default function ImageCropModal({
   useEffect(() => {
     if (!open) {
       setCrop(undefined);
-      setCompletedCrop(undefined);
       setScale(1);
       setProcessing(false);
       setError(null);
@@ -101,7 +141,9 @@ export default function ImageCropModal({
   };
 
   const handleConfirm = async () => {
-    if (!imgRef.current || !completedCrop?.width || !completedCrop.height) {
+    const image = imgRef.current;
+
+    if (!image || !crop?.width || !crop?.height) {
       setError("Adjust the crop area before continuing.");
       return;
     }
@@ -110,17 +152,16 @@ export default function ImageCropModal({
     setError(null);
 
     try {
-      const file = await getCroppedImageFile(
-        imgRef.current,
-        completedCrop,
+      const file = await exportCroppedJpegFile(
+        image,
+        crop,
         profile,
-        {
-          scale,
-          fileName: fileName.replace(/\.[^.]+$/, ".jpg"),
-        }
+        scale,
+        fileName.replace(/\.[^.]+$/, ".jpg")
       );
       onConfirm(file);
-    } catch {
+    } catch (exportError) {
+      console.error("ImageCropModal: crop export failed", exportError);
       setError("Unable to crop image. Please try again.");
       setProcessing(false);
     }
@@ -159,7 +200,6 @@ export default function ImageCropModal({
           <ReactCrop
             crop={crop}
             onChange={(_, percentCrop) => setCrop(percentCrop)}
-            onComplete={(pixelCrop) => setCompletedCrop(pixelCrop)}
             aspect={profile.aspect}
             circularCrop={profile.circular}
             minWidth={Math.min(profile.minWidth, 80)}
