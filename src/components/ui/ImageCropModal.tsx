@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactCrop, {
   centerCrop,
   convertToPixelCrop,
-  cropToCanvas,
   makeAspectCrop,
   type Crop,
 } from "react-image-crop";
@@ -36,43 +35,55 @@ function centerAspectCrop(
   );
 }
 
-async function exportCroppedJpegFile(
+function exportCroppedJpegFile(
   image: HTMLImageElement,
   crop: Crop,
   profile: ImageCropProfile,
-  scale: number,
   fileName: string
 ): Promise<File> {
-  const pixelCrop = convertToPixelCrop(crop, image.width, image.height);
-
-  const cropCanvas = document.createElement("canvas");
-  await cropToCanvas(image, cropCanvas, pixelCrop, scale, 0);
-
-  const outputCanvas = document.createElement("canvas");
-  outputCanvas.width = profile.minWidth;
-  outputCanvas.height = profile.minHeight;
-
-  const ctx = outputCanvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("No 2d context");
-  }
-
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(cropCanvas, 0, 0, outputCanvas.width, outputCanvas.height);
+  console.log("Starting crop export");
 
   return new Promise((resolve, reject) => {
-    outputCanvas.toBlob(
+    const canvas = document.createElement("canvas");
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    const pixelCrop = convertToPixelCrop(crop, image.width, image.height);
+
+    canvas.width = profile.minWidth;
+    canvas.height = profile.minHeight;
+    console.log(`Canvas created: ${canvas.width}x${canvas.height}`);
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      console.error("Failed to get canvas 2d context");
+      reject(new Error("No 2d context"));
+      return;
+    }
+
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(
+      image,
+      pixelCrop.x * scaleX,
+      pixelCrop.y * scaleY,
+      pixelCrop.width * scaleX,
+      pixelCrop.height * scaleY,
+      0,
+      0,
+      profile.minWidth,
+      profile.minHeight
+    );
+
+    canvas.toBlob(
       (blob) => {
         if (!blob) {
+          console.error("Blob is null");
           reject(new Error("Failed to crop image"));
           return;
         }
 
-        resolve(
-          new File([blob], fileName, {
-            type: "image/jpeg",
-          })
-        );
+        console.log(`Blob created: ${blob.size} bytes`);
+        const file = new File([blob], fileName, { type: "image/jpeg" });
+        resolve(file);
       },
       "image/jpeg",
       0.9
@@ -156,9 +167,9 @@ export default function ImageCropModal({
         image,
         crop,
         profile,
-        scale,
         fileName.replace(/\.[^.]+$/, ".jpg")
       );
+      console.log("Calling onConfirm with file");
       onConfirm(file);
     } catch (exportError) {
       console.error("ImageCropModal: crop export failed", exportError);
