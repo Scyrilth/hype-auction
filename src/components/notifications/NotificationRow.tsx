@@ -8,6 +8,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   bid_received: "ti-arrow-up",
   outbid: "ti-arrow-down",
   auction_won: "ti-trophy",
+  auction_ended: "ti-flag",
   item_shipped: "ti-truck",
   ending_soon: "ti-clock",
   new_follower: "ti-user-plus",

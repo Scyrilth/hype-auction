@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
+import { checkAndEndExpiredAuctions, recoverUnfinalizedEndedAuctions } from "@/lib/auction-lifecycle";
 import { corsHeaders } from "@/lib/cors";
 import { checkEndingSoonNotifications } from "@/lib/notifications";
 
@@ -29,12 +29,14 @@ export async function GET(request: Request) {
 
   try {
     const endedCount = await checkAndEndExpiredAuctions();
+    const recoveredCount = await recoverUnfinalizedEndedAuctions();
     await checkEndingSoonNotifications();
 
     return NextResponse.json(
       {
         success: true,
         endedCount,
+        recoveredCount,
         timestamp: new Date().toISOString(),
       },
       { headers }

@@ -8,6 +8,7 @@ export type NotificationType =
   | "outbid"
   | "bid_received"
   | "auction_won"
+  | "auction_ended"
   | "item_shipped"
   | "ending_soon"
   | "new_follower"
@@ -78,9 +79,10 @@ export async function getUserDisplayName(wallet: string): Promise<string> {
 async function hasNotification(
   wallet: string,
   type: NotificationType,
-  link: string
+  link: string,
+  client: SupabaseClient = supabase
 ): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("notifications")
     .select("id")
     .eq("wallet_address", wallet)
@@ -110,10 +112,11 @@ export async function createNotification(
   type: NotificationType,
   title: string,
   body: string,
-  link?: string | null
+  link?: string | null,
+  client: SupabaseClient = supabase
 ): Promise<void> {
   try {
-    const { error } = await supabase.from("notifications").insert({
+    const { error } = await client.from("notifications").insert({
       wallet_address: wallet,
       type,
       title,
@@ -312,19 +315,61 @@ export async function notifyAuctionWon({
   winnerWallet,
   auctionTitle,
   amount,
-  auctionId,
+  threadId,
 }: {
   winnerWallet: string;
   auctionTitle: string;
   amount: number;
-  auctionId: string;
-}): Promise<void> {
+  threadId: string;
+}, client: SupabaseClient = supabase): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(
+    winnerWallet,
+    "auction_won",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
   await createNotification(
     winnerWallet,
     "auction_won",
     "You won the auction!",
     `You won ${auctionTitle} with a bid of ${formatSol(amount)}.`,
-    `/auction/${auctionId}`
+    link,
+    client
+  );
+}
+
+export async function notifySellerAuctionEnded({
+  sellerWallet,
+  auctionTitle,
+  winnerDisplayName,
+  amount,
+  threadId,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  winnerDisplayName: string;
+  amount: number;
+  threadId: string;
+}, client: SupabaseClient = supabase): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(
+    sellerWallet,
+    "auction_ended",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    sellerWallet,
+    "auction_ended",
+    "Auction ended",
+    `Your auction "${auctionTitle}" ended. Winner: ${winnerDisplayName} (${formatSol(amount)}).`,
+    link,
+    client
   );
 }
 

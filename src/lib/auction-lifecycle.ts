@@ -3,10 +3,19 @@ import { logSupabaseError } from "@/lib/errors";
 import {
   createAuctionThread,
   insertThreadSystemMessage,
+  type MessageThread,
 } from "@/lib/messages";
-import { notifyAuctionWon } from "@/lib/notifications";
+import {
+  getUserDisplayName,
+  notifyAuctionWon,
+  notifySellerAuctionEnded,
+} from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { supabase } from "@/lib/supabase";
+import { getAuthenticatedClient, supabase, type SupabaseClient } from "@/lib/supabase";
+
+function getWinnerFlowClient(sellerWallet: string): SupabaseClient {
+  return getAuthenticatedClient(sellerWallet);
+}
 
 export interface AuctionSummaryPayload {
   type: "auction_summary";
@@ -113,15 +122,36 @@ export function parseAuctionSummaryMessage(
 export async function createWinnerThread(
   auction: Auction,
   winnerWallet: string,
-  winnerBidAmount: number
-): Promise<void> {
-  const thread = await createAuctionThread(
-    auction.id,
+  winnerBidAmount: number,
+  client: SupabaseClient = getWinnerFlowClient(auction.seller_wallet)
+): Promise<MessageThread> {
+  console.error("[winner-flow] createWinnerThread: start", {
+    auctionId: auction.id,
     winnerWallet,
-    auction.seller_wallet,
-    auction.title,
-    { skipWelcomeMessage: true }
-  );
+    winnerBidAmount,
+  });
+
+  let thread: MessageThread;
+  try {
+    thread = await createAuctionThread(
+      auction.id,
+      winnerWallet,
+      auction.seller_wallet,
+      auction.title,
+      { skipWelcomeMessage: true },
+      client
+    );
+    console.error("[winner-flow] createWinnerThread: thread ready", {
+      auctionId: auction.id,
+      threadId: thread.id,
+    });
+  } catch (error) {
+    console.error("[winner-flow] createWinnerThread: thread creation failed", {
+      auctionId: auction.id,
+      error,
+    });
+    throw error;
+  }
 
   const itemDetails = auction.item_details ?? {};
   const summary: AuctionSummaryPayload = {
@@ -139,18 +169,73 @@ export async function createWinnerThread(
     auction_id: auction.id,
   };
 
-  await insertThreadSystemMessage(
-    thread.id,
-    JSON.stringify(summary),
-    auction.seller_wallet
-  );
+  try {
+    await insertThreadSystemMessage(
+      thread.id,
+      JSON.stringify(summary),
+      auction.seller_wallet,
+      client
+    );
+    console.error("[winner-flow] createWinnerThread: summary message inserted", {
+      auctionId: auction.id,
+      threadId: thread.id,
+    });
+  } catch (error) {
+    console.error("[winner-flow] createWinnerThread: summary message failed", {
+      auctionId: auction.id,
+      threadId: thread.id,
+      error,
+    });
+    throw error;
+  }
 
-  await notifyAuctionWon({
-    winnerWallet,
-    auctionTitle: auction.title,
-    amount: winnerBidAmount,
-    auctionId: auction.id,
-  });
+  try {
+    await notifyAuctionWon(
+      {
+        winnerWallet,
+        auctionTitle: auction.title,
+        amount: winnerBidAmount,
+        threadId: thread.id,
+      },
+      getAuthenticatedClient(winnerWallet)
+    );
+    console.error("[winner-flow] createWinnerThread: winner notification sent", {
+      auctionId: auction.id,
+      winnerWallet,
+    });
+  } catch (error) {
+    console.error("[winner-flow] createWinnerThread: winner notification failed", {
+      auctionId: auction.id,
+      error,
+    });
+    throw error;
+  }
+
+  try {
+    const winnerDisplayName = await getUserDisplayName(winnerWallet);
+    await notifySellerAuctionEnded(
+      {
+        sellerWallet: auction.seller_wallet,
+        auctionTitle: auction.title,
+        winnerDisplayName,
+        amount: winnerBidAmount,
+        threadId: thread.id,
+      },
+      client
+    );
+    console.error("[winner-flow] createWinnerThread: seller notification sent", {
+      auctionId: auction.id,
+      sellerWallet: auction.seller_wallet,
+    });
+  } catch (error) {
+    console.error("[winner-flow] createWinnerThread: seller notification failed", {
+      auctionId: auction.id,
+      error,
+    });
+    throw error;
+  }
+
+  return thread;
 }
 
 async function getWinningBid(auctionId: string): Promise<{
@@ -165,13 +250,198 @@ async function getWinningBid(auctionId: string): Promise<{
     .limit(1)
     .maybeSingle();
 
-  if (error) throw error;
-  if (!data?.bidder_wallet) return null;
+  if (error) {
+    console.error("[winner-flow] getWinningBid: query failed", {
+      auctionId,
+      error,
+    });
+    throw error;
+  }
+  if (!data?.bidder_wallet) {
+    console.error("[winner-flow] getWinningBid: no bids", { auctionId });
+    return null;
+  }
 
   return {
     bidder_wallet: data.bidder_wallet as string,
     amount: Number(data.amount),
   };
+}
+
+/** Idempotent winner flow: thread, summary message, and notifications. */
+export async function finalizeAuctionWinnerFlow(
+  auctionId: string,
+  preloadedAuction?: Auction,
+  client?: SupabaseClient
+): Promise<boolean> {
+  console.error("[winner-flow] finalizeAuctionWinnerFlow: start", { auctionId });
+
+  let auction = preloadedAuction;
+  if (!auction) {
+    const { data, error } = await supabase
+      .from("auctions")
+      .select("*")
+      .eq("id", auctionId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[winner-flow] finalizeAuctionWinnerFlow: load failed", {
+        auctionId,
+        error,
+      });
+      throw error;
+    }
+    if (!data) {
+      console.error("[winner-flow] finalizeAuctionWinnerFlow: not found", {
+        auctionId,
+      });
+      return false;
+    }
+    auction = parseAuctionRow(data as Record<string, unknown>);
+  }
+
+  if (auction.status !== "ended" && auction.status !== "completed") {
+    console.error("[winner-flow] finalizeAuctionWinnerFlow: not ended", {
+      auctionId,
+      status: auction.status,
+    });
+    return false;
+  }
+
+  const flowClient = client ?? getWinnerFlowClient(auction.seller_wallet);
+
+  const winningBid = await getWinningBid(auctionId);
+  if (!winningBid) {
+    return false;
+  }
+
+  const { data: existingThread, error: threadLookupError } = await flowClient
+    .from("message_threads")
+    .select("id")
+    .eq("auction_id", auctionId)
+    .eq("buyer_wallet", winningBid.bidder_wallet)
+    .maybeSingle();
+
+  if (threadLookupError) {
+    console.error(
+      "[winner-flow] finalizeAuctionWinnerFlow: thread lookup failed",
+      { auctionId, error: threadLookupError }
+    );
+    throw threadLookupError;
+  }
+
+  if (existingThread) {
+    console.error("[winner-flow] finalizeAuctionWinnerFlow: already finalized", {
+      auctionId,
+      threadId: existingThread.id,
+    });
+    return true;
+  }
+
+  if (auction.current_bid !== winningBid.amount) {
+    const { error: bidUpdateError } = await flowClient
+      .from("auctions")
+      .update({ current_bid: winningBid.amount })
+      .eq("id", auctionId);
+
+    if (bidUpdateError) {
+      console.error(
+        "[winner-flow] finalizeAuctionWinnerFlow: current_bid update failed",
+        { auctionId, error: bidUpdateError }
+      );
+      throw bidUpdateError;
+    }
+  }
+
+  await createWinnerThread(
+    { ...auction, current_bid: winningBid.amount },
+    winningBid.bidder_wallet,
+    winningBid.amount,
+    flowClient
+  );
+
+  console.error("[winner-flow] finalizeAuctionWinnerFlow: success", {
+    auctionId,
+  });
+  return true;
+}
+
+/** Backfill winner flow for ended auctions that have bids but no message thread. */
+export async function recoverUnfinalizedEndedAuctions(): Promise<number> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: endedAuctions, error } = await supabase
+    .from("auctions")
+    .select("id, seller_wallet")
+    .eq("status", "ended")
+    .gte("end_time", since);
+
+  if (error) {
+    console.error("[winner-flow] recoverUnfinalizedEndedAuctions: load failed", {
+      error,
+    });
+    logSupabaseError("recoverUnfinalizedEndedAuctions", error);
+    return 0;
+  }
+  if (!endedAuctions?.length) return 0;
+
+  let recovered = 0;
+
+  for (const row of endedAuctions) {
+    const auctionId = row.id as string;
+    const sellerWallet = row.seller_wallet as string;
+    const flowClient = getWinnerFlowClient(sellerWallet);
+
+    const { data: thread, error: threadError } = await flowClient
+      .from("message_threads")
+      .select("id")
+      .eq("auction_id", auctionId)
+      .limit(1)
+      .maybeSingle();
+
+    if (threadError) {
+      console.error("[winner-flow] recoverUnfinalizedEndedAuctions: thread check failed", {
+        auctionId,
+        error: threadError,
+      });
+      continue;
+    }
+    if (thread) continue;
+
+    const { count, error: bidCountError } = await supabase
+      .from("bids")
+      .select("id", { count: "exact", head: true })
+      .eq("auction_id", auctionId);
+
+    if (bidCountError) {
+      console.error("[winner-flow] recoverUnfinalizedEndedAuctions: bid count failed", {
+        auctionId,
+        error: bidCountError,
+      });
+      continue;
+    }
+    if (!count) continue;
+
+    try {
+      const finalized = await finalizeAuctionWinnerFlow(
+        auctionId,
+        undefined,
+        flowClient
+      );
+      if (finalized) recovered += 1;
+    } catch (recoveryError) {
+      console.error("[winner-flow] recoverUnfinalizedEndedAuctions: finalize failed", {
+        auctionId,
+        error: recoveryError,
+      });
+      logSupabaseError("recoverUnfinalizedEndedAuctions:auction", recoveryError);
+    }
+  }
+
+  console.error("[winner-flow] recoverUnfinalizedEndedAuctions: complete", {
+    recovered,
+  });
+  return recovered;
 }
 
 export async function checkAndEndExpiredAuctions(): Promise<number> {
@@ -184,6 +454,9 @@ export async function checkAndEndExpiredAuctions(): Promise<number> {
     .lt("end_time", now);
 
   if (fetchError) {
+    console.error("[winner-flow] checkAndEndExpiredAuctions: fetch failed", {
+      error: fetchError,
+    });
     logSupabaseError("checkAndEndExpiredAuctions", fetchError);
     return 0;
   }
@@ -192,16 +465,22 @@ export async function checkAndEndExpiredAuctions(): Promise<number> {
   let endedCount = 0;
 
   for (const row of expiredRows) {
+    const auctionId = row.id as string;
+
     try {
       const { data: updated, error: updateError } = await supabase
         .from("auctions")
         .update({ status: "ended" })
-        .eq("id", row.id as string)
+        .eq("id", auctionId)
         .eq("status", "live")
         .select("*")
         .maybeSingle();
 
       if (updateError) {
+        console.error("[winner-flow] checkAndEndExpiredAuctions: update failed", {
+          auctionId,
+          error: updateError,
+        });
         logSupabaseError("checkAndEndExpiredAuctions:update", updateError);
         continue;
       }
@@ -209,26 +488,21 @@ export async function checkAndEndExpiredAuctions(): Promise<number> {
 
       endedCount += 1;
       const auction = parseAuctionRow(updated as Record<string, unknown>);
-      const winningBid = await getWinningBid(auction.id);
 
-      if (!winningBid) continue;
+      console.error("[winner-flow] checkAndEndExpiredAuctions: auction ended", {
+        auctionId,
+      });
 
-      const { error: bidUpdateError } = await supabase
-        .from("auctions")
-        .update({ current_bid: winningBid.amount })
-        .eq("id", auction.id);
-
-      if (bidUpdateError) {
-        logSupabaseError("checkAndEndExpiredAuctions:current_bid", bidUpdateError);
-        continue;
-      }
-
-      await createWinnerThread(
-        { ...auction, current_bid: winningBid.amount },
-        winningBid.bidder_wallet,
-        winningBid.amount
+      await finalizeAuctionWinnerFlow(
+        auctionId,
+        auction,
+        getWinnerFlowClient(auction.seller_wallet)
       );
     } catch (error) {
+      console.error("[winner-flow] checkAndEndExpiredAuctions: auction failed", {
+        auctionId,
+        error,
+      });
       logSupabaseError("checkAndEndExpiredAuctions:auction", error);
     }
   }
