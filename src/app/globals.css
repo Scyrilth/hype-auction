@@ -445,10 +445,13 @@ body {
 
 /* Entire admin panel (sidebar, top bar, content): 13px-equivalent density at 100% browser zoom */
 .admin-panel {
+  --admin-zoom: 0.8125;
   font-size: 13px;
   line-height: 1.45;
   /* Root rem utilities (text-lg, p-4, etc.) need zoom to scale — 13 ÷ 16 */
-  zoom: 0.8125;
+  zoom: var(--admin-zoom);
+  /* Compensate layout height so zoomed panel still fills the viewport */
+  min-height: calc(100vh / var(--admin-zoom));
 }
 
 .admin-panel :where(h1, h2, h3, h4) {

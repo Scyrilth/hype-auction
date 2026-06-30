@@ -19,12 +19,12 @@ function AdminContent() {
   const wallet = publicKey?.toBase58() ?? "";
 
   return (
-    <div className="admin-panel flex min-h-screen w-full overflow-hidden bg-background">
+    <div className="admin-panel flex w-full overflow-x-hidden bg-background">
       <AdminSidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AdminTopBar wallet={wallet} />
-        <main className="flex flex-1 flex-col overflow-y-auto bg-background">
-          <div className="flex-1 p-4 lg:p-6">
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-background">
+          <div className="flex min-h-0 flex-1 flex-col p-4 lg:p-6">
             {activeTab === "overview" && <AdminOverview />}
             {activeTab === "flagged" && <AdminFlaggedOrders />}
             {activeTab === "disputes" && <AdminDisputes />}
