@@ -7,6 +7,7 @@ import type {
 import { averageRatingFromReviews, getVendorReviews } from "@/lib/reviews";
 
 export { getVendorReviews };
+import { isDummySellerWallet } from "@/lib/auction-shipping";
 import {
   getBidCountsForAuctions,
   getBidCountsInLast24Hours,
@@ -327,6 +328,19 @@ function getShopSlug(vendor: User): string {
   return vendor.username ?? vendor.wallet_address;
 }
 
+function hasShopProfile(row: Record<string, unknown>): boolean {
+  const username = (row.username as string | null)?.trim() ?? "";
+  const shopName = (row.shop_name as string | null)?.trim() ?? "";
+  return username.length > 0 || shopName.length > 0;
+}
+
+/** Real seller directory entry — excludes seeded dummy vendors. */
+export function isRealDirectoryVendor(row: Record<string, unknown>): boolean {
+  const wallet = row.wallet_address as string;
+  if (isDummySellerWallet(wallet)) return false;
+  return hasShopProfile(row);
+}
+
 function topListingCategories(
   listings: Pick<Auction, "category">[],
   maxCategories = 3
@@ -367,7 +381,9 @@ export async function getSuggestedVendorsForShop(
 
   const wallets = [
     ...new Set(
-      matchingAuctions.map((row) => row.seller_wallet as string).filter(Boolean)
+      matchingAuctions
+        .map((row) => row.seller_wallet as string)
+        .filter((wallet) => wallet && !isDummySellerWallet(wallet))
     ),
   ];
 
@@ -386,6 +402,9 @@ export async function getSuggestedVendorsForShop(
   if (vendorsError) throw vendorsError;
   if (reviewsError) throw reviewsError;
   if (!vendorRows?.length) return [];
+
+  const realVendorRows = vendorRows.filter((row) => isRealDirectoryVendor(row));
+  if (!realVendorRows.length) return [];
 
   const ratingsByVendor = new Map<string, number[]>();
   for (const review of reviews ?? []) {
@@ -428,7 +447,7 @@ export async function getSuggestedVendorsForShop(
     }
   }
 
-  const entries: VendorDirectoryEntry[] = vendorRows.map((row) => {
+  const entries: VendorDirectoryEntry[] = realVendorRows.map((row) => {
     const vendor = parseUser(row as Record<string, unknown>);
     const wallet = vendor.wallet_address;
     const ratings = ratingsByVendor.get(wallet) ?? [];
@@ -457,14 +476,19 @@ export async function getSuggestedVendorsForShop(
 }
 
 export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
-  const { data: vendors, error } = await supabase
+  const { data: vendorRows, error } = await supabase
     .from("users")
     .select("*")
-    .eq("is_vendor", true)
-    .order("created_at", { ascending: false });
+    .or("username.not.is.null,shop_name.not.is.null")
+    .order("followers_count", { ascending: false });
 
   if (error) throw error;
-  if (!vendors?.length) return [];
+
+  const vendors = (vendorRows ?? []).filter((row) =>
+    isRealDirectoryVendor(row as Record<string, unknown>)
+  );
+
+  if (!vendors.length) return [];
 
   const wallets = vendors.map((v) => v.wallet_address as string);
   const now = new Date().toISOString();

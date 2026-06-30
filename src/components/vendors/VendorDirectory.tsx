@@ -191,7 +191,7 @@ export default function VendorDirectory({
         <div className="rounded-2xl border border-border bg-surface px-6 py-16 text-center">
           <p className="text-sm text-muted">
             {vendors.length === 0
-              ? "No vendor shops yet. Enable your shop in Settings to appear here."
+              ? "No vendors yet — be the first to start selling!"
               : "No vendors match your search or filters."}
           </p>
         </div>

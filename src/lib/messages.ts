@@ -833,7 +833,7 @@ export async function confirmReceipt(
     Date.now() + 3 * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  const { data: thread, error: threadError } = await client
+  const { error: threadError } = await client
     .from("message_threads")
     .update({
       confirmed_at: new Date().toISOString(),
@@ -841,9 +841,7 @@ export async function confirmReceipt(
     })
     .eq("id", threadId)
     .eq("buyer_wallet", buyerWallet)
-    .is("confirmed_at", null)
-    .select("*")
-    .single();
+    .is("confirmed_at", null);
 
   if (threadError) throw threadError;
 
