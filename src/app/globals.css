@@ -443,6 +443,18 @@ body {
   color: rgb(233 213 255);
 }
 
+/* Admin main content (not sidebar / top bar): 13px-equivalent density at 100% zoom */
+.admin-content-area {
+  font-size: 13px;
+  line-height: 1.45;
+  /* Root rem utilities (text-lg, p-4, etc.) need zoom to scale — 13 ÷ 16 */
+  zoom: 0.8125;
+}
+
+.admin-content-area :where(h1, h2, h3, h4) {
+  line-height: 1.3;
+}
+
 /* Escrow monitor — extra-dense table rows and inline actions */
 .admin-escrow-monitor .admin-tab-pill {
   padding: 0.0625rem 0.5rem;

@@ -24,7 +24,7 @@ function AdminContent() {
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopBar wallet={wallet} />
         <main className="flex flex-1 flex-col overflow-y-auto bg-background">
-          <div className="flex-1 p-4 lg:p-6">
+          <div className="admin-content-area flex-1 p-4 lg:p-6">
             {activeTab === "overview" && <AdminOverview />}
             {activeTab === "flagged" && <AdminFlaggedOrders />}
             {activeTab === "disputes" && <AdminDisputes />}
