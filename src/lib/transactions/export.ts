@@ -216,7 +216,8 @@ export function exportSellerCsv(
 ) {
   const deduped = dedupeSellerRows(rows);
   const headers = [
-    "Reference",
+    "Txn ID",
+    "Auction Ref",
     "Item",
     "Buyer",
     "Date",
@@ -234,6 +235,7 @@ export function exportSellerCsv(
     headers.join(","),
     ...deduped.map((row) =>
       [
+        row.platformTransactionId,
         row.reference ?? "",
         row.itemTitle,
         row.buyerWallet,
@@ -263,7 +265,8 @@ export function exportBuyerCsv(
 ) {
   const deduped = dedupeBuyerRows(rows);
   const headers = [
-    "Reference",
+    "Txn ID",
+    "Auction Ref",
     "Item",
     "Seller",
     "Date",
@@ -280,6 +283,7 @@ export function exportBuyerCsv(
     headers.join(","),
     ...deduped.map((row) =>
       [
+        row.platformTransactionId,
         row.reference ?? "",
         row.itemTitle,
         row.sellerWallet,
@@ -409,7 +413,8 @@ export async function exportTransactionsPdf({
       startY: tableStartY,
       head: [
         [
-          "Reference",
+          "Txn ID",
+          "Auction Ref",
           "Item",
           "Buyer",
           "Date",
@@ -422,6 +427,7 @@ export async function exportTransactionsPdf({
         ],
       ],
       body: (dedupedRows as SellerTransactionRow[]).map((row) => [
+        row.platformTransactionId,
         row.reference ?? "—",
         row.itemTitle,
         row.buyerWallet === "Unknown"
@@ -443,7 +449,8 @@ export async function exportTransactionsPdf({
       startY: tableStartY,
       head: [
         [
-          "Reference",
+          "Txn ID",
+          "Auction Ref",
           "Item",
           "Seller",
           "Date",
@@ -455,6 +462,7 @@ export async function exportTransactionsPdf({
         ],
       ],
       body: (dedupedRows as BuyerTransactionRow[]).map((row) => [
+        row.platformTransactionId,
         row.reference ?? "—",
         row.itemTitle,
         row.sellerWallet.slice(0, 8) + "…",

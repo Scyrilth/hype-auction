@@ -265,6 +265,19 @@ body {
   transform: scale(1.02);
 }
 
+.admin-action-btn--disabled,
+.admin-action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  pointer-events: none;
+  transform: none;
+}
+
+.admin-action-btn--disabled:hover,
+.admin-action-btn:disabled:hover {
+  transform: none;
+}
+
 .admin-action-btn--release {
   background: rgb(5 150 105 / 0.2);
   color: rgb(110 231 183);

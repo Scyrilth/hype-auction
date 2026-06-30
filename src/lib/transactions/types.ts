@@ -148,7 +148,7 @@ export interface TransactionsData {
 export type SortDirection = "asc" | "desc";
 
 export type SellerSortKey =
-  | "reference"
+  | "platformTransactionId"
   | "itemTitle"
   | "buyerWallet"
   | "date"
@@ -160,7 +160,7 @@ export type SellerSortKey =
   | "displayStatus";
 
 export type BuyerSortKey =
-  | "reference"
+  | "platformTransactionId"
   | "itemTitle"
   | "sellerWallet"
   | "date"

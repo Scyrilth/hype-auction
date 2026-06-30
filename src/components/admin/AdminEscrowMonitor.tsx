@@ -10,7 +10,11 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { getErrorMessage } from "@/lib/errors";
-import type { EscrowMonitorRow, EscrowSummaryPill } from "@/lib/admin/types";
+import type {
+  EscrowMonitorRow,
+  EscrowStateCount,
+  EscrowSummaryPill,
+} from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
 
 import { useAdminContext } from "./AdminContext";
@@ -25,14 +29,22 @@ function badgeClass(state: string) {
   switch (state) {
     case "released":
     case "complete":
+    case "Released":
+    case "Fee Collected":
       return "bg-emerald-500/15 text-emerald-300";
     case "disputed":
+    case "Disputed":
       return "bg-red-500/15 text-red-300";
     case "refunded":
+    case "Refunded":
       return "bg-amber-500/15 text-amber-300";
     default:
       return "bg-accent/15 text-purple-300";
   }
+}
+
+function flowDirectionClass(direction: "INWARD" | "OUTWARD") {
+  return direction === "INWARD" ? "text-emerald-400" : "text-red-400";
 }
 
 export default function AdminEscrowMonitor() {
@@ -43,6 +55,8 @@ export default function AdminEscrowMonitor() {
   const [rows, setRows] = useState<EscrowMonitorRow[]>([]);
   const [pills, setPills] = useState<EscrowSummaryPill[]>([]);
   const [platformFeesSol, setPlatformFeesSol] = useState(0);
+  const [totalVolumeSol, setTotalVolumeSol] = useState(0);
+  const [stateCounts, setStateCounts] = useState<EscrowStateCount[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState<{
@@ -71,10 +85,14 @@ export default function AdminEscrowMonitor() {
         rows: EscrowMonitorRow[];
         pills: EscrowSummaryPill[];
         platformFeesSol: number;
+        totalVolumeSol: number;
+        stateCounts: EscrowStateCount[];
       };
       setRows(data.rows);
       setPills(data.pills);
       setPlatformFeesSol(data.platformFeesSol);
+      setTotalVolumeSol(data.totalVolumeSol);
+      setStateCounts(data.stateCounts);
     } finally {
       setLoading(false);
     }
@@ -88,13 +106,19 @@ export default function AdminEscrowMonitor() {
     let list = [...rows];
     if (filter !== "all") {
       if (filter === "flagged") list = list.filter((r) => r.isFlagged);
-      else if (filter === "funded")
-        list = list.filter((r) => ["funded", "pending"].includes(r.escrowState));
+      else if (filter === "funded") list = list.filter((r) => r.eventType === "funded");
+      else if (filter === "shipped") list = list.filter((r) => r.eventType === "shipped");
+      else if (filter === "disputed") list = list.filter((r) => r.eventType === "disputed");
       else if (filter === "released")
-        list = list.filter((r) => ["released", "complete"].includes(r.escrowState));
-      else list = list.filter((r) => r.escrowState === filter);
+        list = list.filter((r) =>
+          ["released", "fee_collected", "dispute_resolved"].includes(r.eventType)
+        );
+      else if (filter === "refunded") list = list.filter((r) => r.eventType === "refunded");
+      else list = list.filter((r) => r.auctionEscrowState === filter);
     }
-    return list.sort((a, b) => b.daysInState - a.daysInState);
+    return list.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
   }, [rows, filter]);
 
   const handleConfirm = async () => {
@@ -104,7 +128,7 @@ export default function AdminEscrowMonitor() {
       type === "release"
         ? await releaseToSeller(
             row.auctionId,
-            row.escrowState,
+            row.auctionEscrowState,
             row.sellerWallet,
             row.buyerWallet
           )
@@ -112,7 +136,7 @@ export default function AdminEscrowMonitor() {
             row.auctionId,
             row.buyerWallet,
             row.sellerWallet,
-            row.escrowState
+            row.auctionEscrowState
           );
     if (result.success) {
       showToast("Escrow action completed.");
@@ -130,11 +154,39 @@ export default function AdminEscrowMonitor() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-surface px-4 py-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+            Total escrow volume
+          </p>
+          <p className="mt-1 text-lg font-semibold text-white">
+            {totalVolumeSol.toFixed(4)} SOL
+          </p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface px-4 py-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Platform fees collected
           </p>
           <p className="mt-1 text-lg font-semibold text-emerald-300">
             {platformFeesSol.toFixed(4)} SOL
           </p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface px-4 py-3 sm:col-span-2 lg:col-span-2">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+            Auctions by escrow state
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {stateCounts.length === 0 ? (
+              <span className="text-xs text-muted">No escrow activity</span>
+            ) : (
+              stateCounts.map((entry) => (
+                <span
+                  key={entry.state}
+                  className="rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[11px] text-zinc-300"
+                >
+                  <span className="capitalize">{entry.state}</span>
+                  <span className="ml-1 font-semibold text-white">{entry.count}</span>
+                </span>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -159,13 +211,15 @@ export default function AdminEscrowMonitor() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-        <table className="w-full min-w-[960px] text-left text-xs">
+        <table className="w-full min-w-[1100px] text-left text-xs">
           <thead className="border-b border-border text-muted">
             <tr>
-              <th className="px-3 py-2">Reference</th>
+              <th className="px-3 py-2">Txn ID</th>
               <th className="px-3 py-2">Item</th>
+              <th className="px-3 py-2">Leg</th>
+              <th className="px-3 py-2">Direction</th>
               <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">State</th>
+              <th className="px-3 py-2">Flow</th>
               <th className="px-3 py-2">Days</th>
               <th className="px-3 py-2">Tracking</th>
               <th className="px-3 py-2">Tx</th>
@@ -173,72 +227,112 @@ export default function AdminEscrowMonitor() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
-              <tr key={row.auctionId} className="border-t border-border/60">
-                <td className="px-3 py-2 font-mono text-purple-300">
-                  {row.reference ?? "—"}
-                </td>
-                <td className="px-3 py-2">
-                  <Link href={`/auction/${row.auctionId}`} className="text-white hover:text-accent">
-                    {row.itemTitle}
-                  </Link>
-                  <p className="text-muted">
-                    {shortenAddress(row.sellerWallet, 3)} → {shortenAddress(row.buyerWallet, 3)}
-                  </p>
-                </td>
-                <td className="px-3 py-2">{row.amountSol.toFixed(4)} SOL</td>
-                <td className="px-3 py-2">
-                  <span className={`rounded-full px-2 py-0.5 capitalize ${badgeClass(row.escrowState)}`}>
-                    {row.escrowState}
-                  </span>
-                </td>
-                <td className={`px-3 py-2 font-medium ${ageClass(row.daysInState)}`}>
-                  {row.daysInState}d
-                </td>
-                <td className="px-3 py-2 text-muted">{row.trackingStatus}</td>
-                <td className="px-3 py-2">
-                  {row.solscanUrl ? (
-                    <a
-                      href={row.solscanUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono text-purple-300 hover:text-accent"
+            {filtered.map((row) => {
+              const actionsDisabled = row.isTerminal;
+
+              return (
+                <tr key={row.ledgerId} className="border-t border-border/60">
+                  <td className="px-3 py-2">
+                    <p className="font-mono text-purple-300">{row.platformTransactionId}</p>
+                    {row.reference ? (
+                      <p className="mt-0.5 font-mono text-[10px] text-muted">{row.reference}</p>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/auction/${row.auctionId}`}
+                      className="text-white hover:text-accent"
                     >
-                      Solscan
-                    </a>
-                  ) : (
-                    <span className="text-muted">—</span>
-                  )}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {row.threadId && (
-                      <Link
-                        href={`/messages/${row.threadId}`}
+                      {row.itemTitle}
+                    </Link>
+                    <p className="text-muted">
+                      {shortenAddress(row.fromWallet, 3)} → {shortenAddress(row.toWallet, 3)}
+                    </p>
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 ${badgeClass(row.eventLabel)}`}
+                    >
+                      {row.eventLabel}
+                    </span>
+                    {row.isPlatformFee ? (
+                      <span className="ml-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                        Fee
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`text-[10px] font-semibold uppercase tracking-wide ${flowDirectionClass(row.escrowFlowDirection)}`}
+                    >
+                      {row.escrowFlowDirection}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2">{row.amountSol.toFixed(4)} SOL</td>
+                  <td className="px-3 py-2 capitalize text-muted">{row.auctionEscrowState}</td>
+                  <td className={`px-3 py-2 font-medium ${ageClass(row.daysInState)}`}>
+                    {row.daysInState}d
+                  </td>
+                  <td className="px-3 py-2 text-muted">{row.trackingStatus}</td>
+                  <td className="px-3 py-2">
+                    {row.solscanUrl ? (
+                      <a
+                        href={row.solscanUrl}
                         target="_blank"
-                        className={adminActionButtonClass.thread}
+                        rel="noopener noreferrer"
+                        className="font-mono text-purple-300 hover:text-accent"
                       >
-                        Thread
-                      </Link>
+                        Solscan
+                      </a>
+                    ) : (
+                      <span className="text-muted">—</span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setDialog({ type: "release", row })}
-                      className={adminActionButtonClass.release}
-                    >
-                      Release
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDialog({ type: "refund", row })}
-                      className={adminActionButtonClass.refund}
-                    >
-                      Refund
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-wrap gap-1">
+                      {row.threadId ? (
+                        actionsDisabled ? (
+                          <span
+                            className={`${adminActionButtonClass.thread} admin-action-btn--disabled`}
+                            aria-disabled="true"
+                          >
+                            Thread
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/messages/${row.threadId}`}
+                            target="_blank"
+                            className={adminActionButtonClass.thread}
+                          >
+                            Thread
+                          </Link>
+                        )
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={actionsDisabled}
+                        onClick={() => !actionsDisabled && setDialog({ type: "release", row })}
+                        className={`${adminActionButtonClass.release} ${
+                          actionsDisabled ? "admin-action-btn--disabled" : ""
+                        }`}
+                      >
+                        Release
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionsDisabled}
+                        onClick={() => !actionsDisabled && setDialog({ type: "refund", row })}
+                        className={`${adminActionButtonClass.refund} ${
+                          actionsDisabled ? "admin-action-btn--disabled" : ""
+                        }`}
+                      >
+                        Refund
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -245,6 +245,19 @@ export default function SidebarNavContent({
           </Link>
         )}
 
+        {showMobileNavLinks && connected && wallet && !showMyShop && (
+          <Link
+            href="/transactions?mode=buying"
+            className={navLinkClass(
+              currentPath === "/transactions" || currentPath.startsWith("/transactions/")
+            )}
+            onClick={onNavigate}
+          >
+            <i className="ti ti-receipt-2 h-3 w-3 shrink-0 text-sm leading-none" />
+            <span>Transactions</span>
+          </Link>
+        )}
+
         {showMobileNavLinks &&
           mobileDrawerNavLinks.map((link) => {
             const active = isMobileDrawerNavLinkActive(currentPath, link.href);

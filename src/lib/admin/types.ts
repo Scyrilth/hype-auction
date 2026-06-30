@@ -87,23 +87,47 @@ export interface DisputeRow {
 }
 
 export interface EscrowMonitorRow {
+  ledgerId: string;
   auctionId: string;
+  platformTransactionId: string;
   reference: string | null;
   itemTitle: string;
   sellerWallet: string;
   buyerWallet: string;
+  fromWallet: string;
+  toWallet: string;
   amountSol: number;
   paymentDate: string | null;
-  escrowState: EscrowState;
+  createdAt: string;
+  /** Leg label for this ledger row (funded, released, etc.). */
   eventType: string;
+  eventLabel: string;
+  /** Escrow-relative flow for display (into vs out of escrow). */
+  escrowFlowDirection: "INWARD" | "OUTWARD";
+  /** Auction-level escrow state (for terminal action gating). */
+  auctionEscrowState: EscrowState;
   daysInState: number;
   trackingStatus: string;
   threadId: string | null;
   isDummy: boolean;
   isFlagged: boolean;
-  platformTransactionId: string;
+  isPlatformFee: boolean;
+  isTerminal: boolean;
   onChainSignature: string | null;
   solscanUrl: string | null;
+}
+
+export interface EscrowStateCount {
+  state: string;
+  count: number;
+}
+
+export interface EscrowMonitorData {
+  rows: EscrowMonitorRow[];
+  pills: EscrowSummaryPill[];
+  platformFeesSol: number;
+  totalVolumeSol: number;
+  stateCounts: EscrowStateCount[];
 }
 
 export interface EscrowSummaryPill {

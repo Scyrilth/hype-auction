@@ -68,7 +68,7 @@ export default function TransactionsView() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<TransactionsData | null>(null);
   const [range, setRange] = useState<DateRange>(() =>
-    getDateRangeFromPreset("month")
+    getDateRangeFromPreset("all")
   );
   const [role, setRole] = useState<TransactionRole>("selling");
   const [statusFilter, setStatusFilter] = useState<

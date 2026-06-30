@@ -128,8 +128,8 @@ DO $$
 DECLARE
   rec RECORD;
   ptid TEXT;
-  buyer_wallet TEXT;
-  seller_wallet TEXT;
+  v_buyer_wallet TEXT;
+  v_seller_wallet TEXT;
   platform_wallet TEXT := 'CVqvsLBSQ3Q8ZiZDB6pvavYQZ4aKchrJ2g7Eh2BLKXyT';
   total_lamports BIGINT;
   fee_lamports BIGINT;
@@ -156,17 +156,17 @@ BEGIN
        OR a.reference_number = 'HA-202606-S5KREM'
   LOOP
     SELECT b.bidder_wallet
-    INTO buyer_wallet
+    INTO v_buyer_wallet
     FROM public.bids b
     WHERE b.auction_id = rec.auction_id
     ORDER BY b.amount DESC
     LIMIT 1;
 
-    IF buyer_wallet IS NULL THEN
+    IF v_buyer_wallet IS NULL THEN
       CONTINUE;
     END IF;
 
-    seller_wallet := rec.seller_wallet;
+    v_seller_wallet := rec.seller_wallet;
     total_lamports := COALESCE(rec.escrow_amount_lamports, 0);
     IF total_lamports <= 0 THEN
       CONTINUE;
@@ -179,7 +179,7 @@ BEGIN
     INTO thread_uuid
     FROM public.message_threads mt
     WHERE mt.auction_id = rec.auction_id
-      AND mt.buyer_wallet = buyer_wallet
+      AND mt.buyer_wallet = v_buyer_wallet
     ORDER BY mt.created_at DESC
     LIMIT 1;
 
@@ -210,7 +210,7 @@ BEGIN
         thread_uuid,
         'funded',
         'outward',
-        buyer_wallet,
+        v_buyer_wallet,
         rec.escrow_pda,
         total_lamports,
         false,
@@ -245,11 +245,10 @@ BEGIN
         thread_uuid,
         'shipped',
         'outward',
-        seller_wallet,
+        v_seller_wallet,
         rec.escrow_pda,
         total_lamports,
         false,
-        NULL,
         rec.escrow_pda,
         COALESCE(rec.tracking_uploaded_at, now())
       );
@@ -279,7 +278,7 @@ BEGIN
         'released',
         'inward',
         rec.escrow_pda,
-        seller_wallet,
+        v_seller_wallet,
         seller_lamports,
         false,
         rec.escrow_pda,

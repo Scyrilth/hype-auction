@@ -104,41 +104,44 @@ function SortHeader({
   );
 }
 
-function CopyReference({
+function CopyTransactionId({
+  platformTransactionId,
   reference,
 }: {
+  platformTransactionId: string;
   reference: string | null;
 }) {
   const { showToast } = useToast();
-  const display = reference
-    ? reference.length > 10
-      ? `${reference.slice(0, 10)}…`
-      : reference
-    : "—";
+  const display =
+    platformTransactionId.length > 14
+      ? `${platformTransactionId.slice(0, 14)}…`
+      : platformTransactionId;
 
   const handleCopy = async () => {
-    if (!reference) return;
     try {
-      await navigator.clipboard.writeText(reference);
-      showToast("Reference copied!");
+      await navigator.clipboard.writeText(platformTransactionId);
+      showToast("Transaction ID copied!");
     } catch {
       showToast("Failed to copy.", "error");
     }
   };
 
-  if (!reference) {
-    return <span className="font-mono text-xs text-muted">—</span>;
-  }
-
   return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="font-mono text-xs text-purple-300 hover:text-purple-200"
-      title={`Click to copy ${reference}`}
-    >
-      {display}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="font-mono text-xs text-purple-300 hover:text-purple-200"
+        title={`Click to copy ${platformTransactionId}`}
+      >
+        {display}
+      </button>
+      {reference ? (
+        <p className="mt-0.5 font-mono text-[10px] text-muted" title={reference}>
+          {reference.length > 12 ? `${reference.slice(0, 12)}…` : reference}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -188,8 +191,11 @@ function sortSellerRows(
   const factor = direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
     switch (key) {
-      case "reference":
-        return factor * (a.reference ?? "").localeCompare(b.reference ?? "");
+      case "platformTransactionId":
+        return (
+          factor *
+          a.platformTransactionId.localeCompare(b.platformTransactionId)
+        );
       case "itemTitle":
         return factor * a.itemTitle.localeCompare(b.itemTitle);
       case "buyerWallet":
@@ -222,8 +228,11 @@ function sortBuyerRows(
   const factor = direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
     switch (key) {
-      case "reference":
-        return factor * (a.reference ?? "").localeCompare(b.reference ?? "");
+      case "platformTransactionId":
+        return (
+          factor *
+          a.platformTransactionId.localeCompare(b.platformTransactionId)
+        );
       case "itemTitle":
         return factor * a.itemTitle.localeCompare(b.itemTitle);
       case "sellerWallet":
@@ -340,7 +349,7 @@ export default function TransactionTable({
                   {role === "selling" ? (
                     <>
                       <th className="px-3 py-3">
-                        <SortHeader label="Reference" sortKey="reference" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
+                        <SortHeader label="Txn ID" sortKey="platformTransactionId" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
                       </th>
                       <th className="px-3 py-3">
                         <SortHeader label="Item" sortKey="itemTitle" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
@@ -376,7 +385,7 @@ export default function TransactionTable({
                   ) : (
                     <>
                       <th className="px-3 py-3">
-                        <SortHeader label="Reference" sortKey="reference" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
+                        <SortHeader label="Txn ID" sortKey="platformTransactionId" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
                       </th>
                       <th className="px-3 py-3">
                         <SortHeader label="Item" sortKey="itemTitle" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
@@ -417,7 +426,10 @@ export default function TransactionTable({
                         className="border-b border-border/60 transition-colors hover:bg-surface-elevated/30"
                       >
                         <td className="px-3 py-2.5">
-                          <CopyReference reference={row.reference} />
+                          <CopyTransactionId
+                            platformTransactionId={row.platformTransactionId}
+                            reference={row.reference}
+                          />
                         </td>
                         <td className="max-w-[140px] truncate px-3 py-2.5">
                           <Link
@@ -471,7 +483,10 @@ export default function TransactionTable({
                         className="border-b border-border/60 transition-colors hover:bg-surface-elevated/30"
                       >
                         <td className="px-3 py-2.5">
-                          <CopyReference reference={row.reference} />
+                          <CopyTransactionId
+                            platformTransactionId={row.platformTransactionId}
+                            reference={row.reference}
+                          />
                         </td>
                         <td className="max-w-[140px] truncate px-3 py-2.5">
                           <Link
