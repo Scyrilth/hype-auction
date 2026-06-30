@@ -443,15 +443,15 @@ body {
   color: rgb(233 213 255);
 }
 
-/* Admin main content (not sidebar / top bar): 13px-equivalent density at 100% zoom */
-.admin-content-area {
+/* Entire admin panel (sidebar, top bar, content): 13px-equivalent density at 100% browser zoom */
+.admin-panel {
   font-size: 13px;
   line-height: 1.45;
   /* Root rem utilities (text-lg, p-4, etc.) need zoom to scale — 13 ÷ 16 */
   zoom: 0.8125;
 }
 
-.admin-content-area :where(h1, h2, h3, h4) {
+.admin-panel :where(h1, h2, h3, h4) {
   line-height: 1.3;
 }
 
