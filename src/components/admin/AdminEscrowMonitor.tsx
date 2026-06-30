@@ -7,7 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import DateRangeSelector from "@/components/transactions/DateRangeSelector";
+import AdminDateRangeFilter from "@/components/admin/AdminDateRangeFilter";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { useSolPrice } from "@/hooks/useSolPrice";
@@ -117,10 +117,10 @@ function EscrowAmountCell({ row }: { row: EscrowMonitorRow }) {
 
   return (
     <div>
-      <p>{row.amountSol.toFixed(4)} SOL</p>
+      <p className="text-[11px]">{row.amountSol.toFixed(4)} SOL</p>
       {usd != null ? (
         <p
-          className="mt-0.5 text-[10px] text-muted"
+          className="mt-0.5 text-[9px] leading-tight text-muted"
           title={`~$${usd.toFixed(2)} at time of payment`}
         >
           ~${usd.toFixed(2)}
@@ -142,7 +142,7 @@ function SummaryUsdLine({
   }
 
   return (
-    <p className="mt-0.5 text-xs text-muted">
+    <p className="mt-0.5 text-[10px] leading-tight text-muted">
       ~${(amountSol * solPrice).toFixed(2)} at current rate
     </p>
   );
@@ -266,41 +266,41 @@ export default function AdminEscrowMonitor() {
     }
   };
 
-  if (loading) return <div className="h-48 animate-pulse rounded-xl bg-surface" />;
+  if (loading) return <div className="h-28 animate-pulse rounded-lg bg-surface" />;
 
   return (
-    <>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-border bg-surface px-4 py-3">
+    <div className="space-y-2.5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-border bg-surface px-3 py-2">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Total escrow volume
           </p>
-          <p className="mt-1 text-lg font-semibold text-white">
+          <p className="mt-0.5 text-base font-semibold leading-tight text-white">
             {totalVolumeSol.toFixed(4)} SOL
           </p>
           <SummaryUsdLine amountSol={totalVolumeSol} solPrice={solPrice} />
         </div>
-        <div className="rounded-xl border border-border bg-surface px-4 py-3">
+        <div className="rounded-lg border border-border bg-surface px-3 py-2">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Platform fees collected
           </p>
-          <p className="mt-1 text-lg font-semibold text-emerald-300">
+          <p className="mt-0.5 text-base font-semibold leading-tight text-emerald-300">
             {platformFeesSol.toFixed(4)} SOL
           </p>
           <SummaryUsdLine amountSol={platformFeesSol} solPrice={solPrice} />
         </div>
-        <div className="rounded-xl border border-border bg-surface px-4 py-3 sm:col-span-2 lg:col-span-2">
+        <div className="rounded-lg border border-border bg-surface px-3 py-2 sm:col-span-2 lg:col-span-2">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
             Auctions by escrow state
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-1 flex flex-wrap gap-1">
             {stateCounts.length === 0 ? (
-              <span className="text-xs text-muted">No escrow activity</span>
+              <span className="text-[11px] text-muted">No escrow activity</span>
             ) : (
               stateCounts.map((entry) => (
                 <span
                   key={entry.state}
-                  className="rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[11px] text-zinc-300"
+                  className="rounded-full border border-border bg-surface-elevated px-1.5 py-0.5 text-[10px] text-zinc-300"
                 >
                   <span className="capitalize">{entry.state}</span>
                   <span className="ml-1 font-semibold text-white">{entry.count}</span>
@@ -311,25 +311,21 @@ export default function AdminEscrowMonitor() {
         </div>
       </div>
 
-      <DateRangeSelector
-        range={dateRange}
-        onChange={setDateRange}
-        embedded
-      />
+      <AdminDateRangeFilter range={dateRange} onChange={setDateRange} />
 
-      <div className="relative mb-4 max-w-xl">
+      <div className="relative max-w-md">
         <input
           type="search"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
           placeholder="Search by transaction ID, auction ref, or wallet..."
-          className="w-full rounded-lg border border-border bg-surface-elevated py-2 pl-3 pr-9 text-sm text-white placeholder:text-muted focus:border-accent/50 focus:outline-none"
+          className="w-full rounded-lg border border-border bg-surface-elevated py-1.5 pl-2.5 pr-8 text-xs text-white placeholder:text-muted focus:border-accent/50 focus:outline-none"
         />
         {searchQuery ? (
           <button
             type="button"
             onClick={() => setSearchQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted transition-colors hover:text-white"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded px-1 text-sm text-muted transition-colors hover:text-white"
             aria-label="Clear search"
           >
             ×
@@ -337,7 +333,7 @@ export default function AdminEscrowMonitor() {
         ) : null}
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
           onClick={() => setFilter("all")}
@@ -357,26 +353,26 @@ export default function AdminEscrowMonitor() {
         ))}
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-        <table className="w-full min-w-[1100px] text-left text-xs">
-          <thead className="border-b border-border text-muted">
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <table className="w-full min-w-[1000px] text-left text-[11px] leading-tight">
+          <thead className="border-b border-border text-[10px] uppercase tracking-wide text-muted">
             <tr>
-              <th className="px-3 py-2">Txn ID</th>
-              <th className="px-3 py-2">Item</th>
-              <th className="px-3 py-2">Leg</th>
-              <th className="px-3 py-2">Direction</th>
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Flow</th>
-              <th className="px-3 py-2">Days</th>
-              <th className="px-3 py-2">Tracking</th>
-              <th className="px-3 py-2">Tx</th>
-              <th className="px-3 py-2">Actions</th>
+              <th className="px-2 py-1.5 font-medium">Txn ID</th>
+              <th className="px-2 py-1.5 font-medium">Item</th>
+              <th className="px-2 py-1.5 font-medium">Leg</th>
+              <th className="px-2 py-1.5 font-medium">Direction</th>
+              <th className="px-2 py-1.5 font-medium">Amount</th>
+              <th className="px-2 py-1.5 font-medium">Flow</th>
+              <th className="px-2 py-1.5 font-medium">Days</th>
+              <th className="px-2 py-1.5 font-medium">Tracking</th>
+              <th className="px-2 py-1.5 font-medium">Tx</th>
+              <th className="px-2 py-1.5 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-3 py-8 text-center text-sm text-muted">
+                <td colSpan={10} className="px-2 py-6 text-center text-[11px] text-muted">
                   No transactions match your filters
                 </td>
               </tr>
@@ -386,61 +382,63 @@ export default function AdminEscrowMonitor() {
 
               return (
                 <tr key={row.ledgerId} className="border-t border-border/60">
-                  <td className="px-3 py-2">
-                    <p className="font-mono text-purple-300">{row.platformTransactionId}</p>
+                  <td className="px-2 py-1 align-top">
+                    <p className="font-mono text-[10px] text-purple-300">{row.platformTransactionId}</p>
                     {row.reference ? (
-                      <p className="mt-0.5 font-mono text-[10px] text-muted">{row.reference}</p>
+                      <p className="mt-0.5 font-mono text-[9px] text-muted">{row.reference}</p>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="max-w-[180px] px-2 py-1 align-top">
                     <Link
                       href={`/auction/${row.auctionId}`}
-                      className="text-white hover:text-accent"
+                      className="line-clamp-2 text-white hover:text-accent"
                     >
                       {row.itemTitle}
                     </Link>
-                    <p className="text-muted">
+                    <p className="mt-0.5 text-[10px] text-muted">
                       <CopyableWalletAddress address={row.fromWallet} />
                       <span className="mx-1">→</span>
                       <CopyableWalletAddress address={row.toWallet} />
                     </p>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1 align-top">
                     <span
-                      className={`rounded-full px-2 py-0.5 ${badgeClass(row.eventLabel)}`}
+                      className={`inline-block rounded-full px-1.5 py-0.5 text-[10px] ${badgeClass(row.eventLabel)}`}
                     >
                       {row.eventLabel}
                     </span>
                     {row.isPlatformFee ? (
-                      <span className="ml-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
+                      <span className="ml-0.5 inline-block rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-medium text-amber-300">
                         Fee
                       </span>
                     ) : null}
                     {isShippedLedgerEvent(row.eventType) ? (
                       <p
-                        className="mt-0.5 text-[10px] text-muted"
+                        className="mt-0.5 text-[9px] leading-tight text-muted"
                         title="No funds transferred; records shipment on-chain"
                       >
                         {SHIPPED_EVENT_SUBTITLE}
                       </p>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1 align-top">
                     <span
-                      className={`text-[10px] font-semibold uppercase tracking-wide ${flowDirectionClass(row.escrowFlowDirection)}`}
+                      className={`text-[9px] font-semibold uppercase tracking-wide ${flowDirectionClass(row.escrowFlowDirection)}`}
                     >
                       {row.escrowFlowDirection}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1 align-top">
                     <EscrowAmountCell row={row} />
                   </td>
-                  <td className="px-3 py-2 capitalize text-muted">{row.auctionEscrowState}</td>
-                  <td className={`px-3 py-2 font-medium ${ageClass(row.daysInState)}`}>
+                  <td className="px-2 py-1 align-top capitalize text-muted">{row.auctionEscrowState}</td>
+                  <td className={`px-2 py-1 align-top font-medium ${ageClass(row.daysInState)}`}>
                     {row.daysInState}d
                   </td>
-                  <td className="px-3 py-2 text-muted">{row.trackingStatus}</td>
-                  <td className="px-3 py-2">
+                  <td className="max-w-[120px] truncate px-2 py-1 align-top text-[10px] text-muted" title={row.trackingStatus}>
+                    {row.trackingStatus}
+                  </td>
+                  <td className="px-2 py-1 align-top">
                     {row.solscanUrl ? (
                       <a
                         href={row.solscanUrl}
@@ -454,9 +452,9 @@ export default function AdminEscrowMonitor() {
                       <span className="text-muted">—</span>
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-1 align-top">
                     <div
-                      className={`flex flex-wrap gap-1 ${
+                      className={`flex flex-wrap gap-0.5 ${
                         actionsDisabled ? "pointer-events-none" : ""
                       }`}
                     >
@@ -520,6 +518,6 @@ export default function AdminEscrowMonitor() {
         onCancel={() => setDialog(null)}
         onConfirm={() => void handleConfirm()}
       />
-    </>
+    </div>
   );
 }
