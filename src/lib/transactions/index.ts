@@ -5,3 +5,4 @@ export * from "./amounts";
 export * from "./data";
 export * from "./aggregations";
 export * from "./export";
+export * from "./display";

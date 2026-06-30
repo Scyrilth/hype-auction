@@ -16,6 +16,10 @@ import type {
   EscrowSummaryPill,
 } from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
+import {
+  isShippedLedgerEvent,
+  SHIPPED_EVENT_SUBTITLE,
+} from "@/lib/transactions";
 
 import { useAdminContext } from "./AdminContext";
 
@@ -260,6 +264,14 @@ export default function AdminEscrowMonitor() {
                         Fee
                       </span>
                     ) : null}
+                    {isShippedLedgerEvent(row.eventType) ? (
+                      <p
+                        className="mt-0.5 text-[10px] text-muted"
+                        title="No funds transferred; records shipment on-chain"
+                      >
+                        {SHIPPED_EVENT_SUBTITLE}
+                      </p>
+                    ) : null}
                   </td>
                   <td className="px-3 py-2">
                     <span
@@ -268,7 +280,13 @@ export default function AdminEscrowMonitor() {
                       {row.escrowFlowDirection}
                     </span>
                   </td>
-                  <td className="px-3 py-2">{row.amountSol.toFixed(4)} SOL</td>
+                  <td className="px-3 py-2">
+                    {isShippedLedgerEvent(row.eventType) ? (
+                      <span className="text-muted">—</span>
+                    ) : (
+                      `${row.amountSol.toFixed(4)} SOL`
+                    )}
+                  </td>
                   <td className="px-3 py-2 capitalize text-muted">{row.auctionEscrowState}</td>
                   <td className={`px-3 py-2 font-medium ${ageClass(row.daysInState)}`}>
                     {row.daysInState}d

@@ -18,8 +18,10 @@ import type {
 import {
   buyerStatusBadgeClass,
   BUYER_STATUS_LABELS,
+  isShippedLedgerEvent,
   sellerStatusBadgeClass,
   SELLER_STATUS_LABELS,
+  SHIPPED_EVENT_SUBTITLE,
 } from "@/lib/transactions";
 
 const PAGE_SIZE = 20;
@@ -52,11 +54,30 @@ function UsdColumnHeader({
   );
 }
 
+function AmountDash() {
+  return <span className="text-muted">—</span>;
+}
+
+function ShippedConfirmationNote() {
+  return (
+    <p
+      className="mt-0.5 text-[10px] text-muted"
+      title="No funds transferred; records shipment on-chain"
+    >
+      {SHIPPED_EVENT_SUBTITLE}
+    </p>
+  );
+}
+
 function UsdCell({
   row,
 }: {
   row: SellerTransactionRow | BuyerTransactionRow;
 }) {
+  if (isShippedLedgerEvent(row.eventType)) {
+    return <AmountDash />;
+  }
+
   return (
     <div>
       <p>~${row.amounts.usdApprox.toFixed(2)}</p>
@@ -447,16 +468,32 @@ export default function TransactionTable({
                           {new Date(row.date).toLocaleDateString()}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">
-                          {row.amounts.itemSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.itemSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">
-                          {row.amounts.shippingSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.shippingSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">
-                          {row.amounts.feeSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.feeSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs text-emerald-300">
-                          {row.amounts.netSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.netSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 text-xs">
                           <UsdCell row={row} />
@@ -468,6 +505,9 @@ export default function TransactionTable({
                             {SELLER_STATUS_LABELS[row.displayStatus]}
                           </span>
                           <DirectionBadge direction={row.direction} />
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <ShippedConfirmationNote />
+                          ) : null}
                         </td>
                         <td className="px-3 py-2.5">
                           <ExplorerButton
@@ -504,13 +544,25 @@ export default function TransactionTable({
                           {new Date(row.date).toLocaleDateString()}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">
-                          {row.amounts.itemSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.itemSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs">
-                          {row.amounts.shippingSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.shippingSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-xs text-blue-300">
-                          {row.amounts.totalSol.toFixed(4)}
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <AmountDash />
+                          ) : (
+                            row.amounts.totalSol.toFixed(4)
+                          )}
                         </td>
                         <td className="px-3 py-2.5 text-xs">
                           <UsdCell row={row} />
@@ -522,6 +574,9 @@ export default function TransactionTable({
                             {BUYER_STATUS_LABELS[row.displayStatus]}
                           </span>
                           <DirectionBadge direction={row.direction} />
+                          {isShippedLedgerEvent(row.eventType) ? (
+                            <ShippedConfirmationNote />
+                          ) : null}
                         </td>
                         <td className="px-3 py-2.5">
                           <ExplorerButton
