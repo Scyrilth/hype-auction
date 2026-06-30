@@ -152,11 +152,7 @@ export type SellerSortKey =
   | "itemTitle"
   | "buyerWallet"
   | "date"
-  | "itemSol"
-  | "shippingSol"
-  | "feeSol"
-  | "netSol"
-  | "usdApprox"
+  | "amountSol"
   | "displayStatus";
 
 export type BuyerSortKey =
@@ -164,8 +160,5 @@ export type BuyerSortKey =
   | "itemTitle"
   | "sellerWallet"
   | "date"
-  | "itemSol"
-  | "shippingSol"
-  | "totalSol"
-  | "usdApprox"
+  | "amountSol"
   | "displayStatus";

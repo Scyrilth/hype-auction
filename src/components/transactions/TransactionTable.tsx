@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import PortalInfoTooltip from "@/components/ui/PortalInfoTooltip";
 import { useToast } from "@/components/ui/Toast";
 import { getExplorerTxUrl } from "@/lib/escrow";
 import { shortenAddress } from "@/lib/format";
@@ -26,73 +25,8 @@ import {
 
 const PAGE_SIZE = 20;
 
-const USD_COLUMN_TOOLTIP =
-  "USD values use the SOL rate at time of payment where available, otherwise current rate";
-
-function UsdColumnHeader({
-  sortKey,
-  activeKey,
-  direction,
-  onSort,
-}: {
-  sortKey: string;
-  activeKey: string;
-  direction: SortDirection;
-  onSort: (key: string) => void;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <SortHeader
-        label="~USD"
-        sortKey={sortKey}
-        activeKey={activeKey}
-        direction={direction}
-        onSort={onSort}
-      />
-      <PortalInfoTooltip text={USD_COLUMN_TOOLTIP} multiline />
-    </span>
-  );
-}
-
 function AmountDash() {
   return <span className="text-muted">—</span>;
-}
-
-function ShippedConfirmationNote() {
-  return (
-    <p
-      className="mt-0.5 text-[10px] text-muted"
-      title="No funds transferred; records shipment on-chain"
-    >
-      {SHIPPED_EVENT_SUBTITLE}
-    </p>
-  );
-}
-
-function UsdCell({
-  row,
-}: {
-  row: SellerTransactionRow | BuyerTransactionRow;
-}) {
-  if (isShippedLedgerEvent(row.eventType)) {
-    return <AmountDash />;
-  }
-
-  return (
-    <div>
-      <p>~${row.amounts.usdApprox.toFixed(2)}</p>
-      {row.solUsdRateAtPayment != null ? (
-        <p className="mt-0.5 text-[10px] text-muted">
-          Rate: ${row.solUsdRateAtPayment.toFixed(2)}
-          {row.paymentCompletedAt
-            ? ` on ${new Date(row.paymentCompletedAt).toLocaleDateString()}`
-            : ""}
-        </p>
-      ) : (
-        <p className="mt-0.5 text-[10px] text-muted/60">Rate: ~current</p>
-      )}
-    </div>
-  );
 }
 
 function SortHeader({
@@ -113,7 +47,7 @@ function SortHeader({
     <button
       type="button"
       onClick={() => onSort(sortKey)}
-      className="inline-flex items-center gap-1 text-left text-[10px] font-medium uppercase tracking-wider text-muted hover:text-white"
+      className="inline-flex items-center gap-1 text-left font-medium text-muted hover:text-white"
     >
       {label}
       {active && (
@@ -133,10 +67,6 @@ function CopyTransactionId({
   reference: string | null;
 }) {
   const { showToast } = useToast();
-  const display =
-    platformTransactionId.length > 14
-      ? `${platformTransactionId.slice(0, 14)}…`
-      : platformTransactionId;
 
   const handleCopy = async () => {
     try {
@@ -148,25 +78,25 @@ function CopyTransactionId({
   };
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="font-mono text-xs text-purple-300 hover:text-purple-200"
-        title={`Click to copy ${platformTransactionId}`}
-      >
-        {display}
-      </button>
+    <button
+      type="button"
+      onClick={() => void handleCopy()}
+      className="max-w-[130px] text-left"
+      title={`Click to copy ${platformTransactionId}`}
+    >
+      <p className="break-all font-mono text-[10px] leading-tight text-purple-300">
+        {platformTransactionId}
+      </p>
       {reference ? (
-        <p className="mt-0.5 font-mono text-[10px] text-muted" title={reference}>
-          {reference.length > 12 ? `${reference.slice(0, 12)}…` : reference}
+        <p className="mt-0.5 break-all font-mono text-[9px] leading-tight text-muted">
+          {reference}
         </p>
       ) : null}
-    </div>
+    </button>
   );
 }
 
-function ExplorerButton({
+function ScanLink({
   signature,
   solscanUrl,
 }: {
@@ -183,23 +113,76 @@ function ExplorerButton({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface-elevated text-muted transition-colors hover:border-accent/50 hover:text-white"
-      title="View on Solscan"
-      aria-label="View on Solscan"
+      className="text-[10px] text-purple-300 hover:text-accent"
     >
-      <i className="ti ti-external-link text-sm" />
+      Scan
     </a>
   );
 }
 
-function DirectionBadge({ direction }: { direction: "inward" | "outward" }) {
+function directionClass(direction: "inward" | "outward") {
+  return direction === "inward" ? "text-emerald-400" : "text-red-400";
+}
+
+function TransactionAmountCell({
+  row,
+  role,
+}: {
+  row: SellerTransactionRow | BuyerTransactionRow;
+  role: TransactionRole;
+}) {
+  if (isShippedLedgerEvent(row.eventType)) {
+    return (
+      <div>
+        <AmountDash />
+        <p className="mt-0.5 text-[9px] text-muted" title={SHIPPED_EVENT_SUBTITLE}>
+          {SHIPPED_EVENT_SUBTITLE}
+        </p>
+      </div>
+    );
+  }
+
+  const amountSol =
+    role === "selling"
+      ? (row as SellerTransactionRow).amounts.netSol
+      : (row as BuyerTransactionRow).amounts.totalSol;
+
   return (
-    <span
-      className={`mt-1 block text-[10px] font-medium uppercase tracking-wide ${
-        direction === "inward" ? "text-emerald-400" : "text-amber-300"
-      }`}
-    >
-      {direction}
+    <div className="whitespace-nowrap text-[11px] leading-tight">
+      <p className="font-mono">{amountSol.toFixed(4)} SOL</p>
+      <p className="mt-0.5 text-[10px] text-muted">
+        ~${row.amounts.usdApprox.toFixed(2)}
+      </p>
+    </div>
+  );
+}
+
+function StatusWithDirection({
+  role,
+  row,
+}: {
+  role: TransactionRole;
+  row: SellerTransactionRow | BuyerTransactionRow;
+}) {
+  const label =
+    role === "selling"
+      ? SELLER_STATUS_LABELS[(row as SellerTransactionRow).displayStatus]
+      : BUYER_STATUS_LABELS[(row as BuyerTransactionRow).displayStatus];
+  const badgeClass =
+    role === "selling"
+      ? sellerStatusBadgeClass((row as SellerTransactionRow).displayStatus)
+      : buyerStatusBadgeClass((row as BuyerTransactionRow).displayStatus);
+
+  return (
+    <span className="inline-flex max-w-[140px] flex-wrap items-center gap-1">
+      <span className={`rounded-full px-1.5 py-px text-[10px] ${badgeClass}`}>
+        {label}
+      </span>
+      <span
+        className={`text-[9px] font-semibold uppercase ${directionClass(row.direction)}`}
+      >
+        {row.direction}
+      </span>
     </span>
   );
 }
@@ -223,16 +206,8 @@ function sortSellerRows(
         return factor * a.buyerWallet.localeCompare(b.buyerWallet);
       case "date":
         return factor * (new Date(a.date).getTime() - new Date(b.date).getTime());
-      case "itemSol":
-        return factor * (a.amounts.itemSol - b.amounts.itemSol);
-      case "shippingSol":
-        return factor * (a.amounts.shippingSol - b.amounts.shippingSol);
-      case "feeSol":
-        return factor * (a.amounts.feeSol - b.amounts.feeSol);
-      case "netSol":
+      case "amountSol":
         return factor * (a.amounts.netSol - b.amounts.netSol);
-      case "usdApprox":
-        return factor * (a.amounts.usdApprox - b.amounts.usdApprox);
       case "displayStatus":
         return factor * a.displayStatus.localeCompare(b.displayStatus);
       default:
@@ -260,14 +235,8 @@ function sortBuyerRows(
         return factor * a.sellerWallet.localeCompare(b.sellerWallet);
       case "date":
         return factor * (new Date(a.date).getTime() - new Date(b.date).getTime());
-      case "itemSol":
-        return factor * (a.amounts.itemSol - b.amounts.itemSol);
-      case "shippingSol":
-        return factor * (a.amounts.shippingSol - b.amounts.shippingSol);
-      case "totalSol":
+      case "amountSol":
         return factor * (a.amounts.totalSol - b.amounts.totalSol);
-      case "usdApprox":
-        return factor * (a.amounts.usdApprox - b.amounts.usdApprox);
       case "displayStatus":
         return factor * a.displayStatus.localeCompare(b.displayStatus);
       default:
@@ -331,8 +300,11 @@ export default function TransactionTable({
   useEffect(() => {
     setPage(1);
   }, [role, sellerRows, buyerRows]);
+
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const activeKey = role === "selling" ? sellerSortKey : buyerSortKey;
+  const counterpartyLabel = role === "selling" ? "Buyer" : "Seller";
+  const counterpartySortKey = role === "selling" ? "buyerWallet" : "sellerWallet";
 
   return (
     <section className="space-y-4">
@@ -363,80 +335,65 @@ export default function TransactionTable({
         </div>
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-            <table className="w-full min-w-[900px] text-left text-sm">
-              <thead className="border-b border-border bg-surface-elevated/50">
+          <div className="overflow-hidden rounded border border-border bg-surface">
+            <table className="w-full table-fixed text-left text-[11px]">
+              <thead className="border-b border-border text-muted">
                 <tr>
-                  {role === "selling" ? (
-                    <>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Txn ID" sortKey="platformTransactionId" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Item" sortKey="itemTitle" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Buyer" sortKey="buyerWallet" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Date" sortKey="date" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Item (SOL)" sortKey="itemSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Shipping" sortKey="shippingSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Fee" sortKey="feeSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Net" sortKey="netSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <UsdColumnHeader sortKey="usdApprox" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Status" sortKey="displayStatus" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted">
-                        Explorer
-                      </th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Txn ID" sortKey="platformTransactionId" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Item" sortKey="itemTitle" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Seller" sortKey="sellerWallet" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Date" sortKey="date" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Item (SOL)" sortKey="itemSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Shipping" sortKey="shippingSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Total" sortKey="totalSol" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <UsdColumnHeader sortKey="usdApprox" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3">
-                        <SortHeader label="Status" sortKey="displayStatus" activeKey={activeKey} direction={sortDirection} onSort={handleSort} />
-                      </th>
-                      <th className="px-3 py-3 text-[10px] font-medium uppercase tracking-wider text-muted">
-                        Explorer
-                      </th>
-                    </>
-                  )}
+                  <th className="w-[14%] px-2 py-1.5 font-medium">
+                    <SortHeader
+                      label="Txn ID"
+                      sortKey="platformTransactionId"
+                      activeKey={activeKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                  </th>
+                  <th className="w-[22%] px-2 py-1.5 font-medium">
+                    <SortHeader
+                      label="Item"
+                      sortKey="itemTitle"
+                      activeKey={activeKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                  </th>
+                  <th className="w-[11%] px-2 py-1.5 font-medium">
+                    <SortHeader
+                      label={counterpartyLabel}
+                      sortKey={counterpartySortKey}
+                      activeKey={activeKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                  </th>
+                  <th className="w-[9%] px-2 py-1.5 font-medium">
+                    <SortHeader
+                      label="Date"
+                      sortKey="date"
+                      activeKey={activeKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                  </th>
+                  <th className="w-[13%] px-2 py-1.5 font-medium">
+                    <SortHeader
+                      label="Amount"
+                      sortKey="amountSol"
+                      activeKey={activeKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                  </th>
+                  <th className="w-[18%] px-2 py-1.5 font-medium">
+                    <SortHeader
+                      label="Status"
+                      sortKey="displayStatus"
+                      activeKey={activeKey}
+                      direction={sortDirection}
+                      onSort={handleSort}
+                    />
+                  </th>
+                  <th className="w-[7%] px-2 py-1.5 font-medium">Tx</th>
                 </tr>
               </thead>
               <tbody>
@@ -444,73 +401,37 @@ export default function TransactionTable({
                   ? (pageRows as SellerTransactionRow[]).map((row) => (
                       <tr
                         key={`${row.auctionId}-${row.eventType}-${row.date}`}
-                        className="border-b border-border/60 transition-colors hover:bg-surface-elevated/30"
+                        className="border-t border-border/60 align-top"
                       >
-                        <td className="px-3 py-2.5">
+                        <td className="px-2 py-1.5">
                           <CopyTransactionId
                             platformTransactionId={row.platformTransactionId}
                             reference={row.reference}
                           />
                         </td>
-                        <td className="max-w-[140px] truncate px-3 py-2.5">
+                        <td className="px-2 py-1.5">
                           <Link
                             href={`/auction/${row.auctionId}`}
-                            className="text-white hover:text-accent"
+                            className="line-clamp-2 block leading-tight text-white hover:text-accent"
                             title={row.itemTitle}
                           >
                             {row.itemTitle}
                           </Link>
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-muted">
-                          {shortenAddress(row.buyerWallet, 4)}
+                        <td className="px-2 py-1.5 font-mono text-[10px] text-muted">
+                          {shortenAddress(row.buyerWallet, 3)}
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-muted">
+                        <td className="px-2 py-1.5 text-[10px] text-muted">
                           {new Date(row.date).toLocaleDateString()}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.itemSol.toFixed(4)
-                          )}
+                        <td className="px-2 py-1.5">
+                          <TransactionAmountCell row={row} role={role} />
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.shippingSol.toFixed(4)
-                          )}
+                        <td className="px-2 py-1.5">
+                          <StatusWithDirection role={role} row={row} />
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.feeSol.toFixed(4)
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-emerald-300">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.netSol.toFixed(4)
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs">
-                          <UsdCell row={row} />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${sellerStatusBadgeClass(row.displayStatus)}`}
-                          >
-                            {SELLER_STATUS_LABELS[row.displayStatus]}
-                          </span>
-                          <DirectionBadge direction={row.direction} />
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <ShippedConfirmationNote />
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <ExplorerButton
+                        <td className="px-2 py-1.5">
+                          <ScanLink
                             signature={row.txSignature}
                             solscanUrl={row.solscanUrl}
                           />
@@ -520,66 +441,37 @@ export default function TransactionTable({
                   : (pageRows as BuyerTransactionRow[]).map((row) => (
                       <tr
                         key={`${row.auctionId}-${row.eventType}-${row.date}`}
-                        className="border-b border-border/60 transition-colors hover:bg-surface-elevated/30"
+                        className="border-t border-border/60 align-top"
                       >
-                        <td className="px-3 py-2.5">
+                        <td className="px-2 py-1.5">
                           <CopyTransactionId
                             platformTransactionId={row.platformTransactionId}
                             reference={row.reference}
                           />
                         </td>
-                        <td className="max-w-[140px] truncate px-3 py-2.5">
+                        <td className="px-2 py-1.5">
                           <Link
                             href={`/auction/${row.auctionId}`}
-                            className="text-white hover:text-blue-400"
+                            className="line-clamp-2 block leading-tight text-white hover:text-blue-400"
                             title={row.itemTitle}
                           >
                             {row.itemTitle}
                           </Link>
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-muted">
-                          {shortenAddress(row.sellerWallet, 4)}
+                        <td className="px-2 py-1.5 font-mono text-[10px] text-muted">
+                          {shortenAddress(row.sellerWallet, 3)}
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-muted">
+                        <td className="px-2 py-1.5 text-[10px] text-muted">
                           {new Date(row.date).toLocaleDateString()}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.itemSol.toFixed(4)
-                          )}
+                        <td className="px-2 py-1.5">
+                          <TransactionAmountCell row={row} role={role} />
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.shippingSol.toFixed(4)
-                          )}
+                        <td className="px-2 py-1.5">
+                          <StatusWithDirection role={role} row={row} />
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-xs text-blue-300">
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <AmountDash />
-                          ) : (
-                            row.amounts.totalSol.toFixed(4)
-                          )}
-                        </td>
-                        <td className="px-3 py-2.5 text-xs">
-                          <UsdCell row={row} />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${buyerStatusBadgeClass(row.displayStatus)}`}
-                          >
-                            {BUYER_STATUS_LABELS[row.displayStatus]}
-                          </span>
-                          <DirectionBadge direction={row.direction} />
-                          {isShippedLedgerEvent(row.eventType) ? (
-                            <ShippedConfirmationNote />
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <ExplorerButton
+                        <td className="px-2 py-1.5">
+                          <ScanLink
                             signature={row.txSignature}
                             solscanUrl={row.solscanUrl}
                           />

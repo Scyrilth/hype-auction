@@ -12,6 +12,7 @@ import { type SupabaseClient } from "@/lib/supabase";
 import {
   mapBuyerDisplayStatus,
   mapSellerDisplayStatus,
+  resolveDisplayEscrowState,
 } from "./status";
 import type {
   BuyerTransactionRow,
@@ -62,7 +63,11 @@ function buildSellerRow(
 ): SellerTransactionRow | null {
   if (event.is_platform_fee) return null;
 
-  const escrowState = mapLedgerEventToEscrowState(event.event_type);
+  const eventEscrowState = mapLedgerEventToEscrowState(event.event_type);
+  const escrowState = resolveDisplayEscrowState(
+    eventEscrowState,
+    event.auction.escrow_state
+  );
   const displayStatus = mapSellerDisplayStatus(escrowState);
   if (!displayStatus) return null;
 
@@ -99,7 +104,11 @@ function buildBuyerRow(
 ): BuyerTransactionRow | null {
   if (event.is_platform_fee) return null;
 
-  const escrowState = mapLedgerEventToEscrowState(event.event_type);
+  const eventEscrowState = mapLedgerEventToEscrowState(event.event_type);
+  const escrowState = resolveDisplayEscrowState(
+    eventEscrowState,
+    event.auction.escrow_state
+  );
   const displayStatus = mapBuyerDisplayStatus(escrowState);
   if (!displayStatus) return null;
 

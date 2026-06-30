@@ -57,6 +57,24 @@ export function mapBuyerDisplayStatus(
   }
 }
 
+/** Prefer auction lifecycle when a ledger leg predates terminal escrow_state. */
+export function resolveDisplayEscrowState(
+  eventEscrowState: EscrowState,
+  auctionEscrowState: EscrowState
+): EscrowState {
+  if (eventEscrowState === "refunded" || eventEscrowState === "disputed") {
+    return eventEscrowState;
+  }
+  if (eventEscrowState === "complete" || eventEscrowState === "released") {
+    return eventEscrowState;
+  }
+  if (auctionEscrowState === "refunded") return "refunded";
+  if (auctionEscrowState === "complete" || auctionEscrowState === "released") {
+    return "complete";
+  }
+  return eventEscrowState;
+}
+
 export const SELLER_STATUS_LABELS: Record<SellerDisplayStatus, string> = {
   released: "Released",
   funded: "Funded",
@@ -73,23 +91,23 @@ export const BUYER_STATUS_LABELS: Record<BuyerDisplayStatus, string> = {
 export function sellerStatusBadgeClass(status: SellerDisplayStatus): string {
   switch (status) {
     case "released":
-      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+      return "bg-emerald-500/15 text-emerald-300";
     case "funded":
-      return "bg-accent/15 text-purple-300 border-accent/30";
+      return "bg-accent/15 text-purple-300";
     case "refunded":
-      return "bg-amber-500/15 text-amber-300 border-amber-500/30";
+      return "bg-amber-500/15 text-amber-300";
     case "disputed":
-      return "bg-live-red/15 text-red-300 border-live-red/30";
+      return "bg-red-500/15 text-red-300";
   }
 }
 
 export function buyerStatusBadgeClass(status: BuyerDisplayStatus): string {
   switch (status) {
     case "completed":
-      return "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+      return "bg-emerald-500/15 text-emerald-300";
     case "pending":
-      return "bg-accent/15 text-purple-300 border-accent/30";
+      return "bg-accent/15 text-purple-300";
     case "refunded":
-      return "bg-amber-500/15 text-amber-300 border-amber-500/30";
+      return "bg-amber-500/15 text-amber-300";
   }
 }

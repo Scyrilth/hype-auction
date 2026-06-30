@@ -141,6 +141,15 @@ export default function SidebarNavContent({
   );
   const isAdminActive = currentPath.startsWith("/admin");
 
+  const showStandaloneTransactions =
+    connected && wallet && (!isVendor || !showMyShop);
+  const transactionsHref =
+    isVendor && (sidebarMode === "seller" || sidebarMode === "default")
+      ? "/transactions"
+      : "/transactions?mode=buying";
+  const isTransactionsActive =
+    currentPath === "/transactions" || currentPath.startsWith("/transactions/");
+
   const [shopOpen, setShopOpen] = useState(false);
 
   useEffect(() => {
@@ -245,12 +254,10 @@ export default function SidebarNavContent({
           </Link>
         )}
 
-        {showMobileNavLinks && connected && wallet && !showMyShop && (
+        {showStandaloneTransactions && (
           <Link
-            href="/transactions?mode=buying"
-            className={navLinkClass(
-              currentPath === "/transactions" || currentPath.startsWith("/transactions/")
-            )}
+            href={transactionsHref}
+            className={navLinkClass(isTransactionsActive)}
             onClick={onNavigate}
           >
             <i className="ti ti-receipt-2 h-3 w-3 shrink-0 text-sm leading-none" />
