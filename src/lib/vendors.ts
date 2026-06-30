@@ -334,11 +334,12 @@ function hasShopProfile(row: Record<string, unknown>): boolean {
   return username.length > 0 || shopName.length > 0;
 }
 
-/** Real seller directory entry — excludes seeded dummy vendors. */
+/** Real seller directory entry — excludes seeded dummy vendors and reviewer personas. */
 export function isRealDirectoryVendor(row: Record<string, unknown>): boolean {
   const wallet = row.wallet_address as string;
   if (isDummySellerWallet(wallet)) return false;
-  return hasShopProfile(row);
+  if (!hasShopProfile(row)) return false;
+  return Boolean(row.is_vendor);
 }
 
 function topListingCategories(
@@ -479,6 +480,7 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
   const { data: vendorRows, error } = await supabase
     .from("users")
     .select("*")
+    .eq("is_vendor", true)
     .or("username.not.is.null,shop_name.not.is.null")
     .order("followers_count", { ascending: false });
 

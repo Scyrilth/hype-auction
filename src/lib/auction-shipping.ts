@@ -1,7 +1,15 @@
 import { countriesMatch } from "@/lib/countries";
 
+const SEEDED_DUMMY_WALLET_PREFIXES = ["DUMMY_VENDOR_", "DUMMY_REVIEWER_"] as const;
+
+/** Seeded SQL dummy accounts (vendor + reviewer personas). */
+export function isSeededDummyWallet(wallet: string | null | undefined): boolean {
+  if (!wallet) return false;
+  return SEEDED_DUMMY_WALLET_PREFIXES.some((prefix) => wallet.startsWith(prefix));
+}
+
 export function isDummySellerWallet(wallet: string | null | undefined): boolean {
-  return Boolean(wallet?.startsWith("DUMMY_VENDOR_"));
+  return isSeededDummyWallet(wallet);
 }
 
 export function isShippingExemptAuction(auction: {
