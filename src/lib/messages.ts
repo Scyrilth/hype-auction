@@ -895,6 +895,7 @@ export async function confirmReceipt(
           escrowPda,
           totalLamports,
           onChainSignature: onChainTxSignature,
+          buyerWallet,
         });
       }
     }

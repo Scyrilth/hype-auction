@@ -12,9 +12,8 @@ import StatusPills from "@/components/transactions/StatusPills";
 import SummaryCards from "@/components/transactions/SummaryCards";
 import TransactionTable from "@/components/transactions/TransactionTable";
 import TransactionsSkeleton from "@/components/transactions/TransactionsSkeleton";
-import { useSolPrice } from "@/hooks/useSolPrice";
 import { DEFAULT_USER_ERROR_MESSAGE } from "@/lib/errors";
-import { useSupabaseClient } from "@/hooks/useSupabaseClient";
+import { useSolPrice } from "@/hooks/useSolPrice";
 import {
   buildBuyerSpendingSeries,
   buildBuyerStatusBreakdown,
@@ -31,7 +30,6 @@ import {
   exportBuyerCsv,
   exportSellerCsv,
   exportTransactionsPdf,
-  fetchTransactionsData,
   filterBuyerRows,
   filterSellerRows,
   getDateRangeFromPreset,
@@ -63,7 +61,6 @@ const EMPTY_BUYER_SUMMARY: BuyerSummary = {
 
 export default function TransactionsView() {
   const { publicKey } = useWallet();
-  const { client } = useSupabaseClient();
   const searchParams = useSearchParams();
   const { solPrice } = useSolPrice();
 
@@ -88,7 +85,18 @@ export default function TransactionsView() {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchTransactionsData(wallet, rate, client);
+      const response = await fetch(
+        `/api/transactions?rate=${encodeURIComponent(String(rate))}`,
+        {
+          headers: {
+            "x-wallet-address": wallet,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to load transactions");
+      }
+      const result = (await response.json()) as TransactionsData;
       setData(result);
     } catch (err) {
       console.error("TransactionsView: load failed", err);
@@ -96,7 +104,7 @@ export default function TransactionsView() {
     } finally {
       setLoading(false);
     }
-  }, [client, wallet, rate]);
+  }, [wallet, rate]);
 
   useEffect(() => {
     void loadData();

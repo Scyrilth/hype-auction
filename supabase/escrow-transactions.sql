@@ -62,18 +62,43 @@ CREATE UNIQUE INDEX IF NOT EXISTS escrow_transactions_signature_event_uidx
 
 ALTER TABLE public.escrow_transactions ENABLE ROW LEVEL SECURITY;
 
+-- Wallet header helper (x-wallet-address from getAuthenticatedClient).
+CREATE OR REPLACE FUNCTION public.request_wallet_address()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT nullif(
+    trim(
+      coalesce(
+        current_setting('request.headers', true)::json->>'x-wallet-address',
+        ''
+      )
+    ),
+    ''
+  );
+$$;
+
+-- Anon must not read or write this ledger; service_role bypasses RLS for server inserts.
+REVOKE ALL ON public.escrow_transactions FROM anon;
+GRANT SELECT ON public.escrow_transactions TO authenticated;
+
 DROP POLICY IF EXISTS "escrow_transactions_select" ON public.escrow_transactions;
 DROP POLICY IF EXISTS "escrow_transactions_insert" ON public.escrow_transactions;
 
 CREATE POLICY "escrow_transactions_select"
-  ON public.escrow_transactions FOR SELECT
-  TO anon, authenticated
-  USING (true);
+  ON public.escrow_transactions
+  FOR SELECT
+  TO authenticated
+  USING (
+    public.request_wallet_address() = 'CVqvsLBSQ3Q8ZiZDB6pvavYQZ4aKchrJ2g7Eh2BLKXyT'
+    OR from_wallet = public.request_wallet_address()
+    OR to_wallet = public.request_wallet_address()
+  );
 
-CREATE POLICY "escrow_transactions_insert"
-  ON public.escrow_transactions FOR INSERT
-  TO anon, authenticated
-  WITH CHECK (true);
+-- No INSERT policy: only service_role may insert (bypasses RLS).
 
 -- ---------------------------------------------------------------------------
 -- Backfill: live mainnet test auctions (escrow PDAs from recovery / UI tests)

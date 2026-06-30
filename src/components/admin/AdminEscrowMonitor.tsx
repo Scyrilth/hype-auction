@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
@@ -9,7 +10,6 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { getErrorMessage } from "@/lib/errors";
-import { fetchEscrowMonitor } from "@/lib/admin/data";
 import type { EscrowMonitorRow, EscrowSummaryPill } from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
 
@@ -36,6 +36,7 @@ function badgeClass(state: string) {
 }
 
 export default function AdminEscrowMonitor() {
+  const { publicKey } = useWallet();
   const { showDummyData } = useAdminContext();
   const { showToast } = useToast();
   const { releaseToSeller, refundToBuyer, loading: actionLoading } = useAdminEscrow();
@@ -50,16 +51,34 @@ export default function AdminEscrowMonitor() {
   } | null>(null);
 
   const load = useCallback(async () => {
+    const wallet = publicKey?.toBase58();
+    if (!wallet) return;
+
     setLoading(true);
     try {
-      const data = await fetchEscrowMonitor(showDummyData);
+      const response = await fetch(
+        `/api/admin/escrow-monitor?showDummyData=${showDummyData ? "true" : "false"}`,
+        {
+          headers: {
+            "x-wallet-address": wallet,
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Failed to load escrow monitor");
+      }
+      const data = (await response.json()) as {
+        rows: EscrowMonitorRow[];
+        pills: EscrowSummaryPill[];
+        platformFeesSol: number;
+      };
       setRows(data.rows);
       setPills(data.pills);
       setPlatformFeesSol(data.platformFeesSol);
     } finally {
       setLoading(false);
     }
-  }, [showDummyData]);
+  }, [publicKey, showDummyData]);
 
   useEffect(() => {
     void load();

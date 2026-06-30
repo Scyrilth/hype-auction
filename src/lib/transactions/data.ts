@@ -1,13 +1,13 @@
 import {
   auctionHasReleasedEvent,
   directionForWallet,
-  fetchBuyerLedgerEvents,
-  fetchSellerLedgerEvents,
+  fetchWalletLedgerEvents,
+  getLedgerReadClient,
   lamportsToSol,
   mapLedgerEventToEscrowState,
   type EscrowTransactionWithAuction,
 } from "@/lib/escrow-ledger";
-import { supabase, type SupabaseClient } from "@/lib/supabase";
+import { type SupabaseClient } from "@/lib/supabase";
 
 import {
   mapBuyerDisplayStatus,
@@ -137,13 +137,12 @@ export function getTransactionDate(iso: string): string {
 export async function fetchTransactionsData(
   wallet: string,
   currentRateFallback: number,
-  client: SupabaseClient = supabase
+  client: SupabaseClient = getLedgerReadClient(wallet)
 ): Promise<TransactionsData> {
   const normalizedWallet = wallet.trim();
 
-  const [sellerEvents, buyerEvents, listingCountResponse] = await Promise.all([
-    fetchSellerLedgerEvents(normalizedWallet, client),
-    fetchBuyerLedgerEvents(normalizedWallet, client),
+  const [events, listingCountResponse] = await Promise.all([
+    fetchWalletLedgerEvents(normalizedWallet, client),
     client
       .from("auctions")
       .select("id", { count: "exact", head: true })
@@ -152,11 +151,11 @@ export async function fetchTransactionsData(
 
   if (listingCountResponse.error) throw listingCountResponse.error;
 
-  const sellerRows = sellerEvents
+  const sellerRows = events
     .map((event) => buildSellerRow(event, normalizedWallet, currentRateFallback))
     .filter((row): row is SellerTransactionRow => row !== null);
 
-  const buyerRows = buyerEvents
+  const buyerRows = events
     .map((event) => buildBuyerRow(event, normalizedWallet, currentRateFallback))
     .filter((row): row is BuyerTransactionRow => row !== null);
 

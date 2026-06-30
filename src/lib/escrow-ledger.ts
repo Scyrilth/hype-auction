@@ -2,9 +2,14 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import type { Auction, EscrowState } from "@/lib/database.types";
 import { logSupabaseError } from "@/lib/errors";
+import { isBrowserLedgerWrite, postEscrowLedgerEvent } from "@/lib/escrow-ledger-client";
 import { PLATFORM_FEE_BPS, PLATFORM_WALLET } from "@/lib/escrow";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { getNotificationClient, supabase, type SupabaseClient } from "@/lib/supabase";
+import {
+  getAuthenticatedClient,
+  getNotificationClient,
+  type SupabaseClient,
+} from "@/lib/supabase";
 
 export type EscrowLedgerEventType =
   | "funded"
@@ -98,15 +103,22 @@ function parseLedgerRow(row: Record<string, unknown>): EscrowTransaction {
   };
 }
 
-async function getWriteClient(client?: SupabaseClient): Promise<SupabaseClient> {
-  return client ?? getNotificationClient();
+async function getWriteClient(): Promise<SupabaseClient> {
+  return getNotificationClient();
+}
+
+function walletLedgerFilter(wallet: string): string {
+  return `from_wallet.eq.${wallet},to_wallet.eq.${wallet}`;
+}
+
+export function getLedgerReadClient(wallet: string): SupabaseClient {
+  return getAuthenticatedClient(wallet);
 }
 
 export async function getOrCreatePlatformTransactionId(
-  auctionId: string,
-  client?: SupabaseClient
+  auctionId: string
 ): Promise<string> {
-  const db = await getWriteClient(client);
+  const db = await getWriteClient();
 
   const { data: existing, error: existingError } = await db
     .from("escrow_transactions")
@@ -161,10 +173,9 @@ export async function insertEscrowTransaction(
     escrowPda?: string | null;
     createdAt?: string;
     platformTransactionId?: string;
-  },
-  client?: SupabaseClient
+  }
 ): Promise<EscrowTransaction | null> {
-  const db = await getWriteClient(client);
+  const db = await getWriteClient();
   const signature = input.onChainSignature?.trim() || null;
 
   if (signature && (await signatureEventExists(signature, input.eventType, db))) {
@@ -173,7 +184,7 @@ export async function insertEscrowTransaction(
 
   const platformTransactionId =
     input.platformTransactionId ??
-    (await getOrCreatePlatformTransactionId(input.auctionId, db));
+    (await getOrCreatePlatformTransactionId(input.auctionId));
 
   const row = {
     platform_transaction_id: platformTransactionId,
@@ -212,7 +223,6 @@ export async function logEscrowFunded({
   escrowPda,
   amountLamports,
   onChainSignature,
-  client,
 }: {
   auctionId: string;
   threadId?: string | null;
@@ -220,22 +230,34 @@ export async function logEscrowFunded({
   escrowPda: string;
   amountLamports: number;
   onChainSignature: string;
-  client?: SupabaseClient;
 }): Promise<void> {
-  await insertEscrowTransaction(
-    {
-      auctionId,
-      threadId,
-      eventType: "funded",
-      direction: "outward",
-      fromWallet: buyerWallet,
-      toWallet: escrowPda,
-      amountLamports,
-      onChainSignature,
-      escrowPda,
-    },
-    client
-  );
+  if (isBrowserLedgerWrite()) {
+    await postEscrowLedgerEvent(
+      {
+        type: "funded",
+        auctionId,
+        threadId,
+        buyerWallet,
+        escrowPda,
+        amountLamports,
+        onChainSignature,
+      },
+      buyerWallet
+    );
+    return;
+  }
+
+  await insertEscrowTransaction({
+    auctionId,
+    threadId,
+    eventType: "funded",
+    direction: "outward",
+    fromWallet: buyerWallet,
+    toWallet: escrowPda,
+    amountLamports,
+    onChainSignature,
+    escrowPda,
+  });
 }
 
 export async function logEscrowShipped({
@@ -245,7 +267,6 @@ export async function logEscrowShipped({
   escrowPda,
   amountLamports,
   onChainSignature,
-  client,
 }: {
   auctionId: string;
   threadId?: string | null;
@@ -253,22 +274,84 @@ export async function logEscrowShipped({
   escrowPda: string;
   amountLamports: number;
   onChainSignature?: string | null;
-  client?: SupabaseClient;
 }): Promise<void> {
-  await insertEscrowTransaction(
-    {
+  if (isBrowserLedgerWrite()) {
+    await postEscrowLedgerEvent(
+      {
+        type: "shipped",
+        auctionId,
+        threadId,
+        sellerWallet,
+        escrowPda,
+        amountLamports,
+        onChainSignature,
+      },
+      sellerWallet
+    );
+    return;
+  }
+
+  await insertEscrowTransaction({
+    auctionId,
+    threadId,
+    eventType: "shipped",
+    direction: "outward",
+    fromWallet: sellerWallet,
+    toWallet: escrowPda,
+    amountLamports,
+    onChainSignature,
+    escrowPda,
+  });
+}
+
+async function persistEscrowReleased({
+  auctionId,
+  threadId,
+  sellerWallet,
+  escrowPda,
+  totalLamports,
+  onChainSignature,
+  platformWallet = PLATFORM_WALLET,
+}: {
+  auctionId: string;
+  threadId?: string | null;
+  sellerWallet: string;
+  escrowPda: string;
+  totalLamports: number;
+  onChainSignature: string;
+  platformWallet?: string;
+}): Promise<void> {
+  const platformTransactionId = await getOrCreatePlatformTransactionId(auctionId);
+  const { sellerLamports, platformFeeLamports } = splitEscrowLamports(totalLamports);
+
+  await insertEscrowTransaction({
+    auctionId,
+    threadId,
+    eventType: "released",
+    direction: "inward",
+    fromWallet: escrowPda,
+    toWallet: sellerWallet,
+    amountLamports: sellerLamports,
+    onChainSignature,
+    escrowPda,
+    platformTransactionId,
+  });
+
+  if (platformFeeLamports > 0) {
+    await insertEscrowTransaction({
       auctionId,
       threadId,
-      eventType: "shipped",
-      direction: "outward",
-      fromWallet: sellerWallet,
-      toWallet: escrowPda,
-      amountLamports,
+      eventType: "fee_collected",
+      direction: "inward",
+      fromWallet: escrowPda,
+      toWallet: platformWallet,
+      amountLamports: platformFeeLamports,
+      isPlatformFee: true,
       onChainSignature,
       escrowPda,
-    },
-    client
-  );
+      platformTransactionId,
+    });
+  }
 }
 
 export async function logEscrowReleased({
@@ -279,7 +362,7 @@ export async function logEscrowReleased({
   totalLamports,
   onChainSignature,
   platformWallet = PLATFORM_WALLET,
-  client,
+  buyerWallet,
 }: {
   auctionId: string;
   threadId?: string | null;
@@ -288,48 +371,33 @@ export async function logEscrowReleased({
   totalLamports: number;
   onChainSignature: string;
   platformWallet?: string;
-  client?: SupabaseClient;
+  buyerWallet: string;
 }): Promise<void> {
-  const platformTransactionId = await getOrCreatePlatformTransactionId(
-    auctionId,
-    await getWriteClient(client)
-  );
-  const { sellerLamports, platformFeeLamports } = splitEscrowLamports(totalLamports);
-
-  await insertEscrowTransaction(
-    {
-      auctionId,
-      threadId,
-      eventType: "released",
-      direction: "inward",
-      fromWallet: escrowPda,
-      toWallet: sellerWallet,
-      amountLamports: sellerLamports,
-      onChainSignature,
-      escrowPda,
-      platformTransactionId,
-    },
-    client
-  );
-
-  if (platformFeeLamports > 0) {
-    await insertEscrowTransaction(
+  if (isBrowserLedgerWrite()) {
+    await postEscrowLedgerEvent(
       {
+        type: "released",
         auctionId,
         threadId,
-        eventType: "fee_collected",
-        direction: "inward",
-        fromWallet: escrowPda,
-        toWallet: platformWallet,
-        amountLamports: platformFeeLamports,
-        isPlatformFee: true,
-        onChainSignature,
+        sellerWallet,
         escrowPda,
-        platformTransactionId,
+        totalLamports,
+        onChainSignature,
       },
-      client
+      buyerWallet
     );
+    return;
   }
+
+  await persistEscrowReleased({
+    auctionId,
+    threadId,
+    sellerWallet,
+    escrowPda,
+    totalLamports,
+    onChainSignature,
+    platformWallet,
+  });
 }
 
 export async function logEscrowRefunded({
@@ -339,7 +407,6 @@ export async function logEscrowRefunded({
   escrowPda,
   amountLamports,
   onChainSignature,
-  client,
 }: {
   auctionId: string;
   threadId?: string | null;
@@ -347,22 +414,34 @@ export async function logEscrowRefunded({
   escrowPda: string;
   amountLamports: number;
   onChainSignature: string;
-  client?: SupabaseClient;
 }): Promise<void> {
-  await insertEscrowTransaction(
-    {
-      auctionId,
-      threadId,
-      eventType: "refunded",
-      direction: "inward",
-      fromWallet: escrowPda,
-      toWallet: buyerWallet,
-      amountLamports,
-      onChainSignature,
-      escrowPda,
-    },
-    client
-  );
+  if (isBrowserLedgerWrite()) {
+    await postEscrowLedgerEvent(
+      {
+        type: "refunded",
+        auctionId,
+        threadId,
+        buyerWallet,
+        escrowPda,
+        amountLamports,
+        onChainSignature,
+      },
+      buyerWallet
+    );
+    return;
+  }
+
+  await insertEscrowTransaction({
+    auctionId,
+    threadId,
+    eventType: "refunded",
+    direction: "inward",
+    fromWallet: escrowPda,
+    toWallet: buyerWallet,
+    amountLamports,
+    onChainSignature,
+    escrowPda,
+  });
 }
 
 export async function logEscrowDisputeResolved({
@@ -375,7 +454,6 @@ export async function logEscrowDisputeResolved({
   onChainSignature,
   releaseToSeller,
   platformWallet = PLATFORM_WALLET,
-  client,
 }: {
   auctionId: string;
   threadId?: string | null;
@@ -386,10 +464,27 @@ export async function logEscrowDisputeResolved({
   onChainSignature: string;
   releaseToSeller: boolean;
   platformWallet?: string;
-  client?: SupabaseClient;
 }): Promise<void> {
+  if (isBrowserLedgerWrite()) {
+    await postEscrowLedgerEvent(
+      {
+        type: "dispute_resolved",
+        auctionId,
+        threadId,
+        buyerWallet,
+        sellerWallet,
+        escrowPda,
+        totalLamports,
+        onChainSignature,
+        releaseToSeller,
+      },
+      releaseToSeller ? sellerWallet : buyerWallet
+    );
+    return;
+  }
+
   if (releaseToSeller) {
-    await logEscrowReleased({
+    await persistEscrowReleased({
       auctionId,
       threadId,
       sellerWallet,
@@ -397,7 +492,6 @@ export async function logEscrowDisputeResolved({
       totalLamports,
       onChainSignature,
       platformWallet,
-      client,
     });
   } else {
     await logEscrowRefunded({
@@ -407,24 +501,20 @@ export async function logEscrowDisputeResolved({
       escrowPda,
       amountLamports: totalLamports,
       onChainSignature,
-      client,
     });
   }
 
-  await insertEscrowTransaction(
-    {
-      auctionId,
-      threadId,
-      eventType: "dispute_resolved",
-      direction: "inward",
-      fromWallet: escrowPda,
-      toWallet: releaseToSeller ? sellerWallet : buyerWallet,
-      amountLamports: totalLamports,
-      onChainSignature,
-      escrowPda,
-    },
-    client
-  );
+  await insertEscrowTransaction({
+    auctionId,
+    threadId,
+    eventType: "dispute_resolved",
+    direction: "inward",
+    fromWallet: escrowPda,
+    toWallet: releaseToSeller ? sellerWallet : buyerWallet,
+    amountLamports: totalLamports,
+    onChainSignature,
+    escrowPda,
+  });
 }
 
 export function directionForWallet(
@@ -487,54 +577,45 @@ async function attachAuctionsAndBuyers(
   return enriched;
 }
 
-export async function fetchSellerLedgerEvents(
-  sellerWallet: string,
-  client: SupabaseClient = supabase
+export async function fetchWalletLedgerEvents(
+  wallet: string,
+  client: SupabaseClient = getLedgerReadClient(wallet)
 ): Promise<EscrowTransactionWithAuction[]> {
-  const { data: auctions, error: auctionError } = await client
-    .from("auctions")
-    .select("id")
-    .eq("seller_wallet", sellerWallet);
-
-  if (auctionError) throw auctionError;
-
-  const auctionIds = (auctions ?? []).map((row) => row.id as string);
-  if (!auctionIds.length) return [];
-
+  const normalizedWallet = wallet.trim();
   const { data, error } = await client
     .from("escrow_transactions")
     .select(LEDGER_COLUMNS)
-    .in("auction_id", auctionIds)
+    .or(walletLedgerFilter(normalizedWallet))
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return attachAuctionsAndBuyers(
-    (data ?? []).map((row) => parseLedgerRow(row as Record<string, unknown>)),
-    client
-  );
+
+  const rows = (data ?? [])
+    .map((row) => parseLedgerRow(row as Record<string, unknown>))
+    .filter(
+      (row) =>
+        row.from_wallet === normalizedWallet || row.to_wallet === normalizedWallet
+    );
+
+  return attachAuctionsAndBuyers(rows, client);
+}
+
+export async function fetchSellerLedgerEvents(
+  sellerWallet: string,
+  client: SupabaseClient = getLedgerReadClient(sellerWallet)
+): Promise<EscrowTransactionWithAuction[]> {
+  return fetchWalletLedgerEvents(sellerWallet, client);
 }
 
 export async function fetchBuyerLedgerEvents(
   buyerWallet: string,
-  client: SupabaseClient = supabase
+  client: SupabaseClient = getLedgerReadClient(buyerWallet)
 ): Promise<EscrowTransactionWithAuction[]> {
-  const { data, error } = await client
-    .from("escrow_transactions")
-    .select(LEDGER_COLUMNS)
-    .or(`from_wallet.eq.${buyerWallet},to_wallet.eq.${buyerWallet}`)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-
-  const buyerRows = (data ?? [])
-    .map((row) => parseLedgerRow(row as Record<string, unknown>))
-    .filter((row) => row.from_wallet === buyerWallet || row.to_wallet === buyerWallet);
-
-  return attachAuctionsAndBuyers(buyerRows, client);
+  return fetchWalletLedgerEvents(buyerWallet, client);
 }
 
 export async function fetchAllLedgerEvents(
-  client: SupabaseClient = supabase
+  client: SupabaseClient = getNotificationClient()
 ): Promise<EscrowTransactionWithAuction[]> {
   const { data, error } = await client
     .from("escrow_transactions")

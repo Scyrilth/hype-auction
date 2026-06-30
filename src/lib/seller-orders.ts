@@ -269,7 +269,6 @@ export async function submitThreadShippingTracking({
       escrowPda,
       amountLamports: totalLamports,
       onChainSignature: onChainSignature ?? null,
-      client,
     });
   }
 
