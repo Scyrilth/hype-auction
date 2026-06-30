@@ -62,6 +62,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS escrow_transactions_signature_event_uidx
 
 ALTER TABLE public.escrow_transactions ENABLE ROW LEVEL SECURITY;
 
+-- ---------------------------------------------------------------------------
+-- RLS (defense-in-depth — not the app's primary access path)
+--
+-- Real reads: GET /api/transactions and GET /api/admin/escrow-monitor use
+-- getNotificationClient() (service_role), which bypasses RLS.
+-- Real writes: POST /api/escrow/ledger uses service_role after on-chain confirm.
+--
+-- getAuthenticatedClient() sends x-wallet-address but connects as the anon
+-- Postgres role (anon API key), not authenticated. This project's browser
+-- traffic therefore never satisfies TO authenticated below.
+--
+-- request_wallet_address() / request.headers has not been validated in this
+-- Supabase project; message_threads does not use this pattern.
+--
+-- REVOKE FROM anon blocks direct anon REST reads regardless. The SELECT
+-- policy documents intended wallet-scoped access if a future path uses
+-- Supabase Auth (authenticated role) + x-wallet-address; it is inert today.
+-- ---------------------------------------------------------------------------
+
 -- Wallet header helper (x-wallet-address from getAuthenticatedClient).
 CREATE OR REPLACE FUNCTION public.request_wallet_address()
 RETURNS TEXT
@@ -81,13 +100,14 @@ AS $$
   );
 $$;
 
--- Anon must not read or write this ledger; service_role bypasses RLS for server inserts.
+-- Anon cannot read or write via PostgREST; service_role bypasses RLS for server routes.
 REVOKE ALL ON public.escrow_transactions FROM anon;
 GRANT SELECT ON public.escrow_transactions TO authenticated;
 
 DROP POLICY IF EXISTS "escrow_transactions_select" ON public.escrow_transactions;
 DROP POLICY IF EXISTS "escrow_transactions_insert" ON public.escrow_transactions;
 
+-- TO authenticated: inert for current anon-key clients; see block above.
 CREATE POLICY "escrow_transactions_select"
   ON public.escrow_transactions
   FOR SELECT
