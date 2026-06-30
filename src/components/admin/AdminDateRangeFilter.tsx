@@ -33,14 +33,14 @@ export default function AdminDateRangeFilter({
   };
 
   return (
-    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-      <div className="flex flex-wrap gap-1">
+    <div className="flex flex-col gap-1 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap gap-0.5">
         {DATE_PRESETS.map((preset) => (
           <button
             key={preset.id}
             type="button"
             onClick={() => selectPreset(preset.id)}
-            className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+            className={`rounded-full px-1.5 py-px text-[10px] font-medium transition-colors ${
               range.preset === preset.id && !range.isCustom
                 ? "bg-accent/20 text-purple-200"
                 : "border border-border bg-surface-elevated text-muted hover:border-accent/40 hover:text-white"
@@ -51,14 +51,14 @@ export default function AdminDateRangeFilter({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+      <div className="flex flex-wrap items-center gap-1 text-[10px] text-muted">
         <label>
           From
           <input
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="ml-1 rounded border border-border bg-surface-elevated px-1.5 py-0.5 text-[11px] text-white"
+            className="ml-0.5 rounded border border-border bg-surface-elevated px-1 py-px text-[10px] text-white"
           />
         </label>
         <label>
@@ -67,13 +67,13 @@ export default function AdminDateRangeFilter({
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="ml-1 rounded border border-border bg-surface-elevated px-1.5 py-0.5 text-[11px] text-white"
+            className="ml-0.5 rounded border border-border bg-surface-elevated px-1 py-px text-[10px] text-white"
           />
         </label>
         <button
           type="button"
           onClick={applyCustom}
-          className="rounded-full border border-border bg-surface-elevated px-2 py-0.5 text-[11px] font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+          className="rounded-full border border-border bg-surface-elevated px-1.5 py-px text-[10px] font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
         >
           Apply
         </button>
