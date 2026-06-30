@@ -11,6 +11,7 @@ import {
 import {
   notifyItemShipped,
 } from "@/lib/notifications";
+import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { supabase } from "@/lib/supabase";
 
 export const SHIPPING_COURIERS = [
@@ -121,6 +122,9 @@ export async function saveAuctionShippingTracking({
 
   if (winnerError) throw winnerError;
 
+  if (winnerError) throw winnerError;
+
+  let shipTxSignature: string | undefined;
   if (onChain) {
     const onChainResult = await confirmShippingOnChain(
       auctionId,
@@ -132,6 +136,7 @@ export async function saveAuctionShippingTracking({
         getErrorMessage(onChainResult.error, TX_FAILED_OR_CANCELLED_MESSAGE)
       );
     }
+    shipTxSignature = onChainResult.txSignature;
   }
 
   const now = new Date().toISOString();
@@ -150,6 +155,27 @@ export async function saveAuctionShippingTracking({
     .single();
 
   if (error) throw error;
+
+  const parsedAuction = parseAuctionRow(data as Record<string, unknown>);
+  const escrowPda = parsedAuction.escrow_pda;
+  const totalLamports = parsedAuction.escrow_amount_lamports ?? 0;
+  if (escrowPda && totalLamports > 0) {
+    const { data: threadRow } = await supabase
+      .from("message_threads")
+      .select("id")
+      .eq("auction_id", auctionId)
+      .eq("buyer_wallet", winnerBid?.bidder_wallet as string)
+      .maybeSingle();
+
+    await logEscrowShipped({
+      auctionId,
+      threadId: (threadRow?.id as string | undefined) ?? null,
+      sellerWallet,
+      escrowPda,
+      amountLamports: totalLamports,
+      onChainSignature: shipTxSignature ?? null,
+    });
+  }
 
   if (winnerBid?.bidder_wallet) {
     await notifyBuyerShipment({

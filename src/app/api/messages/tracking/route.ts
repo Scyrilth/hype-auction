@@ -11,6 +11,7 @@ type TrackingRequestBody = {
   sellerWallet?: unknown;
   carrier?: unknown;
   trackingNumber?: unknown;
+  onChainSignature?: unknown;
 };
 
 export async function OPTIONS(request: Request) {
@@ -41,6 +42,10 @@ export async function POST(request: Request) {
   const carrier = typeof body.carrier === "string" ? body.carrier.trim() : "";
   const trackingNumber =
     typeof body.trackingNumber === "string" ? body.trackingNumber.trim() : "";
+  const onChainSignature =
+    typeof body.onChainSignature === "string"
+      ? body.onChainSignature.trim()
+      : "";
 
   if (!threadId) {
     return NextResponse.json(
@@ -70,6 +75,7 @@ export async function POST(request: Request) {
       sellerWallet,
       carrier,
       trackingNumber,
+      onChainSignature: onChainSignature || null,
       client,
     });
 

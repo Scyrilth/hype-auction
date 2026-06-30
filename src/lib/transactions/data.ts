@@ -1,106 +1,137 @@
-import { parseAuctionRow } from "@/lib/parse-auction";
-import { supabase, type SupabaseClient } from "@/lib/supabase";
-import type { Auction } from "@/lib/database.types";
-
-import { computeTransactionAmounts } from "./amounts";
 import {
-  isTransactionEscrowState,
+  auctionHasReleasedEvent,
+  directionForWallet,
+  fetchBuyerLedgerEvents,
+  fetchSellerLedgerEvents,
+  lamportsToSol,
+  mapLedgerEventToEscrowState,
+  type EscrowTransactionWithAuction,
+} from "@/lib/escrow-ledger";
+import { supabase, type SupabaseClient } from "@/lib/supabase";
+
+import {
   mapBuyerDisplayStatus,
   mapSellerDisplayStatus,
 } from "./status";
 import type {
   BuyerTransactionRow,
   SellerTransactionRow,
+  TransactionAmounts,
   TransactionsData,
 } from "./types";
 
-const AUCTION_TX_COLUMNS =
-  "id, title, reference_number, seller_wallet, current_bid, start_price, end_time, created_at, status, category, escrow_state, escrow_tx_signature, escrow_amount_lamports, domestic_shipping_usd, international_shipping_usd, sol_usd_rate_at_payment, payment_completed_at";
+function buildAmountsFromLamports(
+  amountLamports: number,
+  solUsdRateAtPayment: number | null,
+  domesticShippingUsd: number,
+  currentRateFallback: number
+): TransactionAmounts {
+  const totalSol = lamportsToSol(amountLamports);
+  const stored = solUsdRateAtPayment;
+  const solUsdRate =
+    stored != null && Number.isFinite(stored) && stored > 0
+      ? stored
+      : currentRateFallback > 0
+        ? currentRateFallback
+        : 0;
+  const usesHistoricalRate =
+    stored != null && Number.isFinite(stored) && stored > 0;
+  const shippingUsd = domesticShippingUsd;
+  const shippingSol = solUsdRate > 0 ? shippingUsd / solUsdRate : 0;
+  const itemSol = Math.max(0, totalSol - shippingSol);
+  const feeSol = 0;
+  const netSol = totalSol;
 
-async function getTopBidderByAuction(
-  auctionIds: string[],
-  client: SupabaseClient
-): Promise<Map<string, string>> {
-  if (!auctionIds.length) return new Map();
-
-  const { data, error } = await client
-    .from("bids")
-    .select("auction_id, bidder_wallet, amount")
-    .in("auction_id", auctionIds)
-    .order("amount", { ascending: false });
-
-  if (error) throw error;
-
-  const winners = new Map<string, string>();
-  for (const row of data ?? []) {
-    const auctionId = row.auction_id as string;
-    if (!winners.has(auctionId)) {
-      winners.set(auctionId, row.bidder_wallet as string);
-    }
-  }
-  return winners;
-}
-
-/** Prefer payment_completed_at, then end_time, then created_at. */
-export function getTransactionDate(auction: Auction): string {
-  return (
-    auction.payment_completed_at ??
-    auction.end_time ??
-    auction.created_at
-  );
+  return {
+    itemSol,
+    shippingSol,
+    shippingUsd,
+    feeSol,
+    netSol,
+    totalSol,
+    usdApprox: totalSol * solUsdRate,
+    usdRateUsed: solUsdRate,
+    usesHistoricalRate,
+  };
 }
 
 function buildSellerRow(
-  auction: Auction,
-  buyerWallet: string,
+  event: EscrowTransactionWithAuction,
+  sellerWallet: string,
   currentRateFallback: number
 ): SellerTransactionRow | null {
-  if (!isTransactionEscrowState(auction.escrow_state)) return null;
+  if (event.is_platform_fee) return null;
 
-  const displayStatus = mapSellerDisplayStatus(auction.escrow_state);
+  const escrowState = mapLedgerEventToEscrowState(event.event_type);
+  const displayStatus = mapSellerDisplayStatus(escrowState);
   if (!displayStatus) return null;
 
   return {
     role: "selling",
-    auctionId: auction.id,
-    reference: auction.reference_number,
-    itemTitle: auction.title,
-    buyerWallet,
-    date: getTransactionDate(auction),
-    amounts: computeTransactionAmounts(auction, currentRateFallback),
-    escrowState: auction.escrow_state,
+    auctionId: event.auction_id,
+    reference: event.auction.reference_number,
+    itemTitle: event.auction.title,
+    buyerWallet: event.buyer_wallet ?? "Unknown",
+    date: event.created_at,
+    amounts: buildAmountsFromLamports(
+      event.amount_lamports,
+      event.auction.sol_usd_rate_at_payment,
+      event.auction.domestic_shipping_usd ?? 0,
+      currentRateFallback
+    ),
+    escrowState,
     displayStatus,
-    txSignature: auction.escrow_tx_signature,
-    category: auction.category,
-    solUsdRateAtPayment: auction.sol_usd_rate_at_payment,
-    paymentCompletedAt: auction.payment_completed_at,
+    txSignature: event.on_chain_signature,
+    solscanUrl: event.solscan_url,
+    direction: directionForWallet(event, sellerWallet),
+    eventType: event.event_type,
+    platformTransactionId: event.platform_transaction_id,
+    category: event.auction.category,
+    solUsdRateAtPayment: event.auction.sol_usd_rate_at_payment,
+    paymentCompletedAt: event.auction.payment_completed_at,
   };
 }
 
 function buildBuyerRow(
-  auction: Auction,
+  event: EscrowTransactionWithAuction,
+  buyerWallet: string,
   currentRateFallback: number
 ): BuyerTransactionRow | null {
-  if (!isTransactionEscrowState(auction.escrow_state)) return null;
+  if (event.is_platform_fee) return null;
 
-  const displayStatus = mapBuyerDisplayStatus(auction.escrow_state);
+  const escrowState = mapLedgerEventToEscrowState(event.event_type);
+  const displayStatus = mapBuyerDisplayStatus(escrowState);
   if (!displayStatus) return null;
 
   return {
     role: "buying",
-    auctionId: auction.id,
-    reference: auction.reference_number,
-    itemTitle: auction.title,
-    sellerWallet: auction.seller_wallet,
-    date: getTransactionDate(auction),
-    amounts: computeTransactionAmounts(auction, currentRateFallback),
-    escrowState: auction.escrow_state,
+    auctionId: event.auction_id,
+    reference: event.auction.reference_number,
+    itemTitle: event.auction.title,
+    sellerWallet: event.auction.seller_wallet,
+    date: event.created_at,
+    amounts: buildAmountsFromLamports(
+      event.amount_lamports,
+      event.auction.sol_usd_rate_at_payment,
+      event.auction.domestic_shipping_usd ?? 0,
+      currentRateFallback
+    ),
+    escrowState,
     displayStatus,
-    txSignature: auction.escrow_tx_signature,
-    category: auction.category,
-    solUsdRateAtPayment: auction.sol_usd_rate_at_payment,
-    paymentCompletedAt: auction.payment_completed_at,
+    txSignature: event.on_chain_signature,
+    solscanUrl: event.solscan_url,
+    direction: directionForWallet(event, buyerWallet),
+    eventType: event.event_type,
+    platformTransactionId: event.platform_transaction_id,
+    category: event.auction.category,
+    solUsdRateAtPayment: event.auction.sol_usd_rate_at_payment,
+    paymentCompletedAt: event.auction.payment_completed_at,
   };
+}
+
+/** Prefer payment_completed_at, then event created_at. */
+export function getTransactionDate(iso: string): string {
+  return iso;
 }
 
 export async function fetchTransactionsData(
@@ -110,90 +141,36 @@ export async function fetchTransactionsData(
 ): Promise<TransactionsData> {
   const normalizedWallet = wallet.trim();
 
-  const [sellerResponse, buyerBidsResponse, listingCountResponse] =
-    await Promise.all([
-      client
-        .from("auctions")
-        .select(AUCTION_TX_COLUMNS)
-        .eq("seller_wallet", normalizedWallet)
-        .eq("status", "ended")
-        .order("end_time", { ascending: false }),
-      client
-        .from("bids")
-        .select("auction_id")
-        .eq("bidder_wallet", normalizedWallet),
-      client
-        .from("auctions")
-        .select("id", { count: "exact", head: true })
-        .eq("seller_wallet", normalizedWallet),
-    ]);
+  const [sellerEvents, buyerEvents, listingCountResponse] = await Promise.all([
+    fetchSellerLedgerEvents(normalizedWallet, client),
+    fetchBuyerLedgerEvents(normalizedWallet, client),
+    client
+      .from("auctions")
+      .select("id", { count: "exact", head: true })
+      .eq("seller_wallet", normalizedWallet),
+  ]);
 
-  if (sellerResponse.error) throw sellerResponse.error;
-  if (buyerBidsResponse.error) throw buyerBidsResponse.error;
   if (listingCountResponse.error) throw listingCountResponse.error;
 
-  const sellerAuctions = [
-    ...new Map(
-      (sellerResponse.data ?? []).map((row) => {
-        const auction = parseAuctionRow(row as Record<string, unknown>);
-        return [auction.id, auction] as const;
-      })
-    ).values(),
-  ];
+  const sellerRows = sellerEvents
+    .map((event) => buildSellerRow(event, normalizedWallet, currentRateFallback))
+    .filter((row): row is SellerTransactionRow => row !== null);
 
-  const buyerAuctionIds = [
-    ...new Set(
-      (buyerBidsResponse.data ?? []).map((row) => row.auction_id as string)
-    ),
-  ];
-
-  let buyerAuctions: Auction[] = [];
-  if (buyerAuctionIds.length) {
-    const { data, error } = await client
-      .from("auctions")
-      .select(AUCTION_TX_COLUMNS)
-      .in("id", buyerAuctionIds)
-      .eq("status", "ended");
-
-    if (error) throw error;
-    buyerAuctions = (data ?? []).map((row) =>
-      parseAuctionRow(row as Record<string, unknown>)
-    );
-  }
-
-  const allIds = [
-    ...new Set([
-      ...sellerAuctions.map((a) => a.id),
-      ...buyerAuctions.map((a) => a.id),
-    ]),
-  ];
-  const topBidders = await getTopBidderByAuction(allIds, client);
-
-  const sellerRowsMap = new Map<string, SellerTransactionRow>();
-  for (const auction of sellerAuctions) {
-    const buyerWallet = topBidders.get(auction.id) ?? "Unknown";
-    const row = buildSellerRow(auction, buyerWallet, currentRateFallback);
-    if (!row) continue;
-
-    const existing = sellerRowsMap.get(row.auctionId);
-    if (!existing) {
-      sellerRowsMap.set(row.auctionId, row);
-      continue;
-    }
-    if (existing.buyerWallet === "Unknown" && row.buyerWallet !== "Unknown") {
-      sellerRowsMap.set(row.auctionId, row);
-    }
-  }
-  const sellerRows = [...sellerRowsMap.values()];
-
-  const buyerRows: BuyerTransactionRow[] = [];
-  for (const auction of buyerAuctions) {
-    if (topBidders.get(auction.id) !== normalizedWallet) continue;
-    const row = buildBuyerRow(auction, currentRateFallback);
-    if (row) buyerRows.push(row);
-  }
+  const buyerRows = buyerEvents
+    .map((event) => buildBuyerRow(event, normalizedWallet, currentRateFallback))
+    .filter((row): row is BuyerTransactionRow => row !== null);
 
   const hasSellerListings = (listingCountResponse.count ?? 0) > 0;
 
   return { sellerRows, buyerRows, hasSellerListings };
+}
+
+export function isSellerAuctionPendingEscrow(
+  events: EscrowTransactionWithAuction[],
+  auctionId: string
+): boolean {
+  const hasFunded = events.some(
+    (event) => event.auction_id === auctionId && event.event_type === "funded"
+  );
+  return hasFunded && !auctionHasReleasedEvent(events, auctionId);
 }

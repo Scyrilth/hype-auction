@@ -2,6 +2,7 @@ import type { AnchorProvider } from "@coral-xyz/anchor";
 
 import type { Auction } from "@/lib/database.types";
 import { confirmReceiptOnChain } from "@/lib/escrow";
+import { logEscrowReleased } from "@/lib/escrow-ledger";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { logSupabaseError, getErrorMessage, TX_FAILED_OR_CANCELLED_MESSAGE } from "@/lib/errors";
 import { parseAuctionRow } from "@/lib/parse-auction";
@@ -868,7 +869,7 @@ export async function confirmReceipt(
 
     const { data: auctionRow, error: auctionLoadError } = await client
       .from("auctions")
-      .select("title, current_bid")
+      .select("title, current_bid, escrow_pda, escrow_amount_lamports")
       .eq("id", auctionId)
       .maybeSingle();
 
@@ -881,6 +882,21 @@ export async function confirmReceipt(
         amount: Number(auctionRow.current_bid ?? 0),
         threadId,
       });
+    }
+
+    if (onChainTxSignature && auctionRow) {
+      const escrowPda = (auctionRow.escrow_pda as string | null) ?? "";
+      const totalLamports = Number(auctionRow.escrow_amount_lamports ?? 0);
+      if (escrowPda && totalLamports > 0) {
+        await logEscrowReleased({
+          auctionId,
+          threadId,
+          sellerWallet: existingThread.seller_wallet as string,
+          escrowPda,
+          totalLamports,
+          onChainSignature: onChainTxSignature,
+        });
+      }
     }
   }
 

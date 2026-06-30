@@ -663,8 +663,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     isBuyer &&
     Boolean(thread.auction_id) &&
     !showPayNow &&
-    (escrowState === "shipped" ||
-      ((!escrowState || escrowState === "none") && !thread.confirmed_at));
+    !thread.confirmed_at &&
+    escrowState === "shipped";
 
   const paymentSecured = ["funded", "shipped", "complete", "disputed"].includes(
     escrowState ?? ""

@@ -60,6 +60,7 @@ export default function UploadTrackingCard({
           sellerWallet,
           carrier,
           trackingNumber,
+          onChainSignature: onChainResult.txSignature ?? null,
         }),
       });
 

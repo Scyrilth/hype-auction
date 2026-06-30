@@ -41,6 +41,7 @@ export default function AdminEscrowMonitor() {
   const { releaseToSeller, refundToBuyer, loading: actionLoading } = useAdminEscrow();
   const [rows, setRows] = useState<EscrowMonitorRow[]>([]);
   const [pills, setPills] = useState<EscrowSummaryPill[]>([]);
+  const [platformFeesSol, setPlatformFeesSol] = useState(0);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState<{
@@ -54,6 +55,7 @@ export default function AdminEscrowMonitor() {
       const data = await fetchEscrowMonitor(showDummyData);
       setRows(data.rows);
       setPills(data.pills);
+      setPlatformFeesSol(data.platformFeesSol);
     } finally {
       setLoading(false);
     }
@@ -106,6 +108,17 @@ export default function AdminEscrowMonitor() {
 
   return (
     <>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-xl border border-border bg-surface px-4 py-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
+            Platform fees collected
+          </p>
+          <p className="mt-1 text-lg font-semibold text-emerald-300">
+            {platformFeesSol.toFixed(4)} SOL
+          </p>
+        </div>
+      </div>
+
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
@@ -136,6 +149,7 @@ export default function AdminEscrowMonitor() {
               <th className="px-3 py-2">State</th>
               <th className="px-3 py-2">Days</th>
               <th className="px-3 py-2">Tracking</th>
+              <th className="px-3 py-2">Tx</th>
               <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
@@ -163,6 +177,20 @@ export default function AdminEscrowMonitor() {
                   {row.daysInState}d
                 </td>
                 <td className="px-3 py-2 text-muted">{row.trackingStatus}</td>
+                <td className="px-3 py-2">
+                  {row.solscanUrl ? (
+                    <a
+                      href={row.solscanUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-purple-300 hover:text-accent"
+                    >
+                      Solscan
+                    </a>
+                  ) : (
+                    <span className="text-muted">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1">
                     {row.threadId && (

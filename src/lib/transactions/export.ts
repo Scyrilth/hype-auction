@@ -247,7 +247,7 @@ export function exportSellerCsv(
           ? formatUsdExport(row.solUsdRateAtPayment)
           : "current",
         SELLER_STATUS_LABELS[row.displayStatus],
-        row.txSignature ? getExplorerTxUrl(row.txSignature) : "",
+        row.solscanUrl ?? (row.txSignature ? getExplorerTxUrl(row.txSignature) : ""),
       ]
         .map((cell) => escapeCsv(String(cell)))
         .join(",")
@@ -292,7 +292,7 @@ export function exportBuyerCsv(
           ? formatUsdExport(row.solUsdRateAtPayment)
           : "current",
         BUYER_STATUS_LABELS[row.displayStatus],
-        row.txSignature ? getExplorerTxUrl(row.txSignature) : "",
+        row.solscanUrl ?? (row.txSignature ? getExplorerTxUrl(row.txSignature) : ""),
       ]
         .map((cell) => escapeCsv(String(cell)))
         .join(",")

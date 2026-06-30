@@ -1,6 +1,15 @@
 import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-import type { Auction, EscrowState } from "@/lib/database.types";
+import type { Auction } from "@/lib/database.types";
+import {
+  computePlatformFeeTotalSol,
+  fetchAllLedgerEvents,
+  lamportsToSol,
+  latestLedgerStateByAuction,
+  mapLedgerEventToEscrowState,
+  type EscrowTransactionWithAuction,
+  type EscrowLedgerEventType,
+} from "@/lib/escrow-ledger";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
@@ -451,55 +460,93 @@ export async function fetchDisputes(
 
 export async function fetchEscrowMonitor(
   showDummyData: boolean
-): Promise<{ rows: EscrowMonitorRow[]; pills: EscrowSummaryPill[] }> {
-  const auctions = await fetchEndedEscrowAuctions(showDummyData);
-  const ids = auctions.map((a) => a.id);
+): Promise<{
+  rows: EscrowMonitorRow[];
+  pills: EscrowSummaryPill[];
+  platformFeesSol: number;
+}> {
+  const allEvents = await fetchAllLedgerEvents();
+  const events = allEvents.filter((event) =>
+    passesDummyFilter(event.auction, showDummyData)
+  );
+
+  const latestEvents = new Map<string, EscrowTransactionWithAuction>();
+  const fundedAmountByAuction = new Map<string, number>();
+
+  for (const event of events) {
+    if (event.event_type === "funded") {
+      fundedAmountByAuction.set(event.auction_id, event.amount_lamports);
+    }
+
+    const existing = latestEvents.get(event.auction_id);
+    if (
+      !existing ||
+      new Date(event.created_at).getTime() > new Date(existing.created_at).getTime()
+    ) {
+      latestEvents.set(event.auction_id, event);
+    }
+  }
+
+  const auctionIds = [...latestEvents.keys()];
   const [topBidders, threads] = await Promise.all([
-    getTopBidders(ids),
-    getThreadIdsByAuction(ids),
+    getTopBidders(auctionIds),
+    getThreadIdsByAuction(auctionIds),
   ]);
 
-  const rows: EscrowMonitorRow[] = auctions.map((auction) => {
-    const stateSince =
-      auction.payment_completed_at ??
-      auction.escrow_funded_at ??
-      auction.end_time;
+  const rows: EscrowMonitorRow[] = [...latestEvents.values()].map((event) => {
+    const auction = event.auction;
+    const stateSince = event.created_at;
     const hasTracking = Boolean(auction.tracking_number?.trim());
     const daysSince = daysBetween(stateSince);
     const paymentDate = auction.payment_completed_at;
+    const escrowState = mapLedgerEventToEscrowState(event.event_type);
     const isFlagged =
-      auction.escrow_state === "funded" &&
+      escrowState === "funded" &&
       !hasTracking &&
       paymentDate != null &&
       daysBetween(paymentDate) >= 7;
 
     let trackingStatus = "Not uploaded";
-    if (hasTracking) trackingStatus = `${auction.tracking_courier ?? "Courier"}: ${auction.tracking_number}`;
-    else if (auction.shipping_status === "delivered") trackingStatus = "Delivered";
+    if (hasTracking) {
+      trackingStatus = `${auction.tracking_courier ?? "Courier"}: ${auction.tracking_number}`;
+    } else if (auction.shipping_status === "shipped") {
+      trackingStatus = "Shipped";
+    } else if (auction.shipping_status === "delivered") {
+      trackingStatus = "Delivered";
+    }
+
+    const fundedLamports =
+      fundedAmountByAuction.get(event.auction_id) ?? event.amount_lamports;
 
     return {
-      auctionId: auction.id,
+      auctionId: event.auction_id,
       reference: auction.reference_number,
       itemTitle: auction.title,
       sellerWallet: auction.seller_wallet,
-      buyerWallet: topBidders.get(auction.id) ?? "Unknown",
-      amountSol: auctionCurrentBidSol(auction),
-      paymentDate: auction.payment_completed_at ?? auction.escrow_funded_at,
-      escrowState: auction.escrow_state,
+      buyerWallet: event.buyer_wallet ?? topBidders.get(event.auction_id) ?? "Unknown",
+      amountSol: lamportsToSol(fundedLamports),
+      paymentDate: auction.payment_completed_at ?? null,
+      escrowState,
+      eventType: event.event_type,
       daysInState: daysSince,
       trackingStatus,
-      threadId: threads.get(auction.id) ?? null,
+      threadId: event.thread_id ?? threads.get(event.auction_id) ?? null,
       isDummy: !isRealAuction(auction),
       isFlagged,
+      platformTransactionId: event.platform_transaction_id,
+      onChainSignature: event.on_chain_signature,
+      solscanUrl: event.solscan_url,
     };
   });
 
-  const pillDefs: { key: string; label: string; states: EscrowState[] }[] = [
-    { key: "funded", label: "Funded", states: ["funded", "pending"] },
+  const latestStates = latestLedgerStateByAuction(events);
+
+  const pillDefs: { key: string; label: string; states: EscrowLedgerEventType[] }[] = [
+    { key: "funded", label: "Funded", states: ["funded"] },
     { key: "shipped", label: "Shipped", states: ["shipped"] },
     { key: "disputed", label: "Disputed", states: ["disputed"] },
     { key: "flagged", label: "Flagged", states: [] },
-    { key: "released", label: "Released", states: ["released", "complete"] },
+    { key: "released", label: "Released", states: ["released", "fee_collected", "dispute_resolved"] },
     { key: "refunded", label: "Refunded", states: ["refunded"] },
   ];
 
@@ -507,7 +554,7 @@ export async function fetchEscrowMonitor(
     const matching =
       key === "flagged"
         ? rows.filter((r) => r.isFlagged)
-        : rows.filter((r) => states.includes(r.escrowState));
+        : rows.filter((r) => states.includes(latestStates.get(r.auctionId) ?? "funded"));
     return {
       key,
       label,
@@ -516,7 +563,11 @@ export async function fetchEscrowMonitor(
     };
   });
 
-  return { rows, pills };
+  return {
+    rows,
+    pills,
+    platformFeesSol: computePlatformFeeTotalSol(events),
+  };
 }
 
 function deriveUserStatus(strikes: BuyerStrikeRow[]): AdminUserProfile["status"] {

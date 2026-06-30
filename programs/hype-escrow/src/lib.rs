@@ -666,32 +666,48 @@ fn execute_release<'info>(
     let signer = &[&seeds[..]];
     let escrow_info = escrow.to_account_info();
 
-    if seller_amount > 0 {
-        system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                Transfer {
-                    from: escrow_info.clone(),
-                    to: seller.clone(),
-                },
-                signer,
-            ),
-            seller_amount,
-        )?;
-    }
+    if seller.key() == platform_wallet.key() {
+        if total > 0 {
+            system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    Transfer {
+                        from: escrow_info,
+                        to: seller.clone(),
+                    },
+                    signer,
+                ),
+                total,
+            )?;
+        }
+    } else {
+        if seller_amount > 0 {
+            system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    Transfer {
+                        from: escrow_info.clone(),
+                        to: seller.clone(),
+                    },
+                    signer,
+                ),
+                seller_amount,
+            )?;
+        }
 
-    if platform_fee > 0 {
-        system_program::transfer(
-            CpiContext::new_with_signer(
-                system_program.to_account_info(),
-                Transfer {
-                    from: escrow_info,
-                    to: platform_wallet.clone(),
-                },
-                signer,
-            ),
-            platform_fee,
-        )?;
+        if platform_fee > 0 {
+            system_program::transfer(
+                CpiContext::new_with_signer(
+                    system_program.to_account_info(),
+                    Transfer {
+                        from: escrow_info,
+                        to: platform_wallet.clone(),
+                    },
+                    signer,
+                ),
+                platform_fee,
+            )?;
+        }
     }
 
     Ok((seller_amount, platform_fee))

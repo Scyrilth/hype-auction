@@ -1,4 +1,5 @@
 import type { EscrowState } from "@/lib/database.types";
+import type { EscrowLedgerDirection, EscrowLedgerEventType } from "@/lib/escrow-ledger";
 
 export type TransactionRole = "selling" | "buying";
 
@@ -58,6 +59,10 @@ export interface SellerTransactionRow {
   escrowState: EscrowState;
   displayStatus: SellerDisplayStatus;
   txSignature: string | null;
+  solscanUrl: string | null;
+  direction: EscrowLedgerDirection;
+  eventType: EscrowLedgerEventType;
+  platformTransactionId: string;
   category: string | null;
   solUsdRateAtPayment: number | null;
   paymentCompletedAt: string | null;
@@ -74,6 +79,10 @@ export interface BuyerTransactionRow {
   escrowState: EscrowState;
   displayStatus: BuyerDisplayStatus;
   txSignature: string | null;
+  solscanUrl: string | null;
+  direction: EscrowLedgerDirection;
+  eventType: EscrowLedgerEventType;
+  platformTransactionId: string;
   category: string | null;
   solUsdRateAtPayment: number | null;
   paymentCompletedAt: string | null;

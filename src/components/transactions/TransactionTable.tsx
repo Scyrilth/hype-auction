@@ -142,22 +142,41 @@ function CopyReference({
   );
 }
 
-function ExplorerButton({ signature }: { signature: string | null }) {
-  if (!signature) {
+function ExplorerButton({
+  signature,
+  solscanUrl,
+}: {
+  signature: string | null;
+  solscanUrl?: string | null;
+}) {
+  const href = solscanUrl ?? (signature ? getExplorerTxUrl(signature) : null);
+  if (!href) {
     return <span className="text-muted">—</span>;
   }
 
   return (
     <a
-      href={getExplorerTxUrl(signature)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-surface-elevated text-muted transition-colors hover:border-accent/50 hover:text-white"
-      title="View on Solana Explorer"
-      aria-label="View on Solana Explorer"
+      title="View on Solscan"
+      aria-label="View on Solscan"
     >
       <i className="ti ti-external-link text-sm" />
     </a>
+  );
+}
+
+function DirectionBadge({ direction }: { direction: "inward" | "outward" }) {
+  return (
+    <span
+      className={`mt-1 block text-[10px] font-medium uppercase tracking-wide ${
+        direction === "inward" ? "text-emerald-400" : "text-amber-300"
+      }`}
+    >
+      {direction}
+    </span>
   );
 }
 
@@ -394,7 +413,7 @@ export default function TransactionTable({
                 {role === "selling"
                   ? (pageRows as SellerTransactionRow[]).map((row) => (
                       <tr
-                        key={row.auctionId}
+                        key={`${row.auctionId}-${row.eventType}-${row.date}`}
                         className="border-b border-border/60 transition-colors hover:bg-surface-elevated/30"
                       >
                         <td className="px-3 py-2.5">
@@ -436,15 +455,19 @@ export default function TransactionTable({
                           >
                             {SELLER_STATUS_LABELS[row.displayStatus]}
                           </span>
+                          <DirectionBadge direction={row.direction} />
                         </td>
                         <td className="px-3 py-2.5">
-                          <ExplorerButton signature={row.txSignature} />
+                          <ExplorerButton
+                            signature={row.txSignature}
+                            solscanUrl={row.solscanUrl}
+                          />
                         </td>
                       </tr>
                     ))
                   : (pageRows as BuyerTransactionRow[]).map((row) => (
                       <tr
-                        key={row.auctionId}
+                        key={`${row.auctionId}-${row.eventType}-${row.date}`}
                         className="border-b border-border/60 transition-colors hover:bg-surface-elevated/30"
                       >
                         <td className="px-3 py-2.5">
@@ -483,9 +506,13 @@ export default function TransactionTable({
                           >
                             {BUYER_STATUS_LABELS[row.displayStatus]}
                           </span>
+                          <DirectionBadge direction={row.direction} />
                         </td>
                         <td className="px-3 py-2.5">
-                          <ExplorerButton signature={row.txSignature} />
+                          <ExplorerButton
+                            signature={row.txSignature}
+                            solscanUrl={row.solscanUrl}
+                          />
                         </td>
                       </tr>
                     ))}

@@ -59,32 +59,67 @@ export function computeSellerSummary(
   rows: SellerTransactionRow[],
   previousRows: SellerTransactionRow[]
 ): SellerSummary {
-  const released = rows.filter((r) => r.displayStatus === "released");
-  const pending = rows.filter((r) => r.displayStatus === "funded");
-  const refunded = rows.filter((r) => r.displayStatus === "refunded");
+  const released = rows.filter(
+    (r) => r.eventType === "released" && r.direction === "inward"
+  );
+  const pending = rows.filter(
+    (r) => r.eventType === "funded" || r.eventType === "shipped"
+  );
+  const refunded = rows.filter((r) => r.eventType === "refunded");
 
-  const prevReleased = previousRows.filter((r) => r.displayStatus === "released");
-  const prevPending = previousRows.filter((r) => r.displayStatus === "funded");
-  const prevRefunded = previousRows.filter((r) => r.displayStatus === "refunded");
+  const prevReleased = previousRows.filter(
+    (r) => r.eventType === "released" && r.direction === "inward"
+  );
+  const prevPending = previousRows.filter(
+    (r) => r.eventType === "funded" || r.eventType === "shipped"
+  );
+  const prevRefunded = previousRows.filter((r) => r.eventType === "refunded");
+
+  const pendingAuctionIds = new Set(
+    pending.map((row) => row.auctionId)
+  );
+  for (const row of released) {
+    pendingAuctionIds.delete(row.auctionId);
+  }
+  for (const row of refunded) {
+    pendingAuctionIds.delete(row.auctionId);
+  }
 
   const totalEarned = released.reduce((s, r) => s + r.amounts.netSol, 0);
   const prevEarned = prevReleased.reduce((s, r) => s + r.amounts.netSol, 0);
 
-  const pendingEscrow = pending.reduce((s, r) => s + r.amounts.totalSol, 0);
-  const prevPendingEscrow = prevPending.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const pendingRows = pending.filter((row) =>
+    pendingAuctionIds.has(row.auctionId)
+  );
+  const prevPendingRows = prevPending.filter((row) =>
+    new Set(
+      prevPending
+        .filter((p) => !prevReleased.some((r) => r.auctionId === p.auctionId))
+        .map((p) => p.auctionId)
+    ).has(row.auctionId)
+  );
+
+  const pendingEscrow = pendingRows.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const prevPendingEscrow = prevPendingRows.reduce(
+    (s, r) => s + r.amounts.totalSol,
+    0
+  );
 
   const platformFees = released.reduce((s, r) => s + r.amounts.feeSol, 0);
   const prevFees = prevReleased.reduce((s, r) => s + r.amounts.feeSol, 0);
 
   const totalRefunded = refunded.reduce((s, r) => s + r.amounts.totalSol, 0);
-  const prevTotalRefunded = prevRefunded.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const prevTotalRefunded = prevRefunded.reduce(
+    (s, r) => s + r.amounts.totalSol,
+    0
+  );
 
   return {
     totalEarned: buildTrend(totalEarned, prevEarned),
     pendingEscrow: buildTrend(pendingEscrow, prevPendingEscrow),
     platformFees: buildTrend(platformFees, prevFees),
     totalRefunded: buildTrend(totalRefunded, prevTotalRefunded),
-    pendingOrderCount: pending.length,
+    pendingOrderCount: pendingAuctionIds.size,
   };
 }
 
@@ -92,29 +127,56 @@ export function computeBuyerSummary(
   rows: BuyerTransactionRow[],
   previousRows: BuyerTransactionRow[]
 ): BuyerSummary {
-  const completed = rows.filter((r) => r.displayStatus === "completed");
-  const pending = rows.filter((r) => r.displayStatus === "pending");
-  const refunded = rows.filter((r) => r.displayStatus === "refunded");
+  const funded = rows.filter(
+    (r) => r.eventType === "funded" && r.direction === "outward"
+  );
+  const completed = rows.filter((r) => r.eventType === "released");
+  const refunded = rows.filter((r) => r.eventType === "refunded");
 
-  const prevCompleted = previousRows.filter((r) => r.displayStatus === "completed");
-  const prevPending = previousRows.filter((r) => r.displayStatus === "pending");
-  const prevRefunded = previousRows.filter((r) => r.displayStatus === "refunded");
+  const prevFunded = previousRows.filter(
+    (r) => r.eventType === "funded" && r.direction === "outward"
+  );
+  const prevCompleted = previousRows.filter((r) => r.eventType === "released");
+  const prevRefunded = previousRows.filter((r) => r.eventType === "refunded");
 
-  const totalSpent = completed.reduce((s, r) => s + r.amounts.totalSol, 0);
-  const prevSpent = prevCompleted.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const pendingAuctionIds = new Set(funded.map((row) => row.auctionId));
+  for (const row of completed) {
+    pendingAuctionIds.delete(row.auctionId);
+  }
+  for (const row of refunded) {
+    pendingAuctionIds.delete(row.auctionId);
+  }
 
-  const pendingTotal = pending.reduce((s, r) => s + r.amounts.totalSol, 0);
-  const prevPendingTotal = prevPending.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const totalSpent = funded.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const prevSpent = prevFunded.reduce((s, r) => s + r.amounts.totalSol, 0);
+
+  const pendingRows = funded.filter((row) => pendingAuctionIds.has(row.auctionId));
+  const prevPendingRows = prevFunded.filter((row) =>
+    new Set(
+      prevFunded
+        .filter((p) => !prevCompleted.some((r) => r.auctionId === p.auctionId))
+        .map((p) => p.auctionId)
+    ).has(row.auctionId)
+  );
+
+  const pendingTotal = pendingRows.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const prevPendingTotal = prevPendingRows.reduce(
+    (s, r) => s + r.amounts.totalSol,
+    0
+  );
 
   const totalRefunded = refunded.reduce((s, r) => s + r.amounts.totalSol, 0);
-  const prevTotalRefunded = prevRefunded.reduce((s, r) => s + r.amounts.totalSol, 0);
+  const prevTotalRefunded = prevRefunded.reduce(
+    (s, r) => s + r.amounts.totalSol,
+    0
+  );
 
   return {
     totalSpent: buildTrend(totalSpent, prevSpent),
     pending: buildTrend(pendingTotal, prevPendingTotal),
     totalRefunded: buildTrend(totalRefunded, prevTotalRefunded),
     purchasesCompleted: buildTrend(completed.length, prevCompleted.length),
-    pendingOrderCount: pending.length,
+    pendingOrderCount: pendingAuctionIds.size,
   };
 }
 

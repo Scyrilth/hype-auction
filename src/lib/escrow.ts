@@ -13,6 +13,11 @@ import { HYPE_ESCROW_IDL } from "@/lib/hype-escrow-idl";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
 import { getAuctionThreadId } from "@/lib/messages";
+import {
+  logEscrowFunded,
+  logEscrowRefunded,
+  logEscrowDisputeResolved,
+} from "@/lib/escrow-ledger";
 import { notifyDisputeResolved, notifyPaymentConfirmed } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 
@@ -306,6 +311,8 @@ export async function initiatePayment(
       escrowUpdate.sol_usd_rate_at_payment = solUsdRate;
     }
 
+    const buyerWallet = wallet.publicKey.toBase58();
+
     const { error } = await supabase
       .from("auctions")
       .update(escrowUpdate)
@@ -313,9 +320,21 @@ export async function initiatePayment(
 
     if (error) {
       console.error("Supabase escrow update failed:", error);
+    } else {
+      try {
+        await logEscrowFunded({
+          auctionId,
+          threadId: await getAuctionThreadId(auctionId, buyerWallet),
+          buyerWallet,
+          escrowPda: escrowPda.toBase58(),
+          amountLamports: totalLamports,
+          onChainSignature: depositSig,
+        });
+      } catch (ledgerError) {
+        console.error("Escrow ledger funded insert failed:", ledgerError);
+      }
     }
 
-    const buyerWallet = wallet.publicKey.toBase58();
     try {
       const [{ data: auctionRow }, threadId] = await Promise.all([
         supabase
@@ -423,7 +442,11 @@ export async function resolveDisputeOnChain(
 
     try {
       const [{ data: auctionRow }, { data: threadRow }] = await Promise.all([
-        supabase.from("auctions").select("title").eq("id", auctionId).maybeSingle(),
+        supabase
+          .from("auctions")
+          .select("title, escrow_pda, escrow_amount_lamports")
+          .eq("id", auctionId)
+          .maybeSingle(),
         supabase
           .from("message_threads")
           .select("id")
@@ -431,6 +454,24 @@ export async function resolveDisputeOnChain(
           .eq("buyer_wallet", buyerWallet)
           .maybeSingle(),
       ]);
+
+      const escrowPda =
+        (auctionRow?.escrow_pda as string | undefined) ??
+        getEscrowPDA(auctionId)[0].toBase58();
+      const totalLamports = Number(auctionRow?.escrow_amount_lamports ?? 0);
+
+      if (totalLamports > 0) {
+        await logEscrowDisputeResolved({
+          auctionId,
+          threadId: (threadRow?.id as string | undefined) ?? null,
+          buyerWallet,
+          sellerWallet,
+          escrowPda,
+          totalLamports,
+          onChainSignature: txSignature,
+          releaseToSeller,
+        });
+      }
 
       if (auctionRow?.title) {
         await notifyDisputeResolved({
@@ -477,6 +518,39 @@ export async function autoRefundOnChain(
 
     if (error) {
       console.error("Supabase auto refund update failed:", error);
+    }
+
+    try {
+      const { data: auctionRow } = await supabase
+        .from("auctions")
+        .select("escrow_pda, escrow_amount_lamports")
+        .eq("id", auctionId)
+        .maybeSingle();
+
+      const escrowPda =
+        (auctionRow?.escrow_pda as string | undefined) ??
+        getEscrowPDA(auctionId)[0].toBase58();
+      const totalLamports = Number(auctionRow?.escrow_amount_lamports ?? 0);
+
+      if (totalLamports > 0) {
+        const { data: threadRow } = await supabase
+          .from("message_threads")
+          .select("id")
+          .eq("auction_id", auctionId)
+          .eq("buyer_wallet", buyerWallet)
+          .maybeSingle();
+
+        await logEscrowRefunded({
+          auctionId,
+          threadId: (threadRow?.id as string | undefined) ?? null,
+          buyerWallet,
+          escrowPda,
+          amountLamports: totalLamports,
+          onChainSignature: txSignature,
+        });
+      }
+    } catch (ledgerError) {
+      console.error("Escrow ledger refund insert failed:", ledgerError);
     }
 
     return { success: true, txSignature };

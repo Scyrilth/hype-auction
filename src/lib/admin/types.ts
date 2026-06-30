@@ -95,11 +95,15 @@ export interface EscrowMonitorRow {
   amountSol: number;
   paymentDate: string | null;
   escrowState: EscrowState;
+  eventType: string;
   daysInState: number;
   trackingStatus: string;
   threadId: string | null;
   isDummy: boolean;
   isFlagged: boolean;
+  platformTransactionId: string;
+  onChainSignature: string | null;
+  solscanUrl: string | null;
 }
 
 export interface EscrowSummaryPill {
