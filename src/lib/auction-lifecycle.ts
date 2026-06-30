@@ -9,6 +9,7 @@ import {
   getUserDisplayName,
   notifyAuctionWon,
   notifySellerAuctionEnded,
+  notifySellerAuctionNoSale,
 } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { getAuthenticatedClient, supabase, type SupabaseClient } from "@/lib/supabase";
@@ -492,6 +493,25 @@ export async function checkAndEndExpiredAuctions(): Promise<number> {
       console.error("[winner-flow] checkAndEndExpiredAuctions: auction ended", {
         auctionId,
       });
+
+      const { count: bidCount, error: bidCountError } = await supabase
+        .from("bids")
+        .select("id", { count: "exact", head: true })
+        .eq("auction_id", auctionId);
+
+      if (bidCountError) {
+        logSupabaseError("checkAndEndExpiredAuctions:bidCount", bidCountError);
+      } else if (!bidCount) {
+        try {
+          await notifySellerAuctionNoSale({
+            sellerWallet: auction.seller_wallet,
+            auctionTitle: auction.title,
+            auctionId,
+          });
+        } catch (noSaleError) {
+          logSupabaseError("checkAndEndExpiredAuctions:noSaleNotify", noSaleError);
+        }
+      }
 
       await finalizeAuctionWinnerFlow(
         auctionId,

@@ -13,7 +13,7 @@ import { HYPE_ESCROW_IDL } from "@/lib/hype-escrow-idl";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
 import { getAuctionThreadId } from "@/lib/messages";
-import { notifyPaymentConfirmed } from "@/lib/notifications";
+import { notifyDisputeResolved, notifyPaymentConfirmed } from "@/lib/notifications";
 import { supabase } from "@/lib/supabase";
 
 const DEVNET_PROGRAM_ID = "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs";
@@ -419,6 +419,30 @@ export async function resolveDisputeOnChain(
 
     if (error) {
       console.error("Supabase resolve dispute update failed:", error);
+    }
+
+    try {
+      const [{ data: auctionRow }, { data: threadRow }] = await Promise.all([
+        supabase.from("auctions").select("title").eq("id", auctionId).maybeSingle(),
+        supabase
+          .from("message_threads")
+          .select("id")
+          .eq("auction_id", auctionId)
+          .eq("buyer_wallet", buyerWallet)
+          .maybeSingle(),
+      ]);
+
+      if (auctionRow?.title) {
+        await notifyDisputeResolved({
+          buyerWallet,
+          sellerWallet,
+          auctionTitle: auctionRow.title as string,
+          sellerWins: releaseToSeller,
+          threadId: (threadRow?.id as string | undefined) ?? null,
+        });
+      }
+    } catch (notifyError) {
+      console.error("Dispute resolution notification failed:", notifyError);
     }
 
     return { success: true, txSignature };

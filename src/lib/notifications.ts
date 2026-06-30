@@ -1,7 +1,8 @@
 import { logSupabaseError } from "@/lib/errors";
 import { formatSol, shortenAddress } from "@/lib/format";
 import { getProfileHref } from "@/lib/profile-links";
-import { supabase, type SupabaseClient } from "@/lib/supabase";
+import { getNotificationClient, supabase, type SupabaseClient } from "@/lib/supabase";
+import { upsertUser } from "@/lib/users";
 
 export type NotificationType =
   | "bid_placed"
@@ -9,6 +10,7 @@ export type NotificationType =
   | "bid_received"
   | "auction_won"
   | "auction_ended"
+  | "auction_no_sale"
   | "item_shipped"
   | "ending_soon"
   | "new_follower"
@@ -19,6 +21,8 @@ export type NotificationType =
   | "action_required_unpaid"
   | "offer_sent_confirmation"
   | "payment_confirmed"
+  | "funds_released"
+  | "dispute_resolved"
   | "tracking_uploaded";
 
 export interface Notification {
@@ -113,10 +117,18 @@ export async function createNotification(
   title: string,
   body: string,
   link?: string | null,
-  client: SupabaseClient = supabase
-): Promise<void> {
+  client?: SupabaseClient
+): Promise<boolean> {
+  const writeClient = client ?? getNotificationClient();
+
   try {
-    const { error } = await client.from("notifications").insert({
+    await upsertUser(wallet, writeClient);
+  } catch (error) {
+    logSupabaseError("createNotification:upsertUser", error);
+  }
+
+  try {
+    const { error } = await writeClient.from("notifications").insert({
       wallet_address: wallet,
       type,
       title,
@@ -125,9 +137,15 @@ export async function createNotification(
       is_read: false,
     });
 
-    if (error) logSupabaseError("createNotification", error);
+    if (error) {
+      logSupabaseError("createNotification", error);
+      return false;
+    }
+
+    return true;
   } catch (error) {
     logSupabaseError("createNotification", error);
+    return false;
   }
 }
 
@@ -226,32 +244,46 @@ export async function checkEndingSoonNotifications(): Promise<void> {
     const title = auction.title as string;
     const link = `/auction/${auctionId}`;
 
-    const { data: bidRows, error: bidsError } = await supabase
-      .from("bids")
-      .select("bidder_wallet")
-      .eq("auction_id", auctionId);
+    const [{ data: bidRows, error: bidsError }, { data: watchRows, error: watchError }] =
+      await Promise.all([
+        supabase
+          .from("bids")
+          .select("bidder_wallet")
+          .eq("auction_id", auctionId),
+        supabase
+          .from("watchlist")
+          .select("wallet_address")
+          .eq("auction_id", auctionId),
+      ]);
 
     if (bidsError) {
       logSupabaseError("checkEndingSoonNotifications:bids", bidsError);
       continue;
     }
 
-    const uniqueBidders = [
+    if (watchError) {
+      logSupabaseError("checkEndingSoonNotifications:watchlist", watchError);
+    }
+
+    const uniqueRecipients = [
       ...new Set(
-        (bidRows ?? []).map((row) => row.bidder_wallet as string).filter(Boolean)
+        [
+          ...(bidRows ?? []).map((row) => row.bidder_wallet as string),
+          ...(watchRows ?? []).map((row) => row.wallet_address as string),
+        ].filter(Boolean)
       ),
     ];
 
-    for (const bidderWallet of uniqueBidders) {
+    for (const recipientWallet of uniqueRecipients) {
       const alreadySent = await hasNotification(
-        bidderWallet,
+        recipientWallet,
         "ending_soon",
         link
       );
       if (alreadySent) continue;
 
       await createNotification(
-        bidderWallet,
+        recipientWallet,
         "ending_soon",
         "Auction ending soon!",
         `${title} ends in less than 1 hour.`,
@@ -281,34 +313,57 @@ export async function notifyBidPlaced({
   const link = `/auction/${auctionId}`;
   const sol = formatSol(amount);
 
-  await createNotification(
-    bidderWallet,
-    "bid_placed",
-    "Bid placed!",
-    `You bid ${sol} on ${auctionTitle}`,
+  await Promise.all([
+    createNotification(
+      bidderWallet,
+      "bid_placed",
+      "Bid placed!",
+      `You bid ${sol} on ${auctionTitle}`,
+      link
+    ),
+    createNotification(
+      sellerWallet,
+      "bid_received",
+      "New bid on your auction",
+      `${bidderDisplayName} bid ${sol} on ${auctionTitle}`,
+      link
+    ),
+    previousBidderWallet && previousBidderWallet !== bidderWallet
+      ? createNotification(
+          previousBidderWallet,
+          "outbid",
+          "You've been outbid!",
+          `Someone bid ${sol} on ${auctionTitle}. Bid again to stay in the lead.`,
+          link
+        )
+      : Promise.resolve(true),
+  ]);
+}
+
+export async function notifySellerAuctionNoSale({
+  sellerWallet,
+  auctionTitle,
+  auctionId,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  auctionId: string;
+}): Promise<void> {
+  const link = `/auction/${auctionId}`;
+  const alreadySent = await hasNotification(
+    sellerWallet,
+    "auction_no_sale",
     link
   );
+  if (alreadySent) return;
 
   await createNotification(
     sellerWallet,
-    "bid_received",
-    "New bid on your auction",
-    `${bidderDisplayName} bid ${sol} on ${auctionTitle}`,
+    "auction_no_sale",
+    "Auction ended with no sale",
+    `Your auction "${auctionTitle}" ended without any bids.`,
     link
   );
-
-  if (
-    previousBidderWallet &&
-    previousBidderWallet !== bidderWallet
-  ) {
-    await createNotification(
-      previousBidderWallet,
-      "outbid",
-      "You've been outbid!",
-      `Someone bid ${sol} on ${auctionTitle}. Bid again to stay in the lead.`,
-      link
-    );
-  }
 }
 
 export async function notifyAuctionWon({
@@ -426,6 +481,78 @@ export async function notifyItemShipped({
     `${auctionTitle} is on its way. Tracking: ${trackingNumber} via ${courier}`,
     `/messages/${threadId}`
   );
+}
+
+export async function notifyFundsReleased({
+  sellerWallet,
+  auctionTitle,
+  amount,
+  threadId,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  amount: number;
+  threadId: string;
+}): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(sellerWallet, "funds_released", link);
+  if (alreadySent) return;
+
+  await createNotification(
+    sellerWallet,
+    "funds_released",
+    "Funds released! 💰",
+    `The buyer confirmed receipt for ${auctionTitle}. ${formatSol(amount)} has been released to your wallet.`,
+    link
+  );
+}
+
+export async function notifyDisputeResolved({
+  buyerWallet,
+  sellerWallet,
+  auctionTitle,
+  sellerWins,
+  threadId,
+}: {
+  buyerWallet: string;
+  sellerWallet: string;
+  auctionTitle: string;
+  sellerWins: boolean;
+  threadId: string | null;
+}): Promise<void> {
+  const link = threadId ? `/messages/${threadId}` : null;
+
+  if (sellerWins) {
+    await createNotification(
+      sellerWallet,
+      "dispute_resolved",
+      "Dispute resolved in your favor",
+      `Admin resolved the dispute for ${auctionTitle}. Funds were released to you.`,
+      link
+    );
+    await createNotification(
+      buyerWallet,
+      "dispute_resolved",
+      "Dispute resolved",
+      `The dispute for ${auctionTitle} was resolved in the seller's favor.`,
+      link
+    );
+  } else {
+    await createNotification(
+      buyerWallet,
+      "dispute_resolved",
+      "Dispute resolved in your favor",
+      `Admin resolved the dispute for ${auctionTitle}. Your payment has been refunded.`,
+      link
+    );
+    await createNotification(
+      sellerWallet,
+      "dispute_resolved",
+      "Dispute resolved",
+      `The dispute for ${auctionTitle} was resolved in the buyer's favor.`,
+      link
+    );
+  }
 }
 
 export async function notifyNewFollower({

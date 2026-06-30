@@ -169,6 +169,7 @@ export async function placeBidWithValidation({
 
   try {
     await upsertUser(bidderWallet);
+    await upsertUser(auction.seller_wallet as string);
   } catch (userError) {
     logSupabaseError("placeBidWithValidation: upsert user", userError);
     throw new Error("Unable to place bid. Please try again.");
@@ -196,6 +197,18 @@ export async function placeBidWithValidation({
   }
 
   const bidderDisplayName = await getUserDisplayName(bidderWallet);
+
+  if (
+    previousTopBid?.bidder_wallet &&
+    previousTopBid.bidder_wallet !== bidderWallet
+  ) {
+    try {
+      await upsertUser(previousTopBid.bidder_wallet as string);
+    } catch (userError) {
+      logSupabaseError("placeBidWithValidation: upsert previous bidder", userError);
+    }
+  }
+
   await notifyBidPlaced({
     bidderWallet,
     sellerWallet: auction.seller_wallet as string,

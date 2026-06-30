@@ -18,6 +18,22 @@ const supabaseConfig = {
 
 export const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
 
+let notificationClient: SupabaseClient | null = null;
+
+/** Prefer service role on the server so lifecycle notifications can target any wallet. */
+export function getNotificationClient(): SupabaseClient {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceKey) {
+    if (!notificationClient) {
+      notificationClient = createClient(supabaseConfig.url, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    }
+    return notificationClient;
+  }
+  return supabase;
+}
+
 export function getAuthenticatedClient(walletAddress: string) {
   return createClient(supabaseConfig.url, supabaseConfig.anonKey, {
     global: {

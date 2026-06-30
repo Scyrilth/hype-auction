@@ -128,6 +128,11 @@ export default function UploadTrackingCard({
           </select>
         </div>
 
+        <p className="text-xs leading-relaxed text-muted">
+          This step records shipment on-chain — a small network fee (~0.0001 SOL)
+          will apply.
+        </p>
+
         <button
           type="button"
           onClick={() => void handleSubmit()}

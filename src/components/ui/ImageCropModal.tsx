@@ -121,7 +121,15 @@ export default function ImageCropModal({
       setScale(1);
       setProcessing(false);
       setError(null);
+      return;
     }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -213,7 +221,7 @@ export default function ImageCropModal({
         </div>
 
         <div
-          className="image-crop-shell w-full bg-black/40 p-4 sm:p-5"
+          className="image-crop-shell mx-auto w-full max-w-full overflow-hidden p-4 sm:p-5"
           onWheel={handleWheel}
         >
           <ReactCrop
@@ -223,14 +231,14 @@ export default function ImageCropModal({
             circularCrop={profile.circular}
             minWidth={Math.min(profile.minWidth, 80)}
             minHeight={Math.min(profile.minHeight, 80)}
-            className="w-full"
+            className="mx-auto max-h-[min(60vh,480px)] max-w-full"
           >
             <img
               ref={imgRef}
               alt="Crop preview"
               src={imageSrc}
               onLoad={onImageLoad}
-              className="block h-auto w-full"
+              className="block max-h-[min(60vh,480px)] w-full max-w-full object-contain"
               style={{
                 transform: `scale(${scale})`,
                 transformOrigin: "center center",

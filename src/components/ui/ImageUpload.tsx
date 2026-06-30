@@ -203,13 +203,14 @@ export default function ImageUpload({
             type="button"
             onClick={openPicker}
             disabled={disabled || isUploading}
-            className="group relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-dashed border-border bg-background/60 transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative aspect-[4/3] w-full max-w-full overflow-hidden rounded-xl border border-dashed border-border bg-background/60 transition-colors hover:border-accent/50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {displayUrl ? (
               <Image
                 src={displayUrl}
                 alt={label}
                 fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover"
                 unoptimized
               />

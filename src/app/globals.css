@@ -430,6 +430,16 @@ body {
   color: rgb(233 213 255);
 }
 
+.image-crop-shell {
+  max-height: min(60vh, 480px);
+  overflow: hidden;
+}
+
+.image-crop-shell .ReactCrop,
+.image-crop-shell .ReactCrop__child-wrapper {
+  max-height: min(60vh, 480px);
+}
+
 .image-crop-shell .ReactCrop__crop-selection {
   border-color: rgb(168 85 247 / 0.9);
   box-shadow: 0 0 0 9999em rgb(0 0 0 / 0.55);

@@ -7,6 +7,7 @@ import { logSupabaseError, getErrorMessage, TX_FAILED_OR_CANCELLED_MESSAGE } fro
 import { parseAuctionRow } from "@/lib/parse-auction";
 import {
   getUserDisplayName,
+  notifyFundsReleased,
   notifyNewMessage,
 } from "@/lib/notifications";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
@@ -791,7 +792,7 @@ export async function confirmReceipt(
 ): Promise<ConfirmReceiptResult> {
   const { data: existingThread, error: fetchError } = await client
     .from("message_threads")
-    .select("id, auction_id, confirmed_at")
+    .select("id, auction_id, confirmed_at, seller_wallet")
     .eq("id", threadId)
     .eq("buyer_wallet", buyerWallet)
     .maybeSingle();
@@ -864,6 +865,23 @@ export async function confirmReceipt(
       .neq("status", "completed");
 
     if (auctionError) throw auctionError;
+
+    const { data: auctionRow, error: auctionLoadError } = await client
+      .from("auctions")
+      .select("title, current_bid")
+      .eq("id", auctionId)
+      .maybeSingle();
+
+    if (auctionLoadError) throw auctionLoadError;
+
+    if (auctionRow?.title) {
+      await notifyFundsReleased({
+        sellerWallet: existingThread.seller_wallet as string,
+        auctionTitle: auctionRow.title as string,
+        amount: Number(auctionRow.current_bid ?? 0),
+        threadId,
+      });
+    }
   }
 
   return {

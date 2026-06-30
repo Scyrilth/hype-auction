@@ -9,6 +9,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   outbid: "ti-arrow-down",
   auction_won: "ti-trophy",
   auction_ended: "ti-flag",
+  auction_no_sale: "ti-flag",
   item_shipped: "ti-truck",
   ending_soon: "ti-clock",
   new_follower: "ti-user-plus",
@@ -19,6 +20,8 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   action_required_unpaid: "ti-alert-triangle",
   offer_sent_confirmation: "ti-send",
   payment_confirmed: "ti-circle-check",
+  funds_released: "ti-cash",
+  dispute_resolved: "ti-scale",
   tracking_uploaded: "ti-truck",
 };
 
