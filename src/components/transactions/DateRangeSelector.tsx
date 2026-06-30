@@ -12,9 +12,12 @@ import {
 export default function DateRangeSelector({
   range,
   onChange,
+  embedded = false,
 }: {
   range: DateRange;
   onChange: (range: DateRange) => void;
+  /** Use inside nested panels (e.g. admin) without full-bleed sticky bar. */
+  embedded?: boolean;
 }) {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -32,7 +35,13 @@ export default function DateRangeSelector({
   };
 
   return (
-    <div className="sticky top-0 z-20 -mx-5 border-b border-border bg-background/95 px-5 py-4 backdrop-blur-sm">
+    <div
+      className={
+        embedded
+          ? "mb-4"
+          : "sticky top-0 z-20 -mx-5 border-b border-border bg-background/95 px-5 py-4 backdrop-blur-sm"
+      }
+    >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
           {DATE_PRESETS.map((preset) => (

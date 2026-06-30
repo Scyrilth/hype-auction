@@ -7,18 +7,27 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import DateRangeSelector from "@/components/transactions/DateRangeSelector";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  computeEscrowMonitorFeesSol,
+  computeEscrowMonitorPills,
+  computeEscrowMonitorVolumeSol,
+  isEscrowMonitorActionsDisabled,
+} from "@/lib/admin/escrow-monitor";
 import type {
   EscrowMonitorRow,
   EscrowStateCount,
-  EscrowSummaryPill,
 } from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
 import {
+  getDateRangeFromPreset,
+  isDateInRange,
   isShippedLedgerEvent,
   SHIPPED_EVENT_SUBTITLE,
+  type DateRange,
 } from "@/lib/transactions";
 
 import { useAdminContext } from "./AdminContext";
@@ -51,16 +60,33 @@ function flowDirectionClass(direction: "INWARD" | "OUTWARD") {
   return direction === "INWARD" ? "text-emerald-400" : "text-red-400";
 }
 
+function DisabledActionButton({
+  label,
+  variant,
+}: {
+  label: string;
+  variant: keyof typeof adminActionButtonClass;
+}) {
+  return (
+    <span
+      className={`${adminActionButtonClass[variant]} admin-action-btn--disabled`}
+      aria-disabled="true"
+    >
+      {label}
+    </span>
+  );
+}
+
 export default function AdminEscrowMonitor() {
   const { publicKey } = useWallet();
   const { showDummyData } = useAdminContext();
   const { showToast } = useToast();
   const { releaseToSeller, refundToBuyer, loading: actionLoading } = useAdminEscrow();
   const [rows, setRows] = useState<EscrowMonitorRow[]>([]);
-  const [pills, setPills] = useState<EscrowSummaryPill[]>([]);
-  const [platformFeesSol, setPlatformFeesSol] = useState(0);
-  const [totalVolumeSol, setTotalVolumeSol] = useState(0);
   const [stateCounts, setStateCounts] = useState<EscrowStateCount[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange>(() =>
+    getDateRangeFromPreset("all")
+  );
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState<{
@@ -87,15 +113,9 @@ export default function AdminEscrowMonitor() {
       }
       const data = (await response.json()) as {
         rows: EscrowMonitorRow[];
-        pills: EscrowSummaryPill[];
-        platformFeesSol: number;
-        totalVolumeSol: number;
         stateCounts: EscrowStateCount[];
       };
       setRows(data.rows);
-      setPills(data.pills);
-      setPlatformFeesSol(data.platformFeesSol);
-      setTotalVolumeSol(data.totalVolumeSol);
       setStateCounts(data.stateCounts);
     } finally {
       setLoading(false);
@@ -106,24 +126,44 @@ export default function AdminEscrowMonitor() {
     void load();
   }, [load]);
 
+  const dateFilteredRows = useMemo(
+    () => rows.filter((row) => isDateInRange(row.createdAt, dateRange)),
+    [rows, dateRange]
+  );
+
+  const pills = useMemo(
+    () => computeEscrowMonitorPills(dateFilteredRows),
+    [dateFilteredRows]
+  );
+
+  const totalVolumeSol = useMemo(
+    () => computeEscrowMonitorVolumeSol(dateFilteredRows),
+    [dateFilteredRows]
+  );
+
+  const platformFeesSol = useMemo(
+    () => computeEscrowMonitorFeesSol(dateFilteredRows),
+    [dateFilteredRows]
+  );
+
   const filtered = useMemo(() => {
-    let list = [...rows];
+    let list = [...dateFilteredRows];
     if (filter !== "all") {
       if (filter === "flagged") list = list.filter((r) => r.isFlagged);
       else if (filter === "funded") list = list.filter((r) => r.eventType === "funded");
       else if (filter === "shipped") list = list.filter((r) => r.eventType === "shipped");
       else if (filter === "disputed") list = list.filter((r) => r.eventType === "disputed");
       else if (filter === "released")
-        list = list.filter((r) =>
-          ["released", "fee_collected", "dispute_resolved"].includes(r.eventType)
-        );
+        list = list.filter((r) => r.eventType === "released");
+      else if (filter === "fees")
+        list = list.filter((r) => r.eventType === "fee_collected");
       else if (filter === "refunded") list = list.filter((r) => r.eventType === "refunded");
       else list = list.filter((r) => r.auctionEscrowState === filter);
     }
     return list.sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
-  }, [rows, filter]);
+  }, [dateFilteredRows, filter]);
 
   const handleConfirm = async () => {
     if (!dialog) return;
@@ -194,6 +234,12 @@ export default function AdminEscrowMonitor() {
         </div>
       </div>
 
+      <DateRangeSelector
+        range={dateRange}
+        onChange={setDateRange}
+        embedded
+      />
+
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
@@ -232,7 +278,7 @@ export default function AdminEscrowMonitor() {
           </thead>
           <tbody>
             {filtered.map((row) => {
-              const actionsDisabled = row.isTerminal;
+              const actionsDisabled = isEscrowMonitorActionsDisabled(row);
 
               return (
                 <tr key={row.ledgerId} className="border-t border-border/60">
@@ -307,15 +353,14 @@ export default function AdminEscrowMonitor() {
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1">
+                    <div
+                      className={`flex flex-wrap gap-1 ${
+                        actionsDisabled ? "pointer-events-none" : ""
+                      }`}
+                    >
                       {row.threadId ? (
                         actionsDisabled ? (
-                          <span
-                            className={`${adminActionButtonClass.thread} admin-action-btn--disabled`}
-                            aria-disabled="true"
-                          >
-                            Thread
-                          </span>
+                          <DisabledActionButton label="Thread" variant="thread" />
                         ) : (
                           <Link
                             href={`/messages/${row.threadId}`}
@@ -326,26 +371,29 @@ export default function AdminEscrowMonitor() {
                           </Link>
                         )
                       ) : null}
-                      <button
-                        type="button"
-                        disabled={actionsDisabled}
-                        onClick={() => !actionsDisabled && setDialog({ type: "release", row })}
-                        className={`${adminActionButtonClass.release} ${
-                          actionsDisabled ? "admin-action-btn--disabled" : ""
-                        }`}
-                      >
-                        Release
-                      </button>
-                      <button
-                        type="button"
-                        disabled={actionsDisabled}
-                        onClick={() => !actionsDisabled && setDialog({ type: "refund", row })}
-                        className={`${adminActionButtonClass.refund} ${
-                          actionsDisabled ? "admin-action-btn--disabled" : ""
-                        }`}
-                      >
-                        Refund
-                      </button>
+                      {actionsDisabled ? (
+                        <>
+                          <DisabledActionButton label="Release" variant="release" />
+                          <DisabledActionButton label="Refund" variant="refund" />
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setDialog({ type: "release", row })}
+                            className={adminActionButtonClass.release}
+                          >
+                            Release
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDialog({ type: "refund", row })}
+                            className={adminActionButtonClass.refund}
+                          >
+                            Refund
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

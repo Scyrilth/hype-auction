@@ -2,10 +2,8 @@ import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import type {
   Auction,
-  EscrowState,
 } from "@/lib/database.types";
 import {
-  computePlatformFeeTotalSol,
   fetchAllLedgerEvents,
   lamportsToSol,
   mapLedgerEventToEscrowState,
@@ -17,6 +15,11 @@ import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
 
 import { isRealAuction, passesDummyFilter } from "./filters";
+import {
+  computeEscrowMonitorFeesSol,
+  computeEscrowMonitorPills,
+  isEscrowMonitorActionsDisabled,
+} from "./escrow-monitor";
 import type {
   AdminCategoryGmv,
   AdminCategoryRow,
@@ -30,7 +33,6 @@ import type {
   EscrowMonitorRow,
   EscrowMonitorData,
   EscrowStateCount,
-  EscrowSummaryPill,
   FlaggedOrder,
   RecentUserRow,
   AdminUserProfile,
@@ -462,15 +464,6 @@ export async function fetchDisputes(
   });
 }
 
-function isTerminalAuctionState(state: EscrowState): boolean {
-  return (
-    state === "complete" ||
-    state === "released" ||
-    state === "refunded" ||
-    state === "cancelled"
-  );
-}
-
 function escrowFlowDirection(
   eventType: EscrowLedgerEventType
 ): "INWARD" | "OUTWARD" {
@@ -559,7 +552,7 @@ export async function fetchEscrowMonitor(
     const buyerWallet =
       event.buyer_wallet ?? topBidders.get(event.auction_id) ?? "Unknown";
 
-    return {
+    const row: EscrowMonitorRow = {
       ledgerId: event.id,
       auctionId: event.auction_id,
       platformTransactionId: event.platform_transaction_id,
@@ -582,44 +575,15 @@ export async function fetchEscrowMonitor(
       isDummy: !isRealAuction(auction),
       isFlagged: flaggedByAuction.get(event.auction_id) ?? false,
       isPlatformFee: event.is_platform_fee,
-      isTerminal: isTerminalAuctionState(auctionEscrowState),
+      isTerminal: false,
       onChainSignature: event.on_chain_signature,
       solscanUrl: event.solscan_url,
     };
+    row.isTerminal = isEscrowMonitorActionsDisabled(row);
+    return row;
   });
 
-  const pillDefs: {
-    key: string;
-    label: string;
-    eventTypes: EscrowLedgerEventType[];
-  }[] = [
-    { key: "funded", label: "Funded", eventTypes: ["funded"] },
-    { key: "shipped", label: "Shipped", eventTypes: ["shipped"] },
-    { key: "disputed", label: "Disputed", eventTypes: ["disputed"] },
-    { key: "flagged", label: "Flagged", eventTypes: [] },
-    {
-      key: "released",
-      label: "Released",
-      eventTypes: ["released", "fee_collected", "dispute_resolved"],
-    },
-    { key: "refunded", label: "Refunded", eventTypes: ["refunded"] },
-  ];
-
-  const pills: EscrowSummaryPill[] = pillDefs.map(({ key, label, eventTypes }) => {
-    const matching =
-      key === "flagged"
-        ? rows.filter((row) => row.isFlagged && row.eventType === "funded")
-        : rows.filter((row) =>
-            eventTypes.includes(row.eventType as EscrowLedgerEventType)
-          );
-
-    return {
-      key,
-      label,
-      count: matching.length,
-      totalSol: matching.reduce((sum, row) => sum + row.amountSol, 0),
-    };
-  });
+  const pills = computeEscrowMonitorPills(rows);
 
   const totalVolumeSol = events
     .filter((event) => event.event_type === "funded")
@@ -643,7 +607,7 @@ export async function fetchEscrowMonitor(
   return {
     rows,
     pills,
-    platformFeesSol: computePlatformFeeTotalSol(events),
+    platformFeesSol: computeEscrowMonitorFeesSol(rows),
     totalVolumeSol,
     stateCounts,
   };
