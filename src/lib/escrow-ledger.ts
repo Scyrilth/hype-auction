@@ -115,27 +115,94 @@ export function getLedgerReadClient(wallet: string): SupabaseClient {
   return getAuthenticatedClient(wallet);
 }
 
-export async function getOrCreatePlatformTransactionId(
-  auctionId: string
-): Promise<string> {
-  const db = await getWriteClient();
+export function extractAuctionRefSuffix(referenceNumber: string): string {
+  const trimmed = referenceNumber.trim();
+  const dashIndex = trimmed.lastIndexOf("-");
+  if (dashIndex < 0 || dashIndex === trimmed.length - 1) {
+    throw new Error(`Invalid auction reference_number format: ${trimmed}`);
+  }
+  return trimmed.slice(dashIndex + 1).toUpperCase();
+}
 
-  const { data: existing, error: existingError } = await db
-    .from("escrow_transactions")
-    .select("platform_transaction_id")
-    .eq("auction_id", auctionId)
-    .order("created_at", { ascending: true })
-    .limit(1)
+export function escrowEventTypeCode(eventType: EscrowLedgerEventType): string {
+  switch (eventType) {
+    case "funded":
+      return "F";
+    case "shipped":
+      return "SH";
+    case "released":
+      return "R";
+    case "fee_collected":
+      return "FE";
+    case "refunded":
+      return "RF";
+    case "disputed":
+      return "D";
+    case "dispute_resolved":
+      return "DR";
+  }
+}
+
+export function formatGlobalTransactionSeq(globalSeq: number): string {
+  if (!Number.isFinite(globalSeq) || globalSeq < 1) {
+    throw new Error("platform_transaction_seq must be a positive integer");
+  }
+  return String(Math.floor(globalSeq)).padStart(6, "0");
+}
+
+/** HA-TXN-{AUCTIONREF}-{TYPECODE}{GLOBALSEQ}, e.g. HA-TXN-S5KREM-F000001 */
+export function formatPlatformTransactionId(
+  referenceNumber: string,
+  eventType: EscrowLedgerEventType,
+  globalSeq: number
+): string {
+  const auctionRef = extractAuctionRefSuffix(referenceNumber);
+  const typeCode = escrowEventTypeCode(eventType);
+  const seq = formatGlobalTransactionSeq(globalSeq);
+  return `HA-TXN-${auctionRef}-${typeCode}${seq}`;
+}
+
+async function nextPlatformTransactionSeq(client: SupabaseClient): Promise<number> {
+  const { data, error } = await client.rpc("next_platform_transaction_seq");
+  if (error) throw error;
+  const seq = Number(data);
+  if (!Number.isFinite(seq) || seq < 1) {
+    throw new Error("Invalid platform_transaction_seq value");
+  }
+  return seq;
+}
+
+async function resolveAuctionReferenceNumber(
+  auctionId: string,
+  client: SupabaseClient,
+  provided?: string | null
+): Promise<string> {
+  const trimmed = provided?.trim();
+  if (trimmed) return trimmed;
+
+  const { data, error } = await client
+    .from("auctions")
+    .select("reference_number")
+    .eq("id", auctionId)
     .maybeSingle();
 
-  if (existingError) throw existingError;
-  if (existing?.platform_transaction_id) {
-    return existing.platform_transaction_id as string;
+  if (error) throw error;
+
+  const referenceNumber = (data?.reference_number as string | null)?.trim();
+  if (!referenceNumber) {
+    throw new Error(`Missing reference_number for auction ${auctionId}`);
   }
 
-  const { data, error } = await db.rpc("next_platform_transaction_id");
-  if (error) throw error;
-  return data as string;
+  return referenceNumber;
+}
+
+export async function generatePlatformTransactionId(
+  referenceNumber: string,
+  eventType: EscrowLedgerEventType,
+  client: SupabaseClient = getNotificationClient()
+): Promise<string> {
+  const seq = await nextPlatformTransactionSeq(client);
+  return formatPlatformTransactionId(referenceNumber, eventType, seq);
 }
 
 async function signatureEventExists(
@@ -162,6 +229,7 @@ async function signatureEventExists(
 export async function insertEscrowTransaction(
   input: {
     auctionId: string;
+    auctionReferenceNumber?: string | null;
     threadId?: string | null;
     eventType: EscrowLedgerEventType;
     direction: EscrowLedgerDirection;
@@ -182,9 +250,15 @@ export async function insertEscrowTransaction(
     return null;
   }
 
+  const referenceNumber = await resolveAuctionReferenceNumber(
+    input.auctionId,
+    db,
+    input.auctionReferenceNumber
+  );
+
   const platformTransactionId =
     input.platformTransactionId ??
-    (await getOrCreatePlatformTransactionId(input.auctionId));
+    (await generatePlatformTransactionId(referenceNumber, input.eventType, db));
 
   const row = {
     platform_transaction_id: platformTransactionId,
@@ -218,6 +292,7 @@ export async function insertEscrowTransaction(
 
 export async function logEscrowFunded({
   auctionId,
+  auctionReferenceNumber,
   threadId,
   buyerWallet,
   escrowPda,
@@ -225,6 +300,7 @@ export async function logEscrowFunded({
   onChainSignature,
 }: {
   auctionId: string;
+  auctionReferenceNumber?: string | null;
   threadId?: string | null;
   buyerWallet: string;
   escrowPda: string;
@@ -249,6 +325,7 @@ export async function logEscrowFunded({
 
   await insertEscrowTransaction({
     auctionId,
+    auctionReferenceNumber,
     threadId,
     eventType: "funded",
     direction: "outward",
@@ -262,6 +339,7 @@ export async function logEscrowFunded({
 
 export async function logEscrowShipped({
   auctionId,
+  auctionReferenceNumber,
   threadId,
   sellerWallet,
   escrowPda,
@@ -269,6 +347,7 @@ export async function logEscrowShipped({
   onChainSignature,
 }: {
   auctionId: string;
+  auctionReferenceNumber?: string | null;
   threadId?: string | null;
   sellerWallet: string;
   escrowPda: string;
@@ -293,6 +372,7 @@ export async function logEscrowShipped({
 
   await insertEscrowTransaction({
     auctionId,
+    auctionReferenceNumber,
     threadId,
     eventType: "shipped",
     direction: "outward",
@@ -306,6 +386,7 @@ export async function logEscrowShipped({
 
 async function persistEscrowReleased({
   auctionId,
+  auctionReferenceNumber,
   threadId,
   sellerWallet,
   escrowPda,
@@ -314,6 +395,7 @@ async function persistEscrowReleased({
   platformWallet = PLATFORM_WALLET,
 }: {
   auctionId: string;
+  auctionReferenceNumber?: string | null;
   threadId?: string | null;
   sellerWallet: string;
   escrowPda: string;
@@ -321,11 +403,11 @@ async function persistEscrowReleased({
   onChainSignature: string;
   platformWallet?: string;
 }): Promise<void> {
-  const platformTransactionId = await getOrCreatePlatformTransactionId(auctionId);
   const { sellerLamports, platformFeeLamports } = splitEscrowLamports(totalLamports);
 
   await insertEscrowTransaction({
     auctionId,
+    auctionReferenceNumber,
     threadId,
     eventType: "released",
     direction: "inward",
@@ -334,12 +416,12 @@ async function persistEscrowReleased({
     amountLamports: sellerLamports,
     onChainSignature,
     escrowPda,
-    platformTransactionId,
   });
 
   if (platformFeeLamports > 0) {
     await insertEscrowTransaction({
       auctionId,
+      auctionReferenceNumber,
       threadId,
       eventType: "fee_collected",
       direction: "inward",
@@ -349,13 +431,13 @@ async function persistEscrowReleased({
       isPlatformFee: true,
       onChainSignature,
       escrowPda,
-      platformTransactionId,
     });
   }
 }
 
 export async function logEscrowReleased({
   auctionId,
+  auctionReferenceNumber,
   threadId,
   sellerWallet,
   escrowPda,
@@ -365,6 +447,7 @@ export async function logEscrowReleased({
   buyerWallet,
 }: {
   auctionId: string;
+  auctionReferenceNumber?: string | null;
   threadId?: string | null;
   sellerWallet: string;
   escrowPda: string;
@@ -391,6 +474,7 @@ export async function logEscrowReleased({
 
   await persistEscrowReleased({
     auctionId,
+    auctionReferenceNumber,
     threadId,
     sellerWallet,
     escrowPda,
@@ -402,6 +486,7 @@ export async function logEscrowReleased({
 
 export async function logEscrowRefunded({
   auctionId,
+  auctionReferenceNumber,
   threadId,
   buyerWallet,
   escrowPda,
@@ -409,6 +494,7 @@ export async function logEscrowRefunded({
   onChainSignature,
 }: {
   auctionId: string;
+  auctionReferenceNumber?: string | null;
   threadId?: string | null;
   buyerWallet: string;
   escrowPda: string;
@@ -433,6 +519,7 @@ export async function logEscrowRefunded({
 
   await insertEscrowTransaction({
     auctionId,
+    auctionReferenceNumber,
     threadId,
     eventType: "refunded",
     direction: "inward",
@@ -446,6 +533,7 @@ export async function logEscrowRefunded({
 
 export async function logEscrowDisputeResolved({
   auctionId,
+  auctionReferenceNumber,
   threadId,
   buyerWallet,
   sellerWallet,
@@ -456,6 +544,7 @@ export async function logEscrowDisputeResolved({
   platformWallet = PLATFORM_WALLET,
 }: {
   auctionId: string;
+  auctionReferenceNumber?: string | null;
   threadId?: string | null;
   buyerWallet: string;
   sellerWallet: string;
@@ -486,6 +575,7 @@ export async function logEscrowDisputeResolved({
   if (releaseToSeller) {
     await persistEscrowReleased({
       auctionId,
+      auctionReferenceNumber,
       threadId,
       sellerWallet,
       escrowPda,
@@ -496,6 +586,7 @@ export async function logEscrowDisputeResolved({
   } else {
     await logEscrowRefunded({
       auctionId,
+      auctionReferenceNumber,
       threadId,
       buyerWallet,
       escrowPda,
@@ -506,6 +597,7 @@ export async function logEscrowDisputeResolved({
 
   await insertEscrowTransaction({
     auctionId,
+    auctionReferenceNumber,
     threadId,
     eventType: "dispute_resolved",
     direction: "inward",

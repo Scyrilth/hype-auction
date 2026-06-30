@@ -34,13 +34,14 @@ async function auctionParties(auctionId: string) {
   const db = getNotificationClient();
   const { data, error } = await db
     .from("auctions")
-    .select("seller_wallet")
+    .select("seller_wallet, reference_number")
     .eq("id", auctionId)
     .maybeSingle();
 
   if (error) throw error;
   return {
     sellerWallet: (data?.seller_wallet as string | undefined)?.trim() ?? null,
+    referenceNumber: (data?.reference_number as string | undefined)?.trim() ?? null,
   };
 }
 
@@ -105,6 +106,7 @@ export async function POST(request: Request) {
       typeof body.onChainSignature === "string"
         ? body.onChainSignature.trim()
         : "";
+    const { referenceNumber: auctionReferenceNumber } = await auctionParties(auctionId);
 
     switch (eventType) {
       case "funded": {
@@ -129,6 +131,7 @@ export async function POST(request: Request) {
 
         await logEscrowFunded({
           auctionId,
+          auctionReferenceNumber,
           threadId,
           buyerWallet,
           escrowPda,
@@ -156,6 +159,7 @@ export async function POST(request: Request) {
 
         await logEscrowShipped({
           auctionId,
+          auctionReferenceNumber: parties.referenceNumber ?? auctionReferenceNumber,
           threadId,
           sellerWallet,
           escrowPda,
@@ -182,6 +186,7 @@ export async function POST(request: Request) {
 
         await logEscrowReleased({
           auctionId,
+          auctionReferenceNumber,
           threadId,
           sellerWallet,
           escrowPda,
@@ -209,6 +214,7 @@ export async function POST(request: Request) {
 
         await logEscrowRefunded({
           auctionId,
+          auctionReferenceNumber,
           threadId,
           buyerWallet,
           escrowPda,
@@ -243,6 +249,7 @@ export async function POST(request: Request) {
 
         await logEscrowDisputeResolved({
           auctionId,
+          auctionReferenceNumber,
           threadId,
           buyerWallet,
           sellerWallet,

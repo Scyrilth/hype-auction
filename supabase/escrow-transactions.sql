@@ -2,16 +2,55 @@
 
 CREATE SEQUENCE IF NOT EXISTS platform_transaction_seq START 1;
 
-CREATE OR REPLACE FUNCTION public.next_platform_transaction_id()
-RETURNS TEXT
-LANGUAGE plpgsql
+DROP FUNCTION IF EXISTS public.next_platform_transaction_id();
+
+CREATE OR REPLACE FUNCTION public.next_platform_transaction_seq()
+RETURNS BIGINT
+LANGUAGE sql
+VOLATILE
 AS $$
-DECLARE
-  n BIGINT;
-BEGIN
-  n := nextval('platform_transaction_seq');
-  RETURN 'HA-TXN-' || lpad(n::text, 6, '0');
-END;
+  SELECT nextval('platform_transaction_seq');
+$$;
+
+CREATE OR REPLACE FUNCTION public.extract_auction_ref_suffix(p_reference_number TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT upper(regexp_replace(trim(p_reference_number), '^.*-', ''));
+$$;
+
+CREATE OR REPLACE FUNCTION public.escrow_event_type_code(p_event_type TEXT)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE p_event_type
+    WHEN 'funded' THEN 'F'
+    WHEN 'shipped' THEN 'SH'
+    WHEN 'released' THEN 'R'
+    WHEN 'fee_collected' THEN 'FE'
+    WHEN 'refunded' THEN 'RF'
+    WHEN 'disputed' THEN 'D'
+    WHEN 'dispute_resolved' THEN 'DR'
+    ELSE upper(left(p_event_type, 2))
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.format_platform_transaction_id(
+  p_reference_number TEXT,
+  p_event_type TEXT,
+  p_seq BIGINT
+)
+RETURNS TEXT
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT 'HA-TXN-'
+    || public.extract_auction_ref_suffix(p_reference_number)
+    || '-'
+    || public.escrow_event_type_code(p_event_type)
+    || lpad(p_seq::text, 6, '0');
 $$;
 
 CREATE TABLE IF NOT EXISTS public.escrow_transactions (
@@ -127,7 +166,6 @@ CREATE POLICY "escrow_transactions_select"
 DO $$
 DECLARE
   rec RECORD;
-  ptid TEXT;
   v_buyer_wallet TEXT;
   v_seller_wallet TEXT;
   platform_wallet TEXT := 'CVqvsLBSQ3Q8ZiZDB6pvavYQZ4aKchrJ2g7Eh2BLKXyT';
@@ -183,7 +221,6 @@ BEGIN
     ORDER BY mt.created_at DESC
     LIMIT 1;
 
-    ptid := public.next_platform_transaction_id();
     funded_sig := NULLIF(TRIM(rec.escrow_tx_signature), '');
 
     IF funded_sig IS NOT NULL AND NOT EXISTS (
@@ -205,7 +242,11 @@ BEGIN
         escrow_pda,
         created_at
       ) VALUES (
-        ptid,
+        public.format_platform_transaction_id(
+          rec.reference_number,
+          'funded',
+          nextval('platform_transaction_seq')
+        ),
         rec.auction_id,
         thread_uuid,
         'funded',
@@ -240,7 +281,11 @@ BEGIN
         escrow_pda,
         created_at
       ) VALUES (
-        ptid,
+        public.format_platform_transaction_id(
+          rec.reference_number,
+          'shipped',
+          nextval('platform_transaction_seq')
+        ),
         rec.auction_id,
         thread_uuid,
         'shipped',
@@ -272,7 +317,11 @@ BEGIN
         escrow_pda,
         created_at
       ) VALUES (
-        ptid,
+        public.format_platform_transaction_id(
+          rec.reference_number,
+          'released',
+          nextval('platform_transaction_seq')
+        ),
         rec.auction_id,
         thread_uuid,
         'released',
@@ -302,7 +351,11 @@ BEGIN
           escrow_pda,
           created_at
         ) VALUES (
-          ptid,
+          public.format_platform_transaction_id(
+            rec.reference_number,
+            'fee_collected',
+            nextval('platform_transaction_seq')
+          ),
           rec.auction_id,
           thread_uuid,
           'fee_collected',
