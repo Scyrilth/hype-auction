@@ -470,13 +470,14 @@ body {
 }
 
 .admin-escrow-monitor table tbody tr {
-  height: 2.75rem;
+  min-height: 2.75rem;
+  height: auto;
 }
 
 .admin-escrow-monitor table tbody td {
   padding: 0.25rem 0.5rem;
-  vertical-align: middle;
-  line-height: 1.1;
+  vertical-align: top;
+  line-height: 1.2;
 }
 
 .admin-escrow-monitor table thead th {

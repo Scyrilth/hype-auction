@@ -63,6 +63,34 @@ function flowDirectionClass(direction: "INWARD" | "OUTWARD") {
   return direction === "INWARD" ? "text-emerald-400" : "text-red-400";
 }
 
+function CopyableWalletAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleCopy()}
+      className="font-mono text-muted transition-colors hover:text-white"
+      title={copied ? "Copied!" : `Copy ${address}`}
+    >
+      {shortenAddress(address, 3)}
+      {copied ? (
+        <span className="ml-1 text-[10px] font-medium text-emerald-400">Copied!</span>
+      ) : null}
+    </button>
+  );
+}
+
 function EscrowActionButton({
   label,
   variant,
@@ -382,29 +410,40 @@ export default function AdminEscrowMonitor() {
                 const legTitle = isShippedLedgerEvent(row.eventType)
                   ? SHIPPED_EVENT_SUBTITLE
                   : undefined;
-                const itemTitle = `${row.itemTitle} · ${shortenAddress(row.fromWallet, 3)} → ${shortenAddress(row.toWallet, 3)}`;
 
                 return (
                   <tr key={row.ledgerId} className="border-t border-border/60">
-                    <td
-                      className="max-w-[130px] truncate font-mono text-[10px] text-purple-300"
-                      title={
-                        row.reference
-                          ? `${row.platformTransactionId}\n${row.reference}`
-                          : row.platformTransactionId
-                      }
-                    >
-                      {row.platformTransactionId}
+                    <td className="max-w-[140px] align-top">
+                      <p
+                        className="break-all font-mono text-[10px] leading-tight text-purple-300"
+                        title={row.platformTransactionId}
+                      >
+                        {row.platformTransactionId}
+                      </p>
+                      {row.reference ? (
+                        <p
+                          className="mt-0.5 break-all font-mono text-[9px] leading-tight text-muted"
+                          title={row.reference}
+                        >
+                          {row.reference}
+                        </p>
+                      ) : null}
                     </td>
-                    <td className="max-w-[150px] truncate" title={itemTitle}>
+                    <td className="max-w-[200px] align-top">
                       <Link
                         href={`/auction/${row.auctionId}`}
-                        className="text-white hover:text-accent"
+                        className="line-clamp-2 block leading-tight text-white hover:text-accent"
+                        title={row.itemTitle}
                       >
                         {row.itemTitle}
                       </Link>
+                      <p className="mt-0.5 whitespace-nowrap text-[10px] leading-tight text-muted">
+                        <CopyableWalletAddress address={row.fromWallet} />
+                        <span className="mx-1">→</span>
+                        <CopyableWalletAddress address={row.toWallet} />
+                      </p>
                     </td>
-                    <td title={legTitle}>
+                    <td className="align-top" title={legTitle}>
                       <span className="inline-flex max-w-[110px] items-center gap-0.5 whitespace-nowrap">
                         <span
                           className={`rounded-full px-1.5 py-px text-[10px] ${badgeClass(row.eventLabel)}`}
