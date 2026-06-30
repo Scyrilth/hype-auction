@@ -115,6 +115,8 @@ export interface EscrowMonitorRow {
   isTerminal: boolean;
   onChainSignature: string | null;
   solscanUrl: string | null;
+  /** SOL/USD rate stored on the auction at payment time (historical row USD). */
+  solUsdRateAtPayment: number | null;
 }
 
 export interface EscrowStateCount {

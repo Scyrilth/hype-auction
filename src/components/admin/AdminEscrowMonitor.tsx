@@ -10,11 +10,14 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import DateRangeSelector from "@/components/transactions/DateRangeSelector";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
+import { useSolPrice } from "@/hooks/useSolPrice";
 import { getErrorMessage } from "@/lib/errors";
 import {
   computeEscrowMonitorFeesSol,
   computeEscrowMonitorPills,
   computeEscrowMonitorVolumeSol,
+  escrowMonitorRowMatchesSearch,
+  historicalUsdAtPayment,
   isEscrowMonitorActionsDisabled,
 } from "@/lib/admin/escrow-monitor";
 import type {
@@ -77,10 +80,79 @@ function DisabledActionButton({
   );
 }
 
+function CopyableWalletAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleCopy()}
+      className="font-mono text-muted transition-colors hover:text-white"
+      title={copied ? "Copied!" : `Copy ${address}`}
+    >
+      {shortenAddress(address, 3)}
+      {copied ? (
+        <span className="ml-1 text-[10px] font-medium text-emerald-400">Copied!</span>
+      ) : null}
+    </button>
+  );
+}
+
+function EscrowAmountCell({ row }: { row: EscrowMonitorRow }) {
+  if (isShippedLedgerEvent(row.eventType)) {
+    return <span className="text-muted">—</span>;
+  }
+
+  const usd = historicalUsdAtPayment(row.amountSol, row.solUsdRateAtPayment);
+
+  return (
+    <div>
+      <p>{row.amountSol.toFixed(4)} SOL</p>
+      {usd != null ? (
+        <p
+          className="mt-0.5 text-[10px] text-muted"
+          title={`~$${usd.toFixed(2)} at time of payment`}
+        >
+          ~${usd.toFixed(2)}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SummaryUsdLine({
+  amountSol,
+  solPrice,
+}: {
+  amountSol: number;
+  solPrice: number | null;
+}) {
+  if (solPrice == null || !Number.isFinite(solPrice) || solPrice <= 0) {
+    return null;
+  }
+
+  return (
+    <p className="mt-0.5 text-xs text-muted">
+      ~${(amountSol * solPrice).toFixed(2)} at current rate
+    </p>
+  );
+}
+
 export default function AdminEscrowMonitor() {
   const { publicKey } = useWallet();
   const { showDummyData } = useAdminContext();
   const { showToast } = useToast();
+  const { solPrice } = useSolPrice();
   const { releaseToSeller, refundToBuyer, loading: actionLoading } = useAdminEscrow();
   const [rows, setRows] = useState<EscrowMonitorRow[]>([]);
   const [stateCounts, setStateCounts] = useState<EscrowStateCount[]>([]);
@@ -88,6 +160,7 @@ export default function AdminEscrowMonitor() {
     getDateRangeFromPreset("all")
   );
   const [filter, setFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState<{
     type: "release" | "refund";
@@ -160,10 +233,12 @@ export default function AdminEscrowMonitor() {
       else if (filter === "refunded") list = list.filter((r) => r.eventType === "refunded");
       else list = list.filter((r) => r.auctionEscrowState === filter);
     }
-    return list.sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  }, [dateFilteredRows, filter]);
+    return list
+      .filter((row) => escrowMonitorRowMatchesSearch(row, searchQuery))
+      .sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }, [dateFilteredRows, filter, searchQuery]);
 
   const handleConfirm = async () => {
     if (!dialog) return;
@@ -203,6 +278,7 @@ export default function AdminEscrowMonitor() {
           <p className="mt-1 text-lg font-semibold text-white">
             {totalVolumeSol.toFixed(4)} SOL
           </p>
+          <SummaryUsdLine amountSol={totalVolumeSol} solPrice={solPrice} />
         </div>
         <div className="rounded-xl border border-border bg-surface px-4 py-3">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
@@ -211,6 +287,7 @@ export default function AdminEscrowMonitor() {
           <p className="mt-1 text-lg font-semibold text-emerald-300">
             {platformFeesSol.toFixed(4)} SOL
           </p>
+          <SummaryUsdLine amountSol={platformFeesSol} solPrice={solPrice} />
         </div>
         <div className="rounded-xl border border-border bg-surface px-4 py-3 sm:col-span-2 lg:col-span-2">
           <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
@@ -239,6 +316,26 @@ export default function AdminEscrowMonitor() {
         onChange={setDateRange}
         embedded
       />
+
+      <div className="relative mb-4 max-w-xl">
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          placeholder="Search by transaction ID, auction ref, or wallet..."
+          className="w-full rounded-lg border border-border bg-surface-elevated py-2 pl-3 pr-9 text-sm text-white placeholder:text-muted focus:border-accent/50 focus:outline-none"
+        />
+        {searchQuery ? (
+          <button
+            type="button"
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted transition-colors hover:text-white"
+            aria-label="Clear search"
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button
@@ -277,7 +374,14 @@ export default function AdminEscrowMonitor() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => {
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="px-3 py-8 text-center text-sm text-muted">
+                  No transactions match your filters
+                </td>
+              </tr>
+            ) : (
+              filtered.map((row) => {
               const actionsDisabled = isEscrowMonitorActionsDisabled(row);
 
               return (
@@ -296,7 +400,9 @@ export default function AdminEscrowMonitor() {
                       {row.itemTitle}
                     </Link>
                     <p className="text-muted">
-                      {shortenAddress(row.fromWallet, 3)} → {shortenAddress(row.toWallet, 3)}
+                      <CopyableWalletAddress address={row.fromWallet} />
+                      <span className="mx-1">→</span>
+                      <CopyableWalletAddress address={row.toWallet} />
                     </p>
                   </td>
                   <td className="px-3 py-2">
@@ -327,11 +433,7 @@ export default function AdminEscrowMonitor() {
                     </span>
                   </td>
                   <td className="px-3 py-2">
-                    {isShippedLedgerEvent(row.eventType) ? (
-                      <span className="text-muted">—</span>
-                    ) : (
-                      `${row.amountSol.toFixed(4)} SOL`
-                    )}
+                    <EscrowAmountCell row={row} />
                   </td>
                   <td className="px-3 py-2 capitalize text-muted">{row.auctionEscrowState}</td>
                   <td className={`px-3 py-2 font-medium ${ageClass(row.daysInState)}`}>
@@ -398,7 +500,8 @@ export default function AdminEscrowMonitor() {
                   </td>
                 </tr>
               );
-            })}
+            })
+            )}
           </tbody>
         </table>
       </div>

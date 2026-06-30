@@ -67,3 +67,32 @@ export function computeEscrowMonitorFeesSol(rows: EscrowMonitorRow[]): number {
     .filter((row) => row.eventType === "fee_collected")
     .reduce((sum, row) => sum + row.amountSol, 0);
 }
+
+export function escrowMonitorRowMatchesSearch(
+  row: EscrowMonitorRow,
+  query: string
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  return (
+    row.platformTransactionId.toLowerCase().includes(q) ||
+    (row.reference?.toLowerCase().includes(q) ?? false) ||
+    row.fromWallet.toLowerCase().includes(q) ||
+    row.toWallet.toLowerCase().includes(q)
+  );
+}
+
+export function historicalUsdAtPayment(
+  amountSol: number,
+  solUsdRateAtPayment: number | null
+): number | null {
+  if (
+    solUsdRateAtPayment == null ||
+    !Number.isFinite(solUsdRateAtPayment) ||
+    solUsdRateAtPayment <= 0
+  ) {
+    return null;
+  }
+  return amountSol * solUsdRateAtPayment;
+}

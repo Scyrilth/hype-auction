@@ -578,6 +578,7 @@ export async function fetchEscrowMonitor(
       isTerminal: false,
       onChainSignature: event.on_chain_signature,
       solscanUrl: event.solscan_url,
+      solUsdRateAtPayment: auction.sol_usd_rate_at_payment,
     };
     row.isTerminal = isEscrowMonitorActionsDisabled(row);
     return row;
