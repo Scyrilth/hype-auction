@@ -1,6 +1,9 @@
 export const DEFAULT_USER_ERROR_MESSAGE =
   "Something went wrong. Please try again.";
 
+export const TX_FAILED_OR_CANCELLED_MESSAGE =
+  "Transaction failed or was cancelled. Please try again.";
+
 const UNSAFE_MESSAGE_PATTERNS = [
   /pgrst/i,
   /postgres/i,

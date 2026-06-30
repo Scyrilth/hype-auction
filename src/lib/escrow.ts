@@ -381,15 +381,6 @@ export async function confirmReceiptOnChain(
       })
       .rpc()) as TransactionSignature;
 
-    const { error } = await supabase
-      .from("auctions")
-      .update({ escrow_state: "complete" })
-      .eq("id", auctionId);
-
-    if (error) {
-      console.error("Supabase escrow complete update failed:", error);
-    }
-
     return { success: true, txSignature };
   } catch (error) {
     console.error("confirmReceiptOnChain failed:", error);
@@ -524,15 +515,6 @@ export async function confirmShippingOnChain(
         escrow: escrowPda,
       })
       .rpc()) as TransactionSignature;
-
-    const { error } = await supabase
-      .from("auctions")
-      .update({ escrow_state: "shipped" })
-      .eq("id", auctionId);
-
-    if (error) {
-      console.error("Supabase escrow shipped update failed:", error);
-    }
 
     return { success: true, txSignature };
   } catch (error) {

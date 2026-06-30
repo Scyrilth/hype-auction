@@ -3,6 +3,7 @@ import type { AnchorProvider } from "@coral-xyz/anchor";
 import { confirmShippingOnChain } from "@/lib/escrow";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import type { Auction, ShippingStatus } from "@/lib/database.types";
+import { TX_FAILED_OR_CANCELLED_MESSAGE, getErrorMessage } from "@/lib/errors";
 import {
   createAuctionThread,
   insertThreadSystemMessage,
@@ -120,6 +121,19 @@ export async function saveAuctionShippingTracking({
 
   if (winnerError) throw winnerError;
 
+  if (onChain) {
+    const onChainResult = await confirmShippingOnChain(
+      auctionId,
+      onChain.provider.wallet,
+      onChain.provider
+    );
+    if (!onChainResult.success) {
+      throw new Error(
+        getErrorMessage(onChainResult.error, TX_FAILED_OR_CANCELLED_MESSAGE)
+      );
+    }
+  }
+
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("auctions")
@@ -128,6 +142,7 @@ export async function saveAuctionShippingTracking({
       tracking_number: trimmedTracking,
       tracking_uploaded_at: now,
       shipping_status: "shipped" satisfies ShippingStatus,
+      escrow_state: "shipped",
     })
     .eq("id", auctionId)
     .eq("seller_wallet", sellerWallet)
@@ -135,17 +150,6 @@ export async function saveAuctionShippingTracking({
     .single();
 
   if (error) throw error;
-
-  if (onChain) {
-    const onChainResult = await confirmShippingOnChain(
-      auctionId,
-      onChain.provider.wallet,
-      onChain.provider
-    );
-    if (!onChainResult.success) {
-      console.error("On-chain confirm_shipping failed:", onChainResult.error);
-    }
-  }
 
   if (winnerBid?.bidder_wallet) {
     await notifyBuyerShipment({

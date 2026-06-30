@@ -57,6 +57,12 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
 
   const handleConfirmReceipt = async () => {
     if (!wallet || confirming) return;
+
+    if (!anchorWallet || !connection) {
+      showToast("Connect your wallet to confirm receipt on-chain.", "error");
+      return;
+    }
+
     setConfirming(true);
     try {
       const threadId = await getAuctionThreadId(auction.id, wallet);
@@ -64,30 +70,23 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
         showToast("Open a message thread with the seller first.", "error");
         return;
       }
-      const provider =
-        anchorWallet && connection
-          ? createEscrowProvider(connection, anchorWallet)
-          : undefined;
+      const provider = createEscrowProvider(connection, anchorWallet);
       const result = await confirmReceipt(
         threadId,
         wallet,
-        provider
-          ? {
-              provider,
-              sellerWallet: auction.seller_wallet,
-              platformWallet: PLATFORM_WALLET,
-            }
-          : undefined,
+        {
+          provider,
+          sellerWallet: auction.seller_wallet,
+          platformWallet: PLATFORM_WALLET,
+        },
         client
       );
       setLocalStatus("delivered");
-      if (result.onChainSuccess) {
-        showToast("✅ Receipt confirmed on-chain");
-      } else if (result.onChainWarning) {
-        showToast(`Receipt saved. ${result.onChainWarning}`, "error");
-      } else {
-        showToast("Receipt confirmed!");
-      }
+      showToast(
+        result.onChainSuccess
+          ? "✅ Receipt confirmed on-chain"
+          : "Receipt confirmed!"
+      );
       router.refresh();
     } catch (error) {
       showToast(getErrorMessage(error), "error");

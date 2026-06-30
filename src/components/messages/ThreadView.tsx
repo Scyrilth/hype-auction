@@ -380,6 +380,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
   const handleConfirmReceipt = async () => {
     if (!wallet || !isBuyer || confirming || thread?.confirmed_at) return;
+
+    if (thread?.auction_id && !anchorWallet) {
+      showToast("Connect your wallet to confirm receipt on-chain.", "error");
+      return;
+    }
+
     setConfirming(true);
     try {
       const provider =
@@ -389,7 +395,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       const result = await confirmReceipt(
         threadId,
         wallet,
-        thread?.auction && provider
+        thread?.auction_id && provider
           ? {
               provider,
               sellerWallet: thread.seller_wallet,
@@ -398,16 +404,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           : undefined,
         client
       );
-      if (result.onChainSuccess) {
-        showToast("✅ Receipt confirmed on-chain");
-      } else if (result.onChainWarning) {
-        showToast(
-          `Receipt saved. ${result.onChainWarning}`,
-          "error"
-        );
-      } else {
-        showToast("Receipt confirmed.");
-      }
+      showToast(
+        result.onChainSuccess
+          ? "✅ Receipt confirmed on-chain"
+          : "Receipt confirmed."
+      );
       await loadThread();
     } catch (error) {
       showToast(getErrorMessage(error), "error");
@@ -796,9 +797,10 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
       {!isArchived && (
         <div className="mt-2 shrink-0 space-y-2 border-t border-border bg-background pt-2 sm:mt-3 sm:space-y-3 sm:border-t-0 sm:bg-transparent sm:pt-0">
-          {showUploadTracking && (
+          {showUploadTracking && thread.auction_id && (
             <UploadTrackingCard
               threadId={thread.id}
+              auctionId={thread.auction_id}
               sellerWallet={thread.seller_wallet}
               onSubmitted={() => void loadThread()}
             />

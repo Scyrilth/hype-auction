@@ -3,7 +3,7 @@ import type { AnchorProvider } from "@coral-xyz/anchor";
 import type { Auction } from "@/lib/database.types";
 import { confirmReceiptOnChain } from "@/lib/escrow";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
-import { logSupabaseError, getErrorMessage } from "@/lib/errors";
+import { logSupabaseError, getErrorMessage, TX_FAILED_OR_CANCELLED_MESSAGE } from "@/lib/errors";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import {
   getUserDisplayName,
@@ -781,7 +781,6 @@ export interface ConfirmReceiptOnChainParams {
 export interface ConfirmReceiptResult {
   onChainSuccess?: boolean;
   onChainTxSignature?: string;
-  onChainWarning?: string;
 }
 
 export async function confirmReceipt(
@@ -790,6 +789,46 @@ export async function confirmReceipt(
   onChain?: ConfirmReceiptOnChainParams,
   client: SupabaseClient = supabase
 ): Promise<ConfirmReceiptResult> {
+  const { data: existingThread, error: fetchError } = await client
+    .from("message_threads")
+    .select("id, auction_id, confirmed_at")
+    .eq("id", threadId)
+    .eq("buyer_wallet", buyerWallet)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+  if (!existingThread) {
+    throw new Error("Thread not found.");
+  }
+  if (existingThread.confirmed_at) {
+    return { onChainSuccess: true };
+  }
+
+  const auctionId = (existingThread.auction_id as string | null) ?? null;
+  let onChainTxSignature: string | undefined;
+
+  if (auctionId) {
+    if (!onChain) {
+      throw new Error("Connect your wallet to confirm receipt on-chain.");
+    }
+
+    const onChainResult = await confirmReceiptOnChain(
+      auctionId,
+      onChain.provider.wallet,
+      onChain.provider,
+      onChain.sellerWallet,
+      onChain.platformWallet
+    );
+
+    if (!onChainResult.success) {
+      throw new Error(
+        getErrorMessage(onChainResult.error, TX_FAILED_OR_CANCELLED_MESSAGE)
+      );
+    }
+
+    onChainTxSignature = onChainResult.txSignature;
+  }
+
   const archiveAt = new Date(
     Date.now() + 3 * 24 * 60 * 60 * 1000
   ).toISOString();
@@ -802,6 +841,7 @@ export async function confirmReceipt(
     })
     .eq("id", threadId)
     .eq("buyer_wallet", buyerWallet)
+    .is("confirmed_at", null)
     .select("*")
     .single();
 
@@ -814,48 +854,24 @@ export async function confirmReceipt(
     client
   );
 
-  let result: ConfirmReceiptResult = {};
-
-  if (thread.auction_id) {
+  if (auctionId) {
     const { error: auctionError } = await client
       .from("auctions")
       .update({
         status: "completed",
         shipping_status: "delivered",
+        escrow_state: "complete",
       })
-      .eq("id", thread.auction_id as string)
+      .eq("id", auctionId)
       .neq("status", "completed");
 
     if (auctionError) throw auctionError;
-
-    if (onChain) {
-      const onChainResult = await confirmReceiptOnChain(
-        thread.auction_id as string,
-        onChain.provider.wallet,
-        onChain.provider,
-        onChain.sellerWallet,
-        onChain.platformWallet
-      );
-
-      if (onChainResult.success) {
-        result = {
-          onChainSuccess: true,
-          onChainTxSignature: onChainResult.txSignature,
-        };
-      } else {
-        console.error("On-chain release failed:", onChainResult.error);
-        result = {
-          onChainSuccess: false,
-          onChainWarning: getErrorMessage(
-            onChainResult.error,
-            "On-chain release failed."
-          ),
-        };
-      }
-    }
   }
 
-  return result;
+  return {
+    onChainSuccess: Boolean(auctionId),
+    onChainTxSignature,
+  };
 }
 
 export function getThreadThumbnail(

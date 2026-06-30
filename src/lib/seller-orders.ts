@@ -1,6 +1,3 @@
-import type { AnchorProvider } from "@coral-xyz/anchor";
-
-import { confirmShippingOnChain } from "@/lib/escrow";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import type { Auction } from "@/lib/database.types";
 import { parseAuctionRow } from "@/lib/parse-auction";
@@ -154,23 +151,17 @@ export async function fetchSellerOrdersNeedingAction(
   return orders.sort((a, b) => a.title.localeCompare(b.title));
 }
 
-export interface ThreadShippingOnChainParams {
-  provider: AnchorProvider;
-}
-
 export async function submitThreadShippingTracking({
   threadId,
   sellerWallet,
   carrier,
   trackingNumber,
-  onChain,
   client = supabase,
 }: {
   threadId: string;
   sellerWallet: string;
   carrier: string;
   trackingNumber: string;
-  onChain?: ThreadShippingOnChainParams;
   client?: SupabaseClient;
 }): Promise<MessageThread> {
   const trimmedCarrier = carrier.trim();
@@ -249,17 +240,6 @@ export async function submitThreadShippingTracking({
     .eq("id", auctionId);
 
   if (auctionUpdateError) throw auctionUpdateError;
-
-  if (onChain) {
-    const onChainResult = await confirmShippingOnChain(
-      auctionId,
-      onChain.provider.wallet,
-      onChain.provider
-    );
-    if (!onChainResult.success) {
-      console.error("On-chain confirm_shipping failed:", onChainResult.error);
-    }
-  }
 
   await insertThreadSystemMessage(
     threadId,

@@ -4,16 +4,18 @@ import { useState } from "react";
 import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 
 import { useToast } from "@/components/ui/Toast";
-import { getErrorMessage } from "@/lib/errors";
+import { TX_FAILED_OR_CANCELLED_MESSAGE, getErrorMessage } from "@/lib/errors";
 import { confirmShippingOnChain, createEscrowProvider } from "@/lib/escrow";
 import { THREAD_SHIPPING_CARRIERS } from "@/lib/seller-orders";
 
 export default function UploadTrackingCard({
   threadId,
+  auctionId,
   sellerWallet,
   onSubmitted,
 }: {
   threadId: string;
+  auctionId: string;
   sellerWallet: string;
   onSubmitted: () => void;
 }) {
@@ -26,13 +28,30 @@ export default function UploadTrackingCard({
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async () => {
-    if (submitting || submitted || !threadId.trim()) return;
+    if (submitting || submitted || !threadId.trim() || !auctionId) return;
+    if (!anchorWallet || !connection) {
+      showToast("Connect your wallet to submit tracking on-chain.", "error");
+      return;
+    }
+
     setSubmitting(true);
 
     const resolvedThreadId = threadId.trim();
-    console.log("threadId:", resolvedThreadId);
 
     try {
+      const provider = createEscrowProvider(connection, anchorWallet);
+      const onChainResult = await confirmShippingOnChain(
+        auctionId,
+        anchorWallet,
+        provider
+      );
+
+      if (!onChainResult.success) {
+        throw new Error(
+          getErrorMessage(onChainResult.error, TX_FAILED_OR_CANCELLED_MESSAGE)
+        );
+      }
+
       const response = await fetch("/api/messages/tracking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -46,7 +65,6 @@ export default function UploadTrackingCard({
 
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
-        auctionId?: string | null;
       };
 
       if (!response.ok) {
@@ -58,23 +76,11 @@ export default function UploadTrackingCard({
         );
       }
 
-      if (anchorWallet && connection && payload.auctionId) {
-        const provider = createEscrowProvider(connection, anchorWallet);
-        const onChainResult = await confirmShippingOnChain(
-          payload.auctionId,
-          anchorWallet,
-          provider
-        );
-        if (!onChainResult.success) {
-          console.error("On-chain confirm_shipping failed:", onChainResult.error);
-        }
-      }
-
       setSubmitted(true);
       showToast("Tracking uploaded — buyer notified.");
       onSubmitted();
     } catch (error) {
-      showToast(getErrorMessage(error), "error");
+      showToast(getErrorMessage(error, TX_FAILED_OR_CANCELLED_MESSAGE), "error");
     } finally {
       setSubmitting(false);
     }
