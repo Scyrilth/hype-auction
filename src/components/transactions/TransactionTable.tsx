@@ -81,7 +81,7 @@ function CopyTransactionId({
     <button
       type="button"
       onClick={() => void handleCopy()}
-      className="max-w-[130px] text-left"
+      className="max-w-[130px] text-left lg:max-w-none"
       title={`Click to copy ${platformTransactionId}`}
     >
       <p className="break-all font-mono text-[10px] leading-tight text-purple-300">
@@ -174,7 +174,7 @@ function StatusWithDirection({
       : buyerStatusBadgeClass((row as BuyerTransactionRow).displayStatus);
 
   return (
-    <span className="inline-flex max-w-[140px] flex-wrap items-center gap-1">
+    <div className="flex flex-col items-start gap-0.5">
       <span className={`rounded-full px-1.5 py-px text-[10px] ${badgeClass}`}>
         {label}
       </span>
@@ -183,7 +183,7 @@ function StatusWithDirection({
       >
         {row.direction}
       </span>
-    </span>
+    </div>
   );
 }
 
@@ -339,7 +339,7 @@ export default function TransactionTable({
             <table className="w-full table-fixed text-left text-[11px]">
               <thead className="border-b border-border text-muted">
                 <tr>
-                  <th className="w-[14%] px-2 py-1.5 font-medium">
+                  <th className="w-[14%] px-2 py-1.5 font-medium lg:w-[21%]">
                     <SortHeader
                       label="Txn ID"
                       sortKey="platformTransactionId"
@@ -348,7 +348,7 @@ export default function TransactionTable({
                       onSort={handleSort}
                     />
                   </th>
-                  <th className="w-[22%] px-2 py-1.5 font-medium">
+                  <th className="w-[22%] px-2 py-1.5 font-medium lg:w-[20%]">
                     <SortHeader
                       label="Item"
                       sortKey="itemTitle"
@@ -384,7 +384,7 @@ export default function TransactionTable({
                       onSort={handleSort}
                     />
                   </th>
-                  <th className="w-[18%] px-2 py-1.5 font-medium">
+                  <th className="w-[18%] px-2 py-1.5 font-medium lg:w-[12%]">
                     <SortHeader
                       label="Status"
                       sortKey="displayStatus"
