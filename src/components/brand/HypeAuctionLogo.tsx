@@ -1,4 +1,29 @@
+"use client";
+
 import Link from "next/link";
+
+const LOGO_BACKGROUND_STYLE = {
+  backgroundImage: "url(/hypeauction-logo.png)",
+  backgroundSize: "contain",
+  backgroundRepeat: "no-repeat",
+  backgroundPosition: "center",
+} as const;
+
+function LogoMark({
+  className = "h-9 w-9",
+}: {
+  className?: string;
+}) {
+  return (
+    <div
+      role="img"
+      aria-label="Hype Auction"
+      className={`shrink-0 ${className}`.trim()}
+      style={LOGO_BACKGROUND_STYLE}
+      onContextMenu={(event) => event.preventDefault()}
+    />
+  );
+}
 
 function BrandText() {
   return (
@@ -17,7 +42,7 @@ function BrandText() {
 }
 
 export default function HypeAuctionLogo({
-  imageClassName = "h-9 w-auto",
+  imageClassName = "h-9 w-9",
   className = "",
   asLink = true,
   showText = true,
@@ -29,11 +54,7 @@ export default function HypeAuctionLogo({
 }) {
   const content = (
     <div className={`flex items-center gap-2 ${className}`.trim()}>
-      <img
-        src="/hypeauction-logo.png"
-        alt="Hype Auction"
-        className={imageClassName}
-      />
+      <LogoMark className={imageClassName} />
       {showText ? <BrandText /> : null}
     </div>
   );
@@ -49,11 +70,5 @@ export default function HypeAuctionLogo({
 
 /** Circle mark for favicon-sized usages — uses the full brand logo scaled down. */
 export function HypeAuctionMark({ className = "h-8 w-8" }: { className?: string }) {
-  return (
-    <img
-      src="/hypeauction-logo.png"
-      alt="Hype Auction"
-      className={className}
-    />
-  );
+  return <LogoMark className={className} />;
 }

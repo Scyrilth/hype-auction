@@ -36,6 +36,10 @@ export const metadata: Metadata = {
   verification: {
     google: "EkjLwV4KMPbJRe4ekNFPiyQC9Hkflp1cpo227ZPNi4s",
   },
+  icons: {
+    icon: "/hypeauction-logo.png",
+    apple: "/hypeauction-logo.png",
+  },
   ...buildPageMetadata({
     title: `${SITE_NAME} — Live Auctions on Solana`,
     description: DEFAULT_DESCRIPTION,

@@ -21,7 +21,7 @@ export default function LiveComingSoon() {
 
       <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
         <HypeAuctionLogo
-          imageClassName="h-10 w-auto sm:h-11"
+          imageClassName="h-10 w-10 sm:h-11 sm:w-11"
           asLink={false}
           showText={false}
         />

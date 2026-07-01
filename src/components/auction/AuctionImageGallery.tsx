@@ -123,7 +123,7 @@ export default function AuctionImageGallery({ auction }: { auction: Auction }) {
 
       {lightboxOpen && activeImage && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 sm:p-8"
+          className="fixed inset-0 z-[9999] flex h-screen w-screen min-h-[100vh] min-w-[100vw] items-center justify-center bg-black/90 p-4 sm:p-8"
           onClick={closeLightbox}
           role="dialog"
           aria-modal="true"
