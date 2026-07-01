@@ -20,11 +20,7 @@ export default function LiveComingSoon() {
       />
 
       <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
-        <HypeAuctionLogo
-          className="h-10 w-auto sm:h-11"
-          asLink={false}
-          showTagline
-        />
+        <HypeAuctionLogo className="h-10 w-auto sm:h-11" asLink={false} />
 
         <div className="mt-10 flex items-center gap-2.5">
           <LivePulseDot className="h-2.5 w-2.5" />

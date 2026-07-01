@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import HypeAuctionLogo from "@/components/brand/HypeAuctionLogo";
 import {
   ChevronDownIcon,
   DashboardLayoutIcon,
@@ -192,7 +191,18 @@ export default function SidebarNavContent({
     <div className={`flex min-h-0 flex-1 flex-col ${className}`.trim()}>
       {showLogo ? (
         <div className="mb-3 shrink-0">
-          <HypeAuctionLogo className="h-7 w-full max-w-[8.5rem]" showTagline />
+          <Link
+            href="/"
+            className="inline-block transition-opacity hover:opacity-90"
+            aria-label="Hype Auction home"
+          >
+            <img
+              src="/hypeauction-logo.png"
+              alt="Hype Auction"
+              className="h-12 w-auto"
+              style={{ mixBlendMode: "multiply" }}
+            />
+          </Link>
         </div>
       ) : null}
 

@@ -8,7 +8,7 @@ export const SITE_NAME = "Hype Auction";
 export const DEFAULT_DESCRIPTION =
   "Live crypto auctions for collectibles, sneakers, and streetwear on Solana with on-chain escrow.";
 
-const DEFAULT_OG_PATH = "/icon.svg";
+const DEFAULT_OG_PATH = "/hypeauction-logo.png";
 
 export function getSiteUrl(): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
