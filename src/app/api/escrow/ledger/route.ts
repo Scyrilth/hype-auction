@@ -47,16 +47,42 @@ async function auctionParties(auctionId: string) {
 
 async function isBuyerForAuction(auctionId: string, buyerWallet: string) {
   const db = getNotificationClient();
-  const { data, error } = await db
+  const normalizedBuyer = buyerWallet.trim();
+
+  const { data: thread, error: threadError } = await db
+    .from("message_threads")
+    .select("id")
+    .eq("auction_id", auctionId)
+    .eq("buyer_wallet", normalizedBuyer)
+    .limit(1)
+    .maybeSingle();
+
+  if (threadError) throw threadError;
+  if (thread) return true;
+
+  const { data: auction, error: auctionError } = await db
+    .from("auctions")
+    .select("next_bidder_wallet")
+    .eq("id", auctionId)
+    .maybeSingle();
+
+  if (auctionError) throw auctionError;
+
+  const nextBidderWallet = (auction?.next_bidder_wallet as string | undefined)?.trim();
+  if (nextBidderWallet && nextBidderWallet === normalizedBuyer) {
+    return true;
+  }
+
+  const { data: topBid, error: bidError } = await db
     .from("bids")
-    .select("bidder_wallet, amount")
+    .select("bidder_wallet")
     .eq("auction_id", auctionId)
     .order("amount", { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) throw error;
-  return (data?.bidder_wallet as string | undefined)?.trim() === buyerWallet;
+  if (bidError) throw bidError;
+  return (topBid?.bidder_wallet as string | undefined)?.trim() === normalizedBuyer;
 }
 
 export async function OPTIONS(request: Request) {
