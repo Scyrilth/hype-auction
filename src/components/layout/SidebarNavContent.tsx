@@ -142,7 +142,7 @@ export default function SidebarNavContent({
   const isAdminActive = currentPath.startsWith("/admin");
 
   const showStandaloneTransactions =
-    connected && wallet && (!isVendor || !showMyShop);
+    connected && wallet && !loading && (!isVendor || !showMyShop);
   const transactionsHref =
     isVendor && (sidebarMode === "seller" || sidebarMode === "default")
       ? "/transactions"

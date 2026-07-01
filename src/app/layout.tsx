@@ -11,6 +11,7 @@ import { WelcomeOnboardingGate } from "@/components/onboarding/WelcomeOnboarding
 import UserSync from "@/components/UserSync";
 import MobilePhantomTipLoader from "@/components/wallet/MobilePhantomTipLoader";
 import WalletContextProvider from "@/components/WalletContextProvider";
+import { SidebarUserProvider } from "@/hooks/useSidebarUser";
 import {
   buildPageMetadata,
   DEFAULT_DESCRIPTION,
@@ -59,14 +60,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <WalletContextProvider>
-          <ToastProvider>
-            <WatchlistProvider>
-              <UserSync />
-              <WelcomeOnboardingGate />
-              <MobilePhantomTipLoader />
-              {children}
-            </WatchlistProvider>
-          </ToastProvider>
+          <SidebarUserProvider>
+            <ToastProvider>
+              <WatchlistProvider>
+                <UserSync />
+                <WelcomeOnboardingGate />
+                <MobilePhantomTipLoader />
+                {children}
+              </WatchlistProvider>
+            </ToastProvider>
+          </SidebarUserProvider>
         </WalletContextProvider>
         <CookieConsent />
         <ConsentAwareVercelAnalytics />

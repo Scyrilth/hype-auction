@@ -52,6 +52,12 @@ export function getSidebarViewMode(
 ): ViewMode {
   const pathMode = getViewModeFromPath(pathname);
   if (pathMode !== "default") return pathMode;
+
+  // Admin mode is for /admin surfaces; don't let a stored admin pill hide vendor nav elsewhere.
+  if (storedMode === "admin" && !pathname.startsWith("/admin")) {
+    return "default";
+  }
+
   return storedMode ?? "default";
 }
 
@@ -70,7 +76,8 @@ export function shouldShowMyShopInSidebar(
   isVendor: boolean
 ): boolean {
   if (!connected || !isVendor) return false;
-  return sidebarMode === "seller" || sidebarMode === "default";
+  if (sidebarMode === "admin") return false;
+  return true;
 }
 
 export function shouldShowMyCollectionsInSidebar(
