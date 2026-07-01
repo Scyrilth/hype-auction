@@ -6,7 +6,6 @@ import {
   type MessageThread,
 } from "@/lib/messages";
 import { notifyItemShipped } from "@/lib/notifications";
-import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export const THREAD_SHIPPING_CARRIERS = [
@@ -157,14 +156,12 @@ export async function submitThreadShippingTracking({
   sellerWallet,
   carrier,
   trackingNumber,
-  onChainSignature,
   client = supabase,
 }: {
   threadId: string;
   sellerWallet: string;
   carrier: string;
   trackingNumber: string;
-  onChainSignature?: string | null;
   client?: SupabaseClient;
 }): Promise<MessageThread> {
   const trimmedCarrier = carrier.trim();
@@ -258,19 +255,6 @@ export async function submitThreadShippingTracking({
     trackingNumber: trimmedTracking,
     threadId,
   });
-
-  const escrowPda = auction.escrow_pda;
-  const totalLamports = auction.escrow_amount_lamports ?? 0;
-  if (escrowPda && totalLamports > 0) {
-    await logEscrowShipped({
-      auctionId,
-      threadId,
-      sellerWallet,
-      escrowPda,
-      amountLamports: totalLamports,
-      onChainSignature: onChainSignature ?? null,
-    });
-  }
 
   return parseThreadRow(updatedThread as Record<string, unknown>);
 }

@@ -802,6 +802,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
               threadId={thread.id}
               auctionId={thread.auction_id}
               sellerWallet={thread.seller_wallet}
+              escrowPda={thread.auction?.escrow_pda ?? null}
+              amountLamports={thread.auction?.escrow_amount_lamports ?? 0}
               onSubmitted={() => void loadThread()}
             />
           )}

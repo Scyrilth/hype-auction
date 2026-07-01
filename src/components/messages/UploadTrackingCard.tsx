@@ -6,17 +6,22 @@ import { useAnchorWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useToast } from "@/components/ui/Toast";
 import { TX_FAILED_OR_CANCELLED_MESSAGE, getErrorMessage } from "@/lib/errors";
 import { confirmShippingOnChain, createEscrowProvider } from "@/lib/escrow";
+import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { THREAD_SHIPPING_CARRIERS } from "@/lib/seller-orders";
 
 export default function UploadTrackingCard({
   threadId,
   auctionId,
   sellerWallet,
+  escrowPda,
+  amountLamports,
   onSubmitted,
 }: {
   threadId: string;
   auctionId: string;
   sellerWallet: string;
+  escrowPda: string | null;
+  amountLamports: number;
   onSubmitted: () => void;
 }) {
   const anchorWallet = useAnchorWallet();
@@ -60,7 +65,6 @@ export default function UploadTrackingCard({
           sellerWallet,
           carrier,
           trackingNumber,
-          onChainSignature: onChainResult.txSignature ?? null,
         }),
       });
 
@@ -75,6 +79,22 @@ export default function UploadTrackingCard({
             "Unable to upload tracking. Please try again."
           )
         );
+      }
+
+      const txSignature = onChainResult.txSignature;
+      if (txSignature && escrowPda && amountLamports > 0) {
+        try {
+          await logEscrowShipped({
+            auctionId,
+            threadId: resolvedThreadId,
+            sellerWallet,
+            escrowPda,
+            amountLamports,
+            onChainSignature: txSignature,
+          });
+        } catch (ledgerError) {
+          console.error("Escrow ledger shipped insert failed:", ledgerError);
+        }
       }
 
       setSubmitted(true);
