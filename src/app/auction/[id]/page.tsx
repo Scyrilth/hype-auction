@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 
 import AuctionDetailError from "@/components/auction/AuctionDetailError";
 import AuctionDetailScrollReset from "@/components/auction/AuctionDetailScrollReset";
@@ -6,10 +7,28 @@ import AuctionDetailView from "@/components/auction/AuctionDetailView";
 import AppShell from "@/components/layout/AppShell";
 import BackButton from "@/components/ui/BackButton";
 import { checkAndEndExpiredAuctions } from "@/lib/auction-lifecycle";
-import { checkEndingSoonNotifications } from "@/lib/notifications";
 import { getAuctionDetailData } from "@/lib/auctions";
+import { checkEndingSoonNotifications } from "@/lib/notifications";
+import { buildAuctionMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  if (!id?.trim()) return {};
+
+  try {
+    const data = await getAuctionDetailData(id);
+    if (!data) return {};
+    return buildAuctionMetadata(data.auction);
+  } catch {
+    return {};
+  }
+}
 
 export default async function AuctionDetailPage({
   params,

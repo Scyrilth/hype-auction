@@ -2,8 +2,16 @@ import BrowseView from "@/components/browse/BrowseView";
 import AppShell from "@/components/layout/AppShell";
 import BackButton from "@/components/ui/BackButton";
 import { getBrowsePageData } from "@/lib/browse";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildPageMetadata({
+  title: "Browse Auctions — Hype Auction",
+  description:
+    "Discover live auctions, categories, and trending collectibles on Hype Auction.",
+  path: "/browse",
+});
 
 export default async function BrowsePage({
   searchParams,

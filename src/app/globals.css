@@ -421,25 +421,37 @@ body {
 
 .admin-tab-pill {
   border-radius: 9999px;
+  border: 1px solid transparent;
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
   line-height: 1rem;
   color: var(--muted);
-  transition: all 150ms ease-in-out;
+  transition:
+    background-color 150ms ease-in-out,
+    border-color 150ms ease-in-out,
+    color 150ms ease-in-out;
 }
 
-.admin-tab-pill:hover {
-  background: rgb(255 255 255 / 0.1);
-  color: white;
+.admin-tab-pill--inactive {
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(255 255 255 / 0.03);
+}
+
+.admin-tab-pill--inactive:hover {
+  background: rgb(124 58 237 / 0.15);
+  border-color: rgb(124 58 237 / 0.35);
+  color: rgb(216 180 254);
 }
 
 .admin-tab-pill--active {
   background: rgb(124 58 237 / 0.2);
+  border-color: rgb(124 58 237 / 0.35);
   color: rgb(216 180 254);
 }
 
 .admin-tab-pill--active:hover {
   background: rgb(124 58 237 / 0.28);
+  border-color: rgb(124 58 237 / 0.45);
   color: rgb(233 213 255);
 }
 

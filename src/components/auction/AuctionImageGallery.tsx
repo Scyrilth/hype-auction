@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 import {
   AuctionCategoryImagePlaceholder,
@@ -28,6 +29,10 @@ export default function AuctionImageGallery({
   const [activeIndex, setActiveIndex] = useState(0);
   const activeImage = images[activeIndex] ?? images[0];
   const title = auction.title?.trim() || "Auction";
+  const { publicKey } = useWallet();
+  const viewerWallet = publicKey?.toBase58() ?? null;
+  const showLiveBadge =
+    isLive && viewerWallet !== auction.seller_wallet;
 
   return (
     <div className="space-y-3">
@@ -48,7 +53,7 @@ export default function AuctionImageGallery({
           />
         )}
 
-        {isLive && (
+        {showLiveBadge && (
           <span className="absolute left-4 top-4 z-10 flex items-center gap-1.5 rounded-md bg-live-red px-2.5 py-1 text-xs font-bold uppercase text-white">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
             Live

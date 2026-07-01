@@ -2,8 +2,16 @@ import CategoryGrid from "@/components/categories/CategoryGrid";
 import AppShell from "@/components/layout/AppShell";
 import BackButton from "@/components/ui/BackButton";
 import { CATEGORIES, getLiveAuctionCountsByCategory } from "@/lib/categories";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata = buildPageMetadata({
+  title: "Categories — Hype Auction",
+  description:
+    "Explore live auctions across curated collectibles, sneakers, and streetwear categories.",
+  path: "/categories",
+});
 
 export default async function CategoriesPage() {
   const liveCounts = await getLiveAuctionCountsByCategory();

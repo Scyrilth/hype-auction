@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { adminTabClass } from "@/components/admin/admin-tab-styles";
 import {
   DATE_PRESETS,
   getDateRangeFromPreset,
@@ -40,11 +41,9 @@ export default function AdminDateRangeFilter({
             key={preset.id}
             type="button"
             onClick={() => selectPreset(preset.id)}
-            className={`rounded-full px-1.5 py-px text-[10px] font-medium transition-colors ${
+            className={adminTabClass(
               range.preset === preset.id && !range.isCustom
-                ? "bg-accent/20 text-purple-200"
-                : "border border-border bg-surface-elevated text-muted hover:border-accent/40 hover:text-white"
-            }`}
+            )}
           >
             {preset.label}
           </button>
@@ -73,7 +72,7 @@ export default function AdminDateRangeFilter({
         <button
           type="button"
           onClick={applyCustom}
-          className="rounded-full border border-border bg-surface-elevated px-1.5 py-px text-[10px] font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+          className={`${adminTabClass(false)} border border-border bg-surface-elevated`}
         >
           Apply
         </button>

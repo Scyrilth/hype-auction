@@ -11,6 +11,12 @@ import { WelcomeOnboardingGate } from "@/components/onboarding/WelcomeOnboarding
 import UserSync from "@/components/UserSync";
 import MobilePhantomTipLoader from "@/components/wallet/MobilePhantomTipLoader";
 import WalletContextProvider from "@/components/WalletContextProvider";
+import {
+  buildPageMetadata,
+  DEFAULT_DESCRIPTION,
+  getSiteUrl,
+  SITE_NAME,
+} from "@/lib/seo";
 
 import "./globals.css";
 
@@ -25,8 +31,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Hype Auction — Live Auctions on Solana",
-  description: "Live-streamed crypto auctions with on-chain escrow",
+  metadataBase: new URL(getSiteUrl()),
+  ...buildPageMetadata({
+    title: `${SITE_NAME} — Live Auctions on Solana`,
+    description: DEFAULT_DESCRIPTION,
+    path: "/",
+  }),
 };
 
 export default function RootLayout({

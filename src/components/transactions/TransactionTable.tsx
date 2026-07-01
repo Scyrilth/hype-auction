@@ -96,6 +96,34 @@ function CopyTransactionId({
   );
 }
 
+function CopyableWalletAddress({ address }: { address: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleCopy()}
+      className="font-mono text-muted transition-colors hover:text-white"
+      title={copied ? "Copied!" : `Copy ${address}`}
+    >
+      {shortenAddress(address, 3)}
+      {copied ? (
+        <span className="ml-1 text-[10px] font-medium text-emerald-400">Copied!</span>
+      ) : null}
+    </button>
+  );
+}
+
 function ScanLink({
   signature,
   solscanUrl,
@@ -418,8 +446,8 @@ export default function TransactionTable({
                             {row.itemTitle}
                           </Link>
                         </td>
-                        <td className="px-2 py-1.5 font-mono text-[10px] text-muted">
-                          {shortenAddress(row.buyerWallet, 3)}
+                        <td className="px-2 py-1.5 text-[10px]">
+                          <CopyableWalletAddress address={row.buyerWallet} />
                         </td>
                         <td className="px-2 py-1.5 text-[10px] text-muted">
                           {new Date(row.date).toLocaleDateString()}
@@ -458,8 +486,8 @@ export default function TransactionTable({
                             {row.itemTitle}
                           </Link>
                         </td>
-                        <td className="px-2 py-1.5 font-mono text-[10px] text-muted">
-                          {shortenAddress(row.sellerWallet, 3)}
+                        <td className="px-2 py-1.5 text-[10px]">
+                          <CopyableWalletAddress address={row.sellerWallet} />
                         </td>
                         <td className="px-2 py-1.5 text-[10px] text-muted">
                           {new Date(row.date).toLocaleDateString()}
