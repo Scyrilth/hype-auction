@@ -153,16 +153,16 @@ export default function DashboardProfileSummary({
           </Link>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:mt-3 lg:grid-cols-6 lg:gap-2">
           {statItems.map((item) => (
             <div
               key={item.label}
-              className="rounded-xl border border-border bg-background/60 px-3 py-3 text-center"
+              className="rounded-xl border border-border bg-background/60 px-3 py-3 text-center lg:px-2.5 lg:py-2"
             >
               <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
                 {item.label}
               </p>
-              <p className="mt-1 text-sm font-semibold text-white">
+              <p className="mt-1 text-sm font-semibold text-white lg:mt-0.5 lg:text-xs">
                 {item.label === "Average Rating" && stats.averageRating > 0 ? (
                   <span className="inline-flex flex-col items-center gap-1">
                     {item.value}
@@ -173,7 +173,7 @@ export default function DashboardProfileSummary({
                 )}
               </p>
               {item.fiatSolAmount !== undefined && (
-                <div className="mt-0.5 flex justify-center">
+                <div className="mt-0.5 flex justify-center lg:mt-0 [&_span]:lg:text-[10px]">
                   <FiatValue solAmount={item.fiatSolAmount} />
                 </div>
               )}

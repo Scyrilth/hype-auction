@@ -55,15 +55,15 @@ export default function BrowseSearchHero() {
         queryReady={queryReady}
         placeholder="Search auctions, vendors, categories..."
         listboxId="browse-search-suggestions"
-        inputClassName="w-full rounded-2xl border border-border bg-surface-elevated py-4 pl-12 pr-4 text-base text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        inputClassName="w-full rounded-2xl border border-border bg-surface-elevated py-4 pl-12 pr-4 text-base text-foreground placeholder:text-muted outline-none focus:border-accent focus:ring-1 focus:ring-accent lg:rounded-xl lg:py-3 lg:pl-11 lg:text-sm"
         leadingSlot={
           <button
             type="button"
             onClick={navigateToSearch}
-            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-muted transition-colors hover:text-white"
+            className="absolute left-4 top-1/2 z-10 -translate-y-1/2 text-muted transition-colors hover:text-white lg:left-3.5"
             aria-label="Search"
           >
-            <SearchIcon className="h-5 w-5" />
+            <SearchIcon className="h-5 w-5 lg:h-4 lg:w-4" />
           </button>
         }
       />

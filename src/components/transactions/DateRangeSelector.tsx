@@ -39,17 +39,17 @@ export default function DateRangeSelector({
       className={
         embedded
           ? "mb-4"
-          : "sticky top-0 z-20 -mx-5 border-b border-border bg-background/95 px-5 py-4 backdrop-blur-sm"
+          : "sticky top-0 z-20 -mx-5 border-b border-border bg-background/95 px-5 py-4 backdrop-blur-sm lg:py-2.5"
       }
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-3 lg:flex-row lg:flex-nowrap lg:items-center lg:gap-4">
+        <div className="flex flex-wrap gap-2 lg:min-w-0 lg:flex-1">
           {DATE_PRESETS.map((preset) => (
             <button
               key={preset.id}
               type="button"
               onClick={() => selectPreset(preset.id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors lg:px-2.5 lg:py-1 ${
                 range.preset === preset.id && !range.isCustom
                   ? "bg-accent text-white shadow-[0_0_12px_rgba(124,58,237,0.35)]"
                   : "border border-border bg-surface-elevated text-muted hover:border-accent/40 hover:text-white"
@@ -60,7 +60,7 @@ export default function DateRangeSelector({
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
           <label className="text-xs text-muted">
             From
             <input
@@ -82,7 +82,7 @@ export default function DateRangeSelector({
           <button
             type="button"
             onClick={applyCustom}
-            className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white"
+            className="rounded-full border border-border bg-surface-elevated px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:border-accent/50 hover:text-white lg:px-2.5 lg:py-1"
           >
             Apply
           </button>

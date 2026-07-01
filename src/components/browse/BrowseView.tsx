@@ -163,11 +163,11 @@ export default function BrowseView({
   }, [filterOpen]);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-10">
-      <header className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-10 lg:space-y-7">
+      <header className="space-y-6 lg:space-y-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">Browse</h1>
-          <p className="mt-1 text-sm text-muted">
+          <h1 className="text-3xl font-bold text-white lg:text-2xl">Browse</h1>
+          <p className="mt-1 text-sm text-muted lg:mt-0.5 lg:text-xs">
             Discover live auctions, categories, and trending items.
           </p>
         </div>
@@ -181,7 +181,7 @@ export default function BrowseView({
             <button
               type="button"
               onClick={() => setFilterOpen((open) => !open)}
-              className="relative flex h-12 items-center gap-2 rounded-2xl border border-border bg-surface-elevated px-3 text-muted transition-colors hover:border-accent/50 hover:text-white"
+              className="relative flex h-12 items-center gap-2 rounded-2xl border border-border bg-surface-elevated px-3 text-muted transition-colors hover:border-accent/50 hover:text-white lg:h-10 lg:rounded-xl"
               aria-label="Filter browse results by category"
               aria-expanded={filterOpen}
               aria-haspopup="true"
@@ -223,8 +223,8 @@ export default function BrowseView({
         </div>
       </header>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-bold text-white">Categories</h2>
+      <section className="space-y-4 lg:space-y-3">
+        <h2 className="text-xl font-bold text-white lg:text-lg">Categories</h2>
         <BrowseCategoryGrid categories={CATEGORIES} liveCounts={data.liveCounts} />
       </section>
 

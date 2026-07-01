@@ -44,21 +44,21 @@ function SummaryCard({
 
   return (
     <div
-      className={`rounded-xl border border-border bg-surface px-4 py-4 transition-colors ${borderAccent}`}
+      className={`rounded-xl border border-border bg-surface px-4 py-4 transition-colors lg:px-3 lg:py-2.5 ${borderAccent}`}
     >
       <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
         {label}
       </p>
-      <p className="mt-2 text-lg font-semibold text-white">
+      <p className="mt-2 text-lg font-semibold text-white lg:mt-1 lg:text-base">
         {solAmount.toFixed(4)} SOL
       </p>
-      <div className="mt-0.5">
+      <div className="mt-0.5 lg:mt-0 [&_span]:lg:text-[10px]">
         <FiatValue solAmount={solAmount} />
       </div>
       {suffix && (
-        <p className="mt-1 text-xs text-muted">{suffix}</p>
+        <p className="mt-1 text-xs text-muted lg:mt-0.5 lg:text-[10px]">{suffix}</p>
       )}
-      <div className="mt-2">
+      <div className="mt-2 lg:mt-1">
         <TrendIndicator metric={metric} />
         <span className="ml-1 text-[10px] text-muted">vs prev. period</span>
       </div>
@@ -79,7 +79,7 @@ export default function SummaryCards({
 
   if (role === "selling") {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2">
         <SummaryCard
           label="Total earned"
           solAmount={sellerSummary.totalEarned.current}
@@ -110,7 +110,7 @@ export default function SummaryCards({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-2">
       <SummaryCard
         label="Total spent"
         solAmount={buyerSummary.totalSpent.current}
@@ -130,14 +130,14 @@ export default function SummaryCards({
         metric={buyerSummary.totalRefunded}
         accent={accent}
       />
-      <div className="rounded-xl border border-border bg-surface px-4 py-4 transition-colors hover:border-blue-500/40">
+      <div className="rounded-xl border border-border bg-surface px-4 py-4 transition-colors hover:border-blue-500/40 lg:px-3 lg:py-2.5">
         <p className="text-[10px] font-medium uppercase tracking-wider text-muted">
           Purchases completed
         </p>
-        <p className="mt-2 text-lg font-semibold text-white">
+        <p className="mt-2 text-lg font-semibold text-white lg:mt-1 lg:text-base">
           {buyerSummary.purchasesCompleted.current}
         </p>
-        <div className="mt-2">
+        <div className="mt-2 lg:mt-1">
           <TrendIndicator metric={buyerSummary.purchasesCompleted} />
           <span className="ml-1 text-[10px] text-muted">vs prev. period</span>
         </div>
