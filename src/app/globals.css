@@ -217,6 +217,24 @@ body {
   }
 }
 
+@keyframes glow-pulse {
+  0%,
+  100% {
+    text-shadow:
+      0 0 4px #4ade80,
+      0 0 8px #4ade80;
+  }
+  50% {
+    text-shadow:
+      0 0 10px #4ade80,
+      0 0 20px #4ade80;
+  }
+}
+
+.glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
 @keyframes vendor-suggestions-fade-in {
   from {
     opacity: 0;

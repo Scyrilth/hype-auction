@@ -25,15 +25,25 @@ function LogoMark({
   );
 }
 
-function BrandText() {
+function BrandText({ variant = "default" }: { variant?: "default" | "sidebar" }) {
+  const isSidebar = variant === "sidebar";
+
   return (
-    <div className="flex flex-col">
-      <span className="text-[15px] font-bold leading-tight text-white">
+    <div className="flex min-w-0 flex-col">
+      <span
+        className={
+          isSidebar
+            ? "whitespace-nowrap text-[13px] font-bold leading-tight text-white"
+            : "text-[15px] font-bold leading-tight text-white"
+        }
+      >
         Hype Auction
       </span>
       <span
-        className="mt-px text-[9px] leading-tight"
-        style={{ color: "#6b5fa0" }}
+        className={`mt-px text-[9px] leading-tight ${
+          isSidebar ? "glow-pulse" : ""
+        }`.trim()}
+        style={{ color: isSidebar ? "#4ade80" : "#6b5fa0" }}
       >
         Live Auctions. On Solana.
       </span>
@@ -46,16 +56,18 @@ export default function HypeAuctionLogo({
   className = "",
   asLink = true,
   showText = true,
+  variant = "default",
 }: {
   imageClassName?: string;
   className?: string;
   asLink?: boolean;
   showText?: boolean;
+  variant?: "default" | "sidebar";
 }) {
   const content = (
     <div className={`flex items-center gap-2 ${className}`.trim()}>
       <LogoMark className={imageClassName} />
-      {showText ? <BrandText /> : null}
+      {showText ? <BrandText variant={variant} /> : null}
     </div>
   );
 
