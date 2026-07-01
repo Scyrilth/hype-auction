@@ -133,11 +133,6 @@ function SuggestionRow({
               <span className="truncate text-sm font-medium">
                 {suggestion.title}
               </span>
-              {suggestion.isLive && (
-                <span className="shrink-0 rounded bg-live-red/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-live-red">
-                  Live
-                </span>
-              )}
             </span>
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
               <span className="truncate">{suggestion.vendorName}</span>

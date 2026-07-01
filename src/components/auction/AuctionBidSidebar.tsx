@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -80,6 +80,7 @@ export default function AuctionBidSidebar({
   const [strikeSummary, setStrikeSummary] = useState<BuyerStrikeSummary | null>(
     null
   );
+  const seenBidIdsRef = useRef(new Set<string>());
 
   const minimumBid = useMemo(
     () => getMinimumBid({ ...auction, current_bid: currentBid }),
@@ -134,7 +135,53 @@ export default function AuctionBidSidebar({
     };
   }, [client, wallet]);
 
+  useEffect(() => {
+    if (!isLive) return;
+
+    const channel = client
+      .channel(`auction-bids:${auction.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "bids",
+          filter: `auction_id=eq.${auction.id}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            id?: string;
+            bidder_wallet?: string;
+            amount?: number;
+          } | null;
+          const bidId = row?.id;
+          if (!bidId || seenBidIdsRef.current.has(bidId)) return;
+          seenBidIdsRef.current.add(bidId);
+
+          const bidderWallet = row?.bidder_wallet?.trim();
+          const amount = Number(row?.amount);
+          if (!bidderWallet || !Number.isFinite(amount)) return;
+
+          setTopBidder(bidderWallet);
+          setTopBidderUsername(null);
+          setCurrentBid(amount);
+          if (bidderWallet !== wallet) {
+            setBidCount((count) => count + 1);
+          }
+          setBidInput((Math.round((amount + 0.1) * 100) / 100).toFixed(2));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      client.removeChannel(channel);
+    };
+  }, [auction.id, client, isLive, wallet]);
+
   const isWalletConnected = connected && Boolean(publicKey);
+  const walletAddress = publicKey?.toBase58() ?? null;
+  const isHighestBidder =
+    Boolean(walletAddress) && isLive && topBidder === walletAddress;
 
   const topBidderLabel = topBidderUsername
     ? `@${topBidderUsername.replace(/^@+/, "")}`
@@ -263,6 +310,11 @@ export default function AuctionBidSidebar({
               </button>
             ) : (
               <>
+                {isHighestBidder && (
+                  <p className="text-xs font-medium text-emerald-400">
+                    You&apos;re the highest bidder
+                  </p>
+                )}
                 <div>
                   <label
                     htmlFor="bid-amount"
@@ -297,7 +349,9 @@ export default function AuctionBidSidebar({
                 >
                   {isPlacingBid || loadingAddresses
                     ? "Placing bid..."
-                    : "Place Bid"}
+                    : isHighestBidder
+                      ? "Increase Bid"
+                      : "Place Bid"}
                 </button>
 
                 {strikeSummary?.status === "banned" && (

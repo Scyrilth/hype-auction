@@ -19,10 +19,6 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
   const title = auction.title?.trim() || "Untitled Auction";
   const description = auction.description?.trim() ?? "";
   const itemDetails = auction.item_details ?? {};
-  const endTime = auction.end_time ?? new Date().toISOString();
-  const isLive =
-    auction.status === "live" &&
-    new Date(endTime).getTime() > Date.now();
   const grading = getGradingFromItemDetails(itemDetails);
   const detailEntries = Object.entries(filterCustomItemDetails(itemDetails));
 
@@ -30,7 +26,7 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
     <div className="mx-auto max-w-6xl space-y-8">
       <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
         <div className="space-y-6 lg:col-span-2">
-          <AuctionImageGallery auction={auction} isLive={isLive} />
+          <AuctionImageGallery auction={auction} />
 
           <div>
             <h1 className="text-xl font-bold text-white sm:text-2xl">
