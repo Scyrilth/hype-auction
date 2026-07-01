@@ -22,6 +22,7 @@ export type NotificationType =
   | "offer_sent_confirmation"
   | "payment_confirmed"
   | "funds_released"
+  | "transaction_complete"
   | "dispute_resolved"
   | "tracking_uploaded";
 
@@ -433,16 +434,16 @@ export async function notifyPaymentConfirmed({
   sellerWallet,
   auctionTitle,
   threadId,
-  amountSol,
+  totalSol,
 }: {
   buyerWallet: string;
   sellerWallet: string;
   auctionTitle: string;
   threadId: string;
-  amountSol: number;
+  totalSol: number;
 }): Promise<void> {
   const link = `/messages/${threadId}`;
-  const sol = formatSol(amountSol);
+  const total = formatSol(totalSol);
 
   await createNotification(
     buyerWallet,
@@ -455,8 +456,34 @@ export async function notifyPaymentConfirmed({
   await createNotification(
     sellerWallet,
     "payment_confirmed",
-    "Payment secured! 💰",
-    `Buyer paid ${sol} for ${auctionTitle}. Ship the item and upload tracking to release your funds.`,
+    "Payment secured in escrow",
+    `${shortenAddress(buyerWallet)} has paid ${total} for ${auctionTitle}. Funds are locked in escrow — ship the item to release payment.`,
+    link
+  );
+}
+
+export async function notifyTransactionComplete({
+  buyerWallet,
+  auctionTitle,
+  threadId,
+}: {
+  buyerWallet: string;
+  auctionTitle: string;
+  threadId: string;
+}): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(
+    buyerWallet,
+    "transaction_complete",
+    link
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    buyerWallet,
+    "transaction_complete",
+    "Transaction complete",
+    `You confirmed receipt of ${auctionTitle}. Funds have been released to the seller. This order is now complete.`,
     link
   );
 }

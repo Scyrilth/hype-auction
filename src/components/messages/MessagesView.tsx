@@ -15,6 +15,7 @@ import {
   formatOrderRef,
   getThreadThumbnail,
   getThreadsForWallet,
+  isThreadOrderComplete,
   markAllThreadMessagesRead,
   type MessagesTab,
   type ThreadListItem,
@@ -87,6 +88,11 @@ function ThreadRow({ thread }: { thread: ThreadListItem }) {
             <span className="text-[11px] text-muted">
               {formatRelativeTime(time)}
             </span>
+            {isThreadOrderComplete(thread) && (
+              <span className="rounded-md bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
+                Completed
+              </span>
+            )}
             {thread.status === "archived" && (
               <span className="rounded-md bg-surface-elevated px-1.5 py-0.5 text-[10px] font-semibold uppercase text-muted">
                 Archived

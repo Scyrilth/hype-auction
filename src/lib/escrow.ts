@@ -3,7 +3,7 @@ import {
   Connection,
   LAMPORTS_PER_SOL,
   PublicKey,
-  type Transaction,
+  Transaction,
   type TransactionSignature,
   type VersionedTransaction,
 } from "@solana/web3.js";
@@ -12,7 +12,8 @@ import { createSolanaConnection, isSolanaDevnet } from "@/lib/solana-config";
 import { HYPE_ESCROW_IDL } from "@/lib/hype-escrow-idl";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
-import { getAuctionThreadId } from "@/lib/messages";
+import { formatSol } from "@/lib/format";
+import { getAuctionThreadId, insertThreadSystemMessage } from "@/lib/messages";
 import {
   logEscrowFunded,
   logEscrowRefunded,
@@ -266,7 +267,7 @@ export async function initiatePayment(
     const sellerPk = new PublicKey(sellerWallet);
     const platformPk = new PublicKey(platformWallet);
 
-    await program.methods
+    const initTx = await program.methods
       .initializeEscrow(
         auctionIdArg,
         sellerPk,
@@ -282,15 +283,22 @@ export async function initiatePayment(
         platformWallet: platformPk,
         escrow: escrowPda,
       })
-      .rpc();
+      .transaction();
 
-    const depositSig = (await program.methods
+    const depositTx = await program.methods
       .deposit(auctionIdArg)
       .accounts({
         buyer: wallet.publicKey,
         escrow: escrowPda,
       })
-      .rpc()) as TransactionSignature;
+      .transaction();
+
+    const transaction = new Transaction();
+    transaction.add(...initTx.instructions, ...depositTx.instructions);
+
+    const depositSig = (await provider.sendAndConfirm(transaction, [], {
+      commitment: "confirmed",
+    })) as TransactionSignature;
 
     const totalLamports = amountLamports + shippingLamports;
     const paymentCompletedAt = new Date().toISOString();
@@ -346,12 +354,21 @@ export async function initiatePayment(
       ]);
 
       if (threadId && auctionRow?.title) {
+        const auctionTitle = auctionRow.title as string;
+        const totalSol = totalLamports / LAMPORTS_PER_SOL;
+
+        await insertThreadSystemMessage(
+          threadId,
+          `💰 Payment secured in escrow. ${formatSol(totalSol)} locked for ${auctionTitle}.`,
+          buyerWallet
+        );
+
         await notifyPaymentConfirmed({
           buyerWallet,
           sellerWallet,
-          auctionTitle: auctionRow.title as string,
+          auctionTitle,
           threadId,
-          amountSol: bidAmountSol,
+          totalSol,
         });
 
         const { error: threadEscrowError } = await supabase

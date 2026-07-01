@@ -10,6 +10,7 @@ import {
   getUserDisplayName,
   notifyFundsReleased,
   notifyNewMessage,
+  notifyTransactionComplete,
 } from "@/lib/notifications";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
@@ -51,10 +52,33 @@ export interface ThreadParticipant {
 }
 
 export interface ThreadListItem extends MessageThread {
-  auction: Pick<Auction, "id" | "title" | "image_url" | "status"> | null;
+  auction: Pick<
+    Auction,
+    "id" | "title" | "image_url" | "status" | "escrow_state"
+  > | null;
   other_party: ThreadParticipant;
   last_message: DirectMessage | null;
   unread_count: number;
+}
+
+export const MESSAGES_UNREAD_CHANGE_EVENT = "hype-messages-unread-change";
+
+export function dispatchMessagesUnreadChange(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(MESSAGES_UNREAD_CHANGE_EVENT));
+  }
+}
+
+export function isThreadOrderComplete(
+  thread: Pick<MessageThread, "confirmed_at" | "escrow_status"> & {
+    auction?: Pick<Auction, "escrow_state" | "status"> | null;
+  }
+): boolean {
+  if (thread.confirmed_at) return true;
+  if (thread.escrow_status === "complete") return true;
+  if (thread.auction?.escrow_state === "complete") return true;
+  if (thread.auction?.status === "completed") return true;
+  return false;
 }
 
 export interface ThreadDetail extends MessageThread {
@@ -334,6 +358,7 @@ async function enrichThreadRows(
         title: row.title as string,
         image_url: (row.image_url as string | null) ?? null,
         status: row.status as Auction["status"],
+        escrow_state: (row.escrow_state as Auction["escrow_state"]) ?? null,
       },
     ])
   );
@@ -526,6 +551,7 @@ export async function insertThreadSystemMessage(
   });
 
   if (error) throw error;
+  dispatchMessagesUnreadChange();
 }
 
 export async function createAuctionThread(
@@ -749,7 +775,7 @@ export async function markThreadMessagesRead(
   if (error) throw error;
 }
 
-/** Marks non-system messages from others as read across all user threads. */
+/** Marks messages from others as read across all user threads. */
 export async function markAllThreadMessagesRead(
   wallet: string,
   client: SupabaseClient = supabase
@@ -768,7 +794,6 @@ export async function markAllThreadMessagesRead(
     .update({ is_read: true })
     .in("thread_id", threadIds)
     .neq("sender_wallet", wallet)
-    .eq("is_system", false)
     .eq("is_read", false);
 
   if (error) throw error;
@@ -840,6 +865,7 @@ export async function confirmReceipt(
     .update({
       confirmed_at: new Date().toISOString(),
       archive_at: archiveAt,
+      escrow_status: "complete",
     })
     .eq("id", threadId)
     .eq("buyer_wallet", buyerWallet)
@@ -876,10 +902,16 @@ export async function confirmReceipt(
     if (auctionLoadError) throw auctionLoadError;
 
     if (auctionRow?.title) {
+      const auctionTitle = auctionRow.title as string;
       await notifyFundsReleased({
         sellerWallet: existingThread.seller_wallet as string,
-        auctionTitle: auctionRow.title as string,
+        auctionTitle,
         amount: Number(auctionRow.current_bid ?? 0),
+        threadId,
+      });
+      await notifyTransactionComplete({
+        buyerWallet,
+        auctionTitle,
         threadId,
       });
     }

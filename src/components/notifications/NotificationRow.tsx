@@ -21,6 +21,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   offer_sent_confirmation: "ti-send",
   payment_confirmed: "ti-circle-check",
   funds_released: "ti-cash",
+  transaction_complete: "ti-circle-check",
   dispute_resolved: "ti-scale",
   tracking_uploaded: "ti-truck",
 };

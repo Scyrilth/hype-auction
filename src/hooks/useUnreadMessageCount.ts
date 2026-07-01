@@ -4,7 +4,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
-import { getUnreadMessageCount } from "@/lib/messages";
+import {
+  getUnreadMessageCount,
+  MESSAGES_UNREAD_CHANGE_EVENT,
+} from "@/lib/messages";
 
 export function useUnreadMessageCount() {
   const { publicKey, connected } = useWallet();
@@ -36,6 +39,55 @@ export function useUnreadMessageCount() {
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [refresh]);
+
+  useEffect(() => {
+    const handleUnreadChange = () => void refresh();
+    window.addEventListener(MESSAGES_UNREAD_CHANGE_EVENT, handleUnreadChange);
+    return () =>
+      window.removeEventListener(MESSAGES_UNREAD_CHANGE_EVENT, handleUnreadChange);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!connected || !publicKey) return;
+
+    let channel: ReturnType<typeof client.channel> | null = null;
+
+    try {
+      channel = client
+        .channel(`unread-messages:${publicKey.toBase58()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "direct_messages",
+          },
+          () => {
+            void refresh();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "direct_messages",
+          },
+          () => {
+            void refresh();
+          }
+        )
+        .subscribe();
+    } catch {
+      // Realtime is optional — polling and custom events still refresh the badge
+    }
+
+    return () => {
+      if (channel) {
+        client.removeChannel(channel);
+      }
+    };
+  }, [client, connected, publicKey, refresh]);
 
   return { count, refresh };
 }

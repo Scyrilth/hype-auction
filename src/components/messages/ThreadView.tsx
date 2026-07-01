@@ -242,6 +242,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     useState<PaymentBreakdown | null>(null);
   const [offerResponding, setOfferResponding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const payInFlightRef = useRef(false);
 
   const wallet = publicKey?.toBase58();
   const isArchived = thread?.status === "archived";
@@ -423,10 +424,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       !anchorWallet ||
       !thread?.auction_id ||
       !thread.auction ||
-      paying
+      paying ||
+      payInFlightRef.current
     ) {
       return;
     }
+
+    payInFlightRef.current = true;
 
     const latestOffer = thread
       ? getLatestOfferForWallet(thread.messages, wallet)
@@ -496,6 +500,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     } catch (error) {
       setPaymentError(getErrorMessage(error));
     } finally {
+      payInFlightRef.current = false;
       setPaying(false);
     }
   };
@@ -872,18 +877,26 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           )}
 
           {(showConfirmReceipt || thread.confirmed_at) && (
-            <button
-              type="button"
-              onClick={handleConfirmReceipt}
-              disabled={Boolean(thread.confirmed_at) || confirming}
-              className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {thread.confirmed_at
-                ? "Receipt Confirmed ✓"
-                : confirming
-                  ? "Confirming..."
-                  : "✓ Confirm Receipt"}
-            </button>
+            <div className="space-y-2">
+              {!thread.confirmed_at && (
+                <p className="text-xs leading-relaxed text-muted">
+                  This step releases payment on-chain — a small network fee
+                  (~0.0001 SOL) will apply.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={handleConfirmReceipt}
+                disabled={Boolean(thread.confirmed_at) || confirming}
+                className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {thread.confirmed_at
+                  ? "Receipt Confirmed ✓"
+                  : confirming
+                    ? "Confirming..."
+                    : "✓ Confirm Receipt"}
+              </button>
+            </div>
           )}
 
           <div className="rounded-2xl border border-border bg-surface p-2.5 sm:p-3">
