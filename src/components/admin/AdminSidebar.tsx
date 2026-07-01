@@ -28,7 +28,7 @@ export default function AdminSidebar() {
         className="mb-4 block"
         aria-label="Back to Hype Auction home"
       >
-        <HypeAuctionLogo className="h-9 w-full max-w-[9.5rem]" />
+        <HypeAuctionLogo />
       </Link>
       <div className="mb-5 border-b border-border pb-5" />
 

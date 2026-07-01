@@ -115,7 +115,7 @@ export default function TopNav() {
           <i className="ti ti-menu-2 text-lg leading-none" aria-hidden />
         </button>
 
-        <HypeAuctionLogo className="h-5 w-[4.75rem] shrink-0 md:hidden" />
+        <HypeAuctionLogo className="shrink-0 md:hidden" />
 
         <div className="relative min-w-0 flex-1 md:max-w-[11rem] lg:max-w-[14rem] xl:max-w-[16rem]">
           <SearchSuggestionsDropdown

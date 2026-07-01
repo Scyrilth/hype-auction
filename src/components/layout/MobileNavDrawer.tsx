@@ -64,7 +64,7 @@ export default function MobileNavDrawer({
         aria-label="Navigation menu"
       >
         <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-          <HypeAuctionLogo className="h-7 w-auto max-w-[8.5rem]" />
+          <HypeAuctionLogo />
           <button
             type="button"
             onClick={onClose}

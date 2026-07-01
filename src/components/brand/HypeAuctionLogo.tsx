@@ -1,29 +1,47 @@
 import Link from "next/link";
 
+function BrandText() {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[15px] font-bold leading-tight text-white">
+        Hype Auction
+      </span>
+      <span
+        className="mt-px text-[9px] leading-tight"
+        style={{ color: "#6b5fa0" }}
+      >
+        Live Auctions. On Solana.
+      </span>
+    </div>
+  );
+}
+
 export default function HypeAuctionLogo({
-  className = "h-9 w-auto",
+  imageClassName = "h-9 w-auto",
+  className = "",
   asLink = true,
+  showText = true,
 }: {
+  imageClassName?: string;
   className?: string;
   asLink?: boolean;
+  showText?: boolean;
 }) {
   const content = (
-    <img
-      src="/hypeauction-logo.png"
-      alt="Hype Auction"
-      className={className}
-      style={{ mixBlendMode: "multiply" }}
-    />
+    <div className={`flex items-center gap-2 ${className}`.trim()}>
+      <img
+        src="/hypeauction-logo.png"
+        alt="Hype Auction"
+        className={imageClassName}
+      />
+      {showText ? <BrandText /> : null}
+    </div>
   );
 
   if (!asLink) return content;
 
   return (
-    <Link
-      href="/"
-      className="inline-block transition-opacity hover:opacity-90"
-      aria-label="Hype Auction home"
-    >
+    <Link href="/" className="inline-block" aria-label="Hype Auction home">
       {content}
     </Link>
   );
@@ -36,7 +54,6 @@ export function HypeAuctionMark({ className = "h-8 w-8" }: { className?: string 
       src="/hypeauction-logo.png"
       alt="Hype Auction"
       className={className}
-      style={{ mixBlendMode: "multiply" }}
     />
   );
 }
