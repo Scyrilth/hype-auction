@@ -192,7 +192,7 @@ export default function SidebarNavContent({
     <div className={`flex min-h-0 flex-1 flex-col ${className}`.trim()}>
       {showLogo ? (
         <div className="mb-3 shrink-0">
-          <HypeAuctionLogo />
+          <HypeAuctionLogo imageClassName="h-14 w-14" />
         </div>
       ) : null}
 
