@@ -32,6 +32,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
+  verification: {
+    google: "EkjLwV4KMPbJRe4ekNFPiyQC9Hkflp1cpo227ZPNi4s",
+  },
   ...buildPageMetadata({
     title: `${SITE_NAME} — Live Auctions on Solana`,
     description: DEFAULT_DESCRIPTION,
