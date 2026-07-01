@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   AuctionCategoryImagePlaceholder,
@@ -22,8 +23,13 @@ export default function AuctionImageGallery({ auction }: { auction: Auction }) {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const activeImage = images[activeIndex] ?? images[0];
   const title = auction.title?.trim() || "Auction";
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const goToPrevious = useCallback(() => {
     if (images.length <= 1) return;
@@ -65,6 +71,70 @@ export default function AuctionImageGallery({ auction }: { auction: Auction }) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [closeLightbox, goToNext, goToPrevious, lightboxOpen]);
+
+  const lightbox =
+    lightboxOpen && activeImage ? (
+      <div
+        className="fixed inset-0 z-[9999] flex h-[100dvh] w-screen min-h-[100vh] min-w-[100vw] items-center justify-center bg-black/90 p-4 sm:p-8"
+        onClick={closeLightbox}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${title} image viewer`}
+      >
+        <button
+          type="button"
+          onClick={closeLightbox}
+          className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-black/70"
+        >
+          Close
+        </button>
+
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                goToPrevious();
+              }}
+              className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition-colors hover:bg-black/70 sm:left-6"
+              aria-label="Previous image"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                goToNext();
+              }}
+              className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition-colors hover:bg-black/70 sm:right-6"
+              aria-label="Next image"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+          </>
+        )}
+
+        <div
+          className="max-h-full max-w-full overflow-auto"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={activeImage}
+            alt={title}
+            className="mx-auto max-h-[calc(100vh-4rem)] w-auto max-w-full object-contain"
+          />
+        </div>
+
+        {images.length > 1 && (
+          <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/70">
+            {activeIndex + 1} / {images.length}
+          </p>
+        )}
+      </div>
+    ) : null;
 
   return (
     <>
@@ -121,68 +191,7 @@ export default function AuctionImageGallery({ auction }: { auction: Auction }) {
         )}
       </div>
 
-      {lightboxOpen && activeImage && (
-        <div
-          className="fixed inset-0 z-[9999] flex h-screen w-screen min-h-[100vh] min-w-[100vw] items-center justify-center bg-black/90 p-4 sm:p-8"
-          onClick={closeLightbox}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${title} image viewer`}
-        >
-          <button
-            type="button"
-            onClick={closeLightbox}
-            className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/50 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-black/70"
-          >
-            Close
-          </button>
-
-          {images.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  goToPrevious();
-                }}
-                className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition-colors hover:bg-black/70 sm:left-6"
-                aria-label="Previous image"
-              >
-                <ChevronLeftIcon className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  goToNext();
-                }}
-                className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition-colors hover:bg-black/70 sm:right-6"
-                aria-label="Next image"
-              >
-                <ChevronRightIcon className="h-5 w-5" />
-              </button>
-            </>
-          )}
-
-          <div
-            className="max-h-full max-w-full overflow-auto"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={activeImage}
-              alt={title}
-              className="mx-auto max-h-[calc(100vh-4rem)] w-auto max-w-full object-contain"
-            />
-          </div>
-
-          {images.length > 1 && (
-            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/70">
-              {activeIndex + 1} / {images.length}
-            </p>
-          )}
-        </div>
-      )}
+      {mounted && lightbox ? createPortal(lightbox, document.body) : null}
     </>
   );
 }
