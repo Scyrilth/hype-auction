@@ -33,15 +33,15 @@ function BrandText({ variant = "default" }: { variant?: "default" | "sidebar" })
       <span
         className={
           isSidebar
-            ? "whitespace-nowrap text-[13px] font-bold leading-tight text-white"
+            ? "whitespace-nowrap text-[12px] font-bold leading-tight text-white"
             : "text-[15px] font-bold leading-tight text-white"
         }
       >
         Hype Auction
       </span>
       <span
-        className={`mt-px text-[9px] leading-tight ${
-          isSidebar ? "glow-pulse" : ""
+        className={`mt-px leading-tight ${
+          isSidebar ? "glow-pulse whitespace-nowrap text-[8px]" : "text-[9px]"
         }`.trim()}
         style={{ color: isSidebar ? "#4ade80" : "#6b5fa0" }}
       >
