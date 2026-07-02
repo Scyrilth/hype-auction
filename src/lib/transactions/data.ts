@@ -104,6 +104,14 @@ function buildBuyerRow(
 ): BuyerTransactionRow | null {
   if (event.is_platform_fee) return null;
 
+  const normalizedBuyerWallet = buyerWallet.trim();
+  if (
+    event.event_type === "funded" &&
+    event.from_wallet.trim() !== normalizedBuyerWallet
+  ) {
+    return null;
+  }
+
   const eventEscrowState = mapLedgerEventToEscrowState(event.event_type);
   const escrowState = resolveDisplayEscrowState(
     eventEscrowState,
@@ -118,6 +126,7 @@ function buildBuyerRow(
     reference: event.auction.reference_number,
     itemTitle: event.auction.title,
     sellerWallet: event.auction.seller_wallet,
+    fromWallet: event.from_wallet,
     date: event.created_at,
     amounts: buildAmountsFromLamports(
       event.amount_lamports,

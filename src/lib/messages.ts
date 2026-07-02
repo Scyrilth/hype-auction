@@ -13,6 +13,7 @@ import {
   notifyTransactionComplete,
 } from "@/lib/notifications";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
+import { incrementVendorSaleStats } from "@/lib/vendors";
 import { upsertUser } from "@/lib/users";
 
 export type ThreadStatus = "active" | "archived";
@@ -881,6 +882,14 @@ export async function confirmReceipt(
   );
 
   if (auctionId) {
+    const { data: priorAuction, error: priorAuctionError } = await client
+      .from("auctions")
+      .select("status")
+      .eq("id", auctionId)
+      .maybeSingle();
+
+    if (priorAuctionError) throw priorAuctionError;
+
     const { error: auctionError } = await client
       .from("auctions")
       .update({
@@ -900,6 +909,19 @@ export async function confirmReceipt(
       .maybeSingle();
 
     if (auctionLoadError) throw auctionLoadError;
+
+    const saleAmount = Number(auctionRow?.current_bid ?? 0);
+    if (
+      priorAuction?.status !== "completed" &&
+      saleAmount > 0 &&
+      existingThread.seller_wallet
+    ) {
+      await incrementVendorSaleStats(
+        existingThread.seller_wallet as string,
+        saleAmount,
+        client
+      );
+    }
 
     if (auctionRow?.title) {
       const auctionTitle = auctionRow.title as string;

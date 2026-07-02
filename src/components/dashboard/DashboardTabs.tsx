@@ -163,65 +163,74 @@ function PastAuctionCard({ auction }: { auction: SellerAuctionWithStats }) {
   const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-      <div className="relative aspect-[16/10] bg-surface-elevated opacity-90">
-        <Image
-          src={imageSrc}
-          alt={auction.title}
-          fill
-          className="object-cover"
-          unoptimized
+    <article className="relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50">
+      <Link
+        href={`/auction/${auction.id}`}
+        className="absolute inset-0 z-0 cursor-pointer"
+        aria-label={`View ${auction.title}`}
+      />
+      <div className="relative z-10 flex flex-1 flex-col pointer-events-none">
+        <div className="relative aspect-[16/10] bg-surface-elevated opacity-90">
+          <Image
+            src={imageSrc}
+            alt={auction.title}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        </div>
+        <AuctionCardContent
+          header={
+            <>
+              <AuctionCardTitle>{auction.title}</AuctionCardTitle>
+              <AuctionLabelBadges
+                auction={auction}
+                bidCount={auction.bidCount}
+                className="mt-2"
+              />
+              {auction.reference_number && (
+                <div className="mt-2">
+                  <ReferenceNumber referenceNumber={auction.reference_number} />
+                </div>
+              )}
+            </>
+          }
+          footer={
+            <>
+              <div>
+                <p className="text-xs text-muted">Final bid</p>
+                <p className="text-lg font-bold text-accent">
+                  {formatSol(displayBid)}
+                </p>
+                <FiatValue solAmount={displayBid} />
+              </div>
+              <p className="mt-2 text-xs text-muted">
+                Winner:{" "}
+                {auction.winnerWallet
+                  ? shortenAddress(auction.winnerWallet, 6)
+                  : "No bids"}
+              </p>
+              {auction.winnerWallet && (
+                <div className="pointer-events-auto mt-3">
+                  <MessageThreadButton
+                    variant="buyer"
+                    auctionId={auction.id}
+                    auctionTitle={auction.title}
+                    sellerWallet={auction.seller_wallet}
+                    buyerWallet={auction.winnerWallet}
+                    className="w-full rounded-full border border-border py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
+                  />
+                </div>
+              )}
+              {auction.winnerWallet && (
+                <div className="pointer-events-auto">
+                  <PastAuctionShipping auction={auction} />
+                </div>
+              )}
+            </>
+          }
         />
       </div>
-      <AuctionCardContent
-        header={
-          <>
-            <AuctionCardTitle>{auction.title}</AuctionCardTitle>
-            <AuctionLabelBadges
-              auction={auction}
-              bidCount={auction.bidCount}
-              className="mt-2"
-            />
-            {auction.reference_number && (
-              <div className="mt-2">
-                <ReferenceNumber referenceNumber={auction.reference_number} />
-              </div>
-            )}
-          </>
-        }
-        footer={
-          <>
-            <div>
-              <p className="text-xs text-muted">Final bid</p>
-              <p className="text-lg font-bold text-accent">
-                {formatSol(displayBid)}
-              </p>
-              <FiatValue solAmount={displayBid} />
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              Winner:{" "}
-              {auction.winnerWallet
-                ? shortenAddress(auction.winnerWallet, 6)
-                : "No bids"}
-            </p>
-            {auction.winnerWallet && (
-              <div className="mt-3">
-                <MessageThreadButton
-                  variant="buyer"
-                  auctionId={auction.id}
-                  auctionTitle={auction.title}
-                  sellerWallet={auction.seller_wallet}
-                  buyerWallet={auction.winnerWallet}
-                  className="w-full rounded-full border border-border py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-accent/50 hover:text-white disabled:opacity-60"
-                />
-              </div>
-            )}
-            {auction.winnerWallet && (
-              <PastAuctionShipping auction={auction} />
-            )}
-          </>
-        }
-      />
     </article>
   );
 }

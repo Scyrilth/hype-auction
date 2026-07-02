@@ -90,11 +90,38 @@ export async function getVendorPastAuctions(
     .from("auctions")
     .select("*")
     .eq("seller_wallet", sellerWallet)
-    .eq("status", "ended")
+    .in("status", ["ended", "completed"])
     .order("end_time", { ascending: false });
 
   if (error) throw error;
   return (data ?? []).map(parseAuctionRow);
+}
+
+export async function incrementVendorSaleStats(
+  sellerWallet: string,
+  saleAmountSol: number,
+  client: SupabaseClient = supabase
+): Promise<void> {
+  if (saleAmountSol <= 0) return;
+
+  const { data: vendor, error: loadError } = await client
+    .from("users")
+    .select("total_sales, total_volume")
+    .eq("wallet_address", sellerWallet)
+    .maybeSingle();
+
+  if (loadError) throw loadError;
+  if (!vendor) return;
+
+  const { error: updateError } = await client
+    .from("users")
+    .update({
+      total_sales: Number(vendor.total_sales ?? 0) + 1,
+      total_volume: Number(vendor.total_volume ?? 0) + saleAmountSol,
+    })
+    .eq("wallet_address", sellerWallet);
+
+  if (updateError) throw updateError;
 }
 
 export function buildVendorStats(
@@ -427,7 +454,7 @@ export async function getSuggestedVendorsForShop(
     const status = auction.status as string;
     const endTime = auction.end_time as string;
 
-    if (status === "ended") {
+    if (status === "ended" || status === "completed") {
       salesByVendor.set(wallet, (salesByVendor.get(wallet) ?? 0) + 1);
     }
 
@@ -531,7 +558,7 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
     const status = auction.status as string;
     const endTime = auction.end_time as string;
 
-    if (status === "ended") {
+    if (status === "ended" || status === "completed") {
       salesByVendor.set(wallet, (salesByVendor.get(wallet) ?? 0) + 1);
     }
 

@@ -92,8 +92,8 @@ function parseLedgerRow(row: Record<string, unknown>): EscrowTransaction {
     thread_id: (row.thread_id as string | null) ?? null,
     event_type: row.event_type as EscrowLedgerEventType,
     direction: row.direction as EscrowLedgerDirection,
-    from_wallet: row.from_wallet as string,
-    to_wallet: row.to_wallet as string,
+    from_wallet: (row.from_wallet as string).trim(),
+    to_wallet: (row.to_wallet as string).trim(),
     amount_lamports: Number(row.amount_lamports),
     is_platform_fee: Boolean(row.is_platform_fee),
     on_chain_signature: (row.on_chain_signature as string | null) ?? null,
@@ -613,8 +613,11 @@ export function directionForWallet(
   row: EscrowTransaction,
   wallet: string
 ): EscrowLedgerDirection {
-  if (row.to_wallet === wallet) return "inward";
-  if (row.from_wallet === wallet) return "outward";
+  const normalizedWallet = wallet.trim();
+  const fromWallet = row.from_wallet.trim();
+  const toWallet = row.to_wallet.trim();
+  if (toWallet === normalizedWallet) return "inward";
+  if (fromWallet === normalizedWallet) return "outward";
   return row.direction;
 }
 

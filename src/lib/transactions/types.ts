@@ -74,6 +74,7 @@ export interface BuyerTransactionRow {
   reference: string | null;
   itemTitle: string;
   sellerWallet: string;
+  fromWallet: string;
   date: string;
   amounts: TransactionAmounts;
   escrowState: EscrowState;

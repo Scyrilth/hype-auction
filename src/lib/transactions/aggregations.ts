@@ -127,15 +127,11 @@ export function computeBuyerSummary(
   rows: BuyerTransactionRow[],
   previousRows: BuyerTransactionRow[]
 ): BuyerSummary {
-  const funded = rows.filter(
-    (r) => r.eventType === "funded" && r.direction === "outward"
-  );
+  const funded = rows.filter((r) => r.eventType === "funded");
   const completed = rows.filter((r) => r.eventType === "released");
   const refunded = rows.filter((r) => r.eventType === "refunded");
 
-  const prevFunded = previousRows.filter(
-    (r) => r.eventType === "funded" && r.direction === "outward"
-  );
+  const prevFunded = previousRows.filter((r) => r.eventType === "funded");
   const prevCompleted = previousRows.filter((r) => r.eventType === "released");
   const prevRefunded = previousRows.filter((r) => r.eventType === "refunded");
 
