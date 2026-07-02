@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
+import { notifyListingLive } from "@/lib/notifications";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 import { sanitizeText } from "@/lib/sanitize";
 import { createAuction } from "@/lib/seller";
@@ -134,6 +135,17 @@ export async function POST(request: Request) {
       domesticShippingUsd: parseNumber(body.domesticShippingUsd) || 0,
       internationalShippingUsd: parseNumber(body.internationalShippingUsd) || 0,
     });
+
+    try {
+      await notifyListingLive({
+        sellerWallet,
+        auctionTitle: title.trim(),
+        categoryLabel: category,
+        auctionId: auction.id,
+      });
+    } catch (notifyError) {
+      logSupabaseError("api/listings POST:notifyListingLive", notifyError);
+    }
 
     return NextResponse.json({ success: true, auction }, { headers });
   } catch (error) {

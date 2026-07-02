@@ -282,6 +282,22 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     }
   }, [client, threadId, wallet, router, showToast, refreshUnreadCount]);
 
+  const refreshThread = useCallback(async () => {
+    if (!wallet) return;
+    try {
+      const data = await getThreadDetail(threadId, wallet, client);
+      if (!data) {
+        router.replace("/messages");
+        return;
+      }
+      setThread(data);
+      await markThreadMessagesRead(threadId, wallet, client);
+      void refreshUnreadCount();
+    } catch (error) {
+      console.error("Failed to refresh thread:", error);
+    }
+  }, [client, threadId, wallet, router, refreshUnreadCount]);
+
   useEffect(() => {
     if (!connected || !wallet) {
       router.replace("/");
@@ -420,7 +436,27 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           ? "✅ Receipt confirmed on-chain"
           : "Receipt confirmed."
       );
-      await loadThread();
+
+      const confirmedAt = new Date().toISOString();
+      setThread((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          confirmed_at: confirmedAt,
+          escrow_status: "complete",
+          auction: prev.auction
+            ? {
+                ...prev.auction,
+                escrow_state: "complete",
+                status: "completed",
+                shipping_status: "delivered",
+              }
+            : null,
+        };
+      });
+
+      router.refresh();
+      await refreshThread();
     } catch (error) {
       showToast(getErrorMessage(error), "error");
     } finally {

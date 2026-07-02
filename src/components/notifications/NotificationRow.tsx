@@ -24,6 +24,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   transaction_complete: "ti-circle-check",
   dispute_resolved: "ti-scale",
   tracking_uploaded: "ti-truck",
+  listing_live: "ti-rocket",
 };
 
 export default function NotificationRow({

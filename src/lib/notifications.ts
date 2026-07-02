@@ -24,7 +24,8 @@ export type NotificationType =
   | "funds_released"
   | "transaction_complete"
   | "dispute_resolved"
-  | "tracking_uploaded";
+  | "tracking_uploaded"
+  | "listing_live";
 
 export interface Notification {
   id: string;
@@ -448,7 +449,7 @@ export async function notifyPaymentConfirmed({
   await createNotification(
     buyerWallet,
     "payment_confirmed",
-    "Payment secured!",
+    "Payment secured! 🔒",
     `Your payment of ${total} for ${auctionTitle} is locked in escrow. The seller will ship soon.`,
     link
   );
@@ -456,8 +457,8 @@ export async function notifyPaymentConfirmed({
   await createNotification(
     sellerWallet,
     "payment_confirmed",
-    "Payment secured in escrow",
-    `${shortenAddress(buyerWallet)} has paid ${total} for ${auctionTitle}. Funds are locked in escrow — ship the item to release payment.`,
+    "Payment received! 💰",
+    `${total} has been secured in escrow for ${auctionTitle}. Please ship the item and upload tracking.`,
     link
   );
 }
@@ -530,6 +531,30 @@ export async function notifyTrackingUploaded({
     "tracking_uploaded",
     "Tracking uploaded",
     "Shipment recorded on-chain. The buyer has been notified.",
+    link
+  );
+}
+
+export async function notifyListingLive({
+  sellerWallet,
+  auctionTitle,
+  categoryLabel,
+  auctionId,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  categoryLabel: string;
+  auctionId: string;
+}): Promise<void> {
+  const link = `/auction/${auctionId}`;
+  const alreadySent = await hasNotification(sellerWallet, "listing_live", link);
+  if (alreadySent) return;
+
+  await createNotification(
+    sellerWallet,
+    "listing_live",
+    "Your listing is live! 🚀",
+    `${categoryLabel} — ${auctionTitle} is now live on Hype Auction.`,
     link
   );
 }

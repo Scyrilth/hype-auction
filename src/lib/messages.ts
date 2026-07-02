@@ -970,15 +970,19 @@ export async function confirmReceipt(
       const escrowPda = (auctionRow.escrow_pda as string | null) ?? "";
       const totalLamports = Number(auctionRow.escrow_amount_lamports ?? 0);
       if (escrowPda && totalLamports > 0) {
-        await logEscrowReleased({
-          auctionId,
-          threadId,
-          sellerWallet: existingThread.seller_wallet as string,
-          escrowPda,
-          totalLamports,
-          onChainSignature: onChainTxSignature,
-          buyerWallet,
-        });
+        try {
+          await logEscrowReleased({
+            auctionId,
+            threadId,
+            sellerWallet: existingThread.seller_wallet as string,
+            escrowPda,
+            totalLamports,
+            onChainSignature: onChainTxSignature,
+            buyerWallet,
+          });
+        } catch (ledgerError) {
+          console.error("Escrow ledger released insert failed:", ledgerError);
+        }
       }
     }
   }
