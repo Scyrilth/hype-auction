@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 const LOGO_BACKGROUND_STYLE = {
-  backgroundImage: "url(/hypeauction-logo.png)",
+  backgroundImage: "url(/hypeauction-logo.svg)",
   backgroundSize: "contain",
   backgroundRepeat: "no-repeat",
   backgroundPosition: "center",
