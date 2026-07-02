@@ -191,8 +191,10 @@ export default function SidebarNavContent({
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${className}`.trim()}>
       {showLogo ? (
-        <div className="mb-3 shrink-0 rounded-lg bg-gradient-to-b from-[#2d1b69] to-transparent p-3">
-          <HypeAuctionLogo imageClassName="h-16 w-16" variant="sidebar" />
+        <div className="mb-3 w-full shrink-0 -mx-2 bg-gradient-to-b from-[#2d1b69] to-transparent lg:-mx-2.5">
+          <div className="px-2 py-3 lg:px-2.5">
+            <HypeAuctionLogo imageClassName="h-16 w-16" variant="sidebar" />
+          </div>
         </div>
       ) : null}
 
