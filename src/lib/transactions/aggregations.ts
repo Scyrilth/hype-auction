@@ -128,10 +128,16 @@ export function computeBuyerSummary(
   previousRows: BuyerTransactionRow[]
 ): BuyerSummary {
   const funded = rows.filter((r) => r.eventType === "funded");
+  const completedPurchases = funded.filter(
+    (r) => r.escrowState === "complete" || r.escrowState === "released"
+  );
   const completed = rows.filter((r) => r.eventType === "released");
   const refunded = rows.filter((r) => r.eventType === "refunded");
 
   const prevFunded = previousRows.filter((r) => r.eventType === "funded");
+  const prevCompletedPurchases = prevFunded.filter(
+    (r) => r.escrowState === "complete" || r.escrowState === "released"
+  );
   const prevCompleted = previousRows.filter((r) => r.eventType === "released");
   const prevRefunded = previousRows.filter((r) => r.eventType === "refunded");
 
@@ -171,7 +177,10 @@ export function computeBuyerSummary(
     totalSpent: buildTrend(totalSpent, prevSpent),
     pending: buildTrend(pendingTotal, prevPendingTotal),
     totalRefunded: buildTrend(totalRefunded, prevTotalRefunded),
-    purchasesCompleted: buildTrend(completed.length, prevCompleted.length),
+    purchasesCompleted: buildTrend(
+      completedPurchases.length,
+      prevCompletedPurchases.length
+    ),
     pendingOrderCount: pendingAuctionIds.size,
   };
 }

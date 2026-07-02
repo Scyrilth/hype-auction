@@ -122,8 +122,7 @@ export default function VendorDirectory({
           Discover Vendors
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Browse verified sellers, live streamers, and top-rated shops on
-          LIVEAUCTION.
+          Browse verified sellers and top-rated shops on Hype Auction.
         </p>
       </header>
 

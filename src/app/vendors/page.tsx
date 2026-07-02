@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const metadata = buildPageMetadata({
   title: "Vendors — Hype Auction",
   description:
-    "Browse verified sellers, live streamers, and top-rated shops on Hype Auction.",
+    "Browse verified sellers and top-rated shops on Hype Auction.",
   path: "/vendors",
 });
 
