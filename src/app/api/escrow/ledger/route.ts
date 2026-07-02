@@ -186,6 +186,12 @@ export async function POST(request: Request) {
   const auctionId =
     typeof body.auctionId === "string" ? body.auctionId.trim() : "";
   const eventType = typeof body.type === "string" ? body.type.trim() : "";
+  const threadId =
+    typeof body.threadId === "string" ? body.threadId.trim() || null : null;
+
+  console.log(
+    `[escrow/ledger] Ledger API called - method: POST, wallet: ${callerWallet || "(none)"}, event: ${eventType || "(none)"}, auctionId: ${auctionId || "(none)"}, threadId: ${threadId ?? "(none)"}`
+  );
 
   if (!callerWallet) {
     return NextResponse.json(
@@ -202,8 +208,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const threadId =
-      typeof body.threadId === "string" ? body.threadId.trim() || null : null;
     const onChainSignature =
       typeof body.onChainSignature === "string"
         ? body.onChainSignature.trim()
@@ -227,7 +231,12 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Invalid funded payload." }, { status: 400, headers });
         }
 
-        if (!(await isBuyerForAuction(auctionId, buyerWallet, threadId))) {
+        const buyerAuthorized = await isBuyerForAuction(auctionId, buyerWallet, threadId);
+        console.log(
+          `[escrow/ledger] funded auth - auctionId: ${auctionId}, threadId: ${threadId ?? "(none)"}, buyerWallet: ${buyerWallet}, isBuyerForAuction: ${buyerAuthorized}`
+        );
+
+        if (!buyerAuthorized) {
           return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
         }
 
@@ -249,10 +258,15 @@ export async function POST(request: Request) {
           typeof body.escrowPda === "string" ? body.escrowPda.trim() : "";
         const amountLamports = parsePositiveInt(body.amountLamports);
         const parties = await auctionParties(auctionId);
+        const sellerAuthorized = await isSellerForAuction(auctionId, sellerWallet, threadId);
+
+        console.log(
+          `[escrow/ledger] shipped auth - auctionId: ${auctionId}, threadId: ${threadId ?? "(none)"}, sellerWallet: ${sellerWallet}, isSellerForAuction: ${sellerAuthorized}`
+        );
 
         if (
           sellerWallet !== callerWallet ||
-          !(await isSellerForAuction(auctionId, sellerWallet, threadId)) ||
+          !sellerAuthorized ||
           !escrowPda ||
           !amountLamports
         ) {
@@ -276,12 +290,17 @@ export async function POST(request: Request) {
         const escrowPda =
           typeof body.escrowPda === "string" ? body.escrowPda.trim() : "";
         const totalLamports = parsePositiveInt(body.totalLamports);
+        const buyerAuthorized = await isBuyerForAuction(auctionId, callerWallet, threadId);
+
+        console.log(
+          `[escrow/ledger] released auth - auctionId: ${auctionId}, threadId: ${threadId ?? "(none)"}, buyerWallet: ${callerWallet}, isBuyerForAuction: ${buyerAuthorized}`
+        );
 
         if (
           !escrowPda ||
           !totalLamports ||
           !onChainSignature ||
-          !(await isBuyerForAuction(auctionId, callerWallet, threadId))
+          !buyerAuthorized
         ) {
           return NextResponse.json({ error: "Invalid released payload." }, { status: 400, headers });
         }
@@ -314,7 +333,12 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Invalid refunded payload." }, { status: 400, headers });
         }
 
-        if (!(await isBuyerForAuction(auctionId, buyerWallet, threadId))) {
+        const buyerAuthorized = await isBuyerForAuction(auctionId, buyerWallet, threadId);
+        console.log(
+          `[escrow/ledger] refunded auth - auctionId: ${auctionId}, threadId: ${threadId ?? "(none)"}, buyerWallet: ${buyerWallet}, isBuyerForAuction: ${buyerAuthorized}`
+        );
+
+        if (!buyerAuthorized) {
           return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
         }
 
@@ -375,6 +399,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { headers });
   } catch (error) {
+    console.error(
+      `[escrow/ledger] insert failed - auctionId: ${auctionId}, threadId: ${threadId ?? "(none)"}, event: ${eventType}, wallet: ${callerWallet}`,
+      error
+    );
+    if (error && typeof error === "object") {
+      console.error("[escrow/ledger] insert error details:", JSON.stringify(error, null, 2));
+    }
     logSupabaseError("api/escrow/ledger POST", error);
 
     if (error instanceof Error && isSafeUserFacingMessage(error.message)) {

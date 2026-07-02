@@ -15,6 +15,13 @@ export async function postEscrowLedgerEvent(
   payload: EscrowLedgerApiPayload,
   wallet: string
 ): Promise<void> {
+  console.log("[escrow-ledger-client] postEscrowLedgerEvent", {
+    type: payload.type,
+    auctionId: payload.auctionId,
+    threadId: payload.threadId ?? null,
+    wallet,
+  });
+
   const response = await fetch("/api/escrow/ledger", {
     method: "POST",
     headers: {
@@ -28,6 +35,16 @@ export async function postEscrowLedgerEvent(
     const body = (await response.json().catch(() => null)) as
       | { error?: string }
       | null;
+    console.error("[escrow-ledger-client] ledger API failed", {
+      status: response.status,
+      statusText: response.statusText,
+      body,
+      payload: {
+        type: payload.type,
+        auctionId: payload.auctionId,
+        threadId: payload.threadId ?? null,
+      },
+    });
     throw new Error(body?.error ?? "Unable to record escrow ledger event.");
   }
 }

@@ -307,6 +307,15 @@ export async function logEscrowFunded({
   amountLamports: number;
   onChainSignature: string;
 }): Promise<void> {
+  console.log("[escrow-ledger] logEscrowFunded called", {
+    auctionId,
+    threadId: threadId ?? null,
+    buyerWallet,
+    escrowPda,
+    amountLamports,
+    onChainSignature,
+  });
+
   if (isBrowserLedgerWrite()) {
     await postEscrowLedgerEvent(
       {
@@ -354,6 +363,15 @@ export async function logEscrowShipped({
   amountLamports: number;
   onChainSignature?: string | null;
 }): Promise<void> {
+  console.log("[escrow-ledger] logEscrowShipped called", {
+    auctionId,
+    threadId: threadId ?? null,
+    sellerWallet,
+    escrowPda,
+    amountLamports,
+    onChainSignature: onChainSignature ?? null,
+  });
+
   if (isBrowserLedgerWrite()) {
     await postEscrowLedgerEvent(
       {
@@ -456,6 +474,16 @@ export async function logEscrowReleased({
   platformWallet?: string;
   buyerWallet: string;
 }): Promise<void> {
+  console.log("[escrow-ledger] logEscrowReleased called", {
+    auctionId,
+    threadId: threadId ?? null,
+    sellerWallet,
+    buyerWallet,
+    escrowPda,
+    totalLamports,
+    onChainSignature,
+  });
+
   if (isBrowserLedgerWrite()) {
     await postEscrowLedgerEvent(
       {

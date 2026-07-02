@@ -105,6 +105,14 @@ function formatMessageTime(iso: string) {
   });
 }
 
+function isReceiptConfirmed(thread: ThreadDetail): boolean {
+  return (
+    Boolean(thread.confirmed_at) ||
+    thread.auction?.escrow_state === "complete" ||
+    thread.auction?.status === "completed"
+  );
+}
+
 function getThreadStatusBadge(thread: ThreadDetail) {
   if (thread.status === "archived") {
     return {
@@ -113,7 +121,7 @@ function getThreadStatusBadge(thread: ThreadDetail) {
     };
   }
 
-  if (thread.confirmed_at) {
+  if (isReceiptConfirmed(thread)) {
     return {
       label: "Receipt Confirmed ✓",
       className: "bg-emerald-500/20 text-emerald-300",
@@ -380,7 +388,9 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   };
 
   const handleConfirmReceipt = async () => {
-    if (!wallet || !isBuyer || confirming || thread?.confirmed_at) return;
+    if (!wallet || !isBuyer || confirming || (thread && isReceiptConfirmed(thread))) {
+      return;
+    }
 
     if (thread?.auction_id && !anchorWallet) {
       showToast("Connect your wallet to confirm receipt on-chain.", "error");
@@ -666,11 +676,13 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
   const showPayNow = canPayAsBuyer;
 
+  const receiptConfirmed = isReceiptConfirmed(thread);
+
   const showConfirmReceipt =
     isBuyer &&
     Boolean(thread.auction_id) &&
     !showPayNow &&
-    !thread.confirmed_at &&
+    !receiptConfirmed &&
     escrowState === "shipped";
 
   const paymentSecured = ["funded", "shipped", "complete", "disputed"].includes(
@@ -878,26 +890,28 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             </div>
           )}
 
-          {(showConfirmReceipt || thread.confirmed_at) && (
+          {(showConfirmReceipt || receiptConfirmed) && (
             <div className="space-y-2">
-              {!thread.confirmed_at && (
-                <p className="text-xs leading-relaxed text-muted">
-                  This step releases payment on-chain — a small network fee
-                  (~0.0001 SOL) will apply.
+              {receiptConfirmed ? (
+                <p className="rounded-full bg-emerald-500/15 px-4 py-2.5 text-center text-sm font-semibold text-emerald-200">
+                  Receipt Confirmed ✓
                 </p>
+              ) : (
+                <>
+                  <p className="text-xs leading-relaxed text-muted">
+                    This step releases payment on-chain — a small network fee
+                    (~0.0001 SOL) will apply.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleConfirmReceipt}
+                    disabled={confirming}
+                    className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {confirming ? "Confirming..." : "✓ Confirm Receipt"}
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                onClick={handleConfirmReceipt}
-                disabled={Boolean(thread.confirmed_at) || confirming}
-                className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {thread.confirmed_at
-                  ? "Receipt Confirmed ✓"
-                  : confirming
-                    ? "Confirming..."
-                    : "✓ Confirm Receipt"}
-              </button>
             </div>
           )}
 
