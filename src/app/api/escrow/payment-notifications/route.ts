@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { corsHeaders } from "@/lib/cors";
+import { isBuyerForAuction } from "@/lib/escrow-buyer-auth";
 import { logSupabaseError, isSafeUserFacingMessage } from "@/lib/errors";
 import { getAuctionThreadId, insertThreadSystemMessage } from "@/lib/messages";
 import { notifyPaymentConfirmed } from "@/lib/notifications";
@@ -9,8 +10,6 @@ import { getNotificationClient } from "@/lib/supabase";
 
 type PaymentNotificationRequestBody = {
   auctionId?: unknown;
-  buyerWallet?: unknown;
-  sellerWallet?: unknown;
   threadId?: unknown;
   totalSol?: unknown;
 };
@@ -39,10 +38,6 @@ export async function POST(request: Request) {
   const callerWallet = request.headers.get("x-wallet-address")?.trim() ?? "";
   const auctionId =
     typeof body.auctionId === "string" ? body.auctionId.trim() : "";
-  const buyerWallet =
-    typeof body.buyerWallet === "string" ? body.buyerWallet.trim() : "";
-  const sellerWallet =
-    typeof body.sellerWallet === "string" ? body.sellerWallet.trim() : "";
   const threadId =
     typeof body.threadId === "string" ? body.threadId.trim() || null : null;
   const totalSol =
@@ -56,13 +51,13 @@ export async function POST(request: Request) {
     `[escrow/payment-notifications] called - wallet: ${callerWallet || "(none)"}, auctionId: ${auctionId || "(none)"}, threadId: ${threadId ?? "(none)"}`
   );
 
-  if (!callerWallet || callerWallet !== buyerWallet) {
+  if (!callerWallet) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
   }
 
-  if (!auctionId || !buyerWallet || !sellerWallet) {
+  if (!auctionId) {
     return NextResponse.json(
-      { error: "Auction, buyer, and seller are required." },
+      { error: "Auction is required." },
       { status: 400, headers }
     );
   }
@@ -76,12 +71,10 @@ export async function POST(request: Request) {
 
   try {
     const db = getNotificationClient();
-    const resolvedThreadId =
-      threadId ?? (await getAuctionThreadId(auctionId, buyerWallet));
 
     const { data: auctionRow, error: auctionError } = await db
       .from("auctions")
-      .select("title, seller_wallet")
+      .select("title, seller_wallet, escrow_state, escrow_funded")
       .eq("id", auctionId)
       .maybeSingle();
 
@@ -93,13 +86,43 @@ export async function POST(request: Request) {
       );
     }
 
-    if ((auctionRow.seller_wallet as string).trim() !== sellerWallet) {
+    const escrowState = (auctionRow.escrow_state as string | null)?.trim() ?? "";
+    if (escrowState !== "funded" || !auctionRow.escrow_funded) {
+      console.log(
+        `[escrow/payment-notifications] rejected - auctionId: ${auctionId}, escrow_state: ${escrowState || "(none)"}, escrow_funded: ${Boolean(auctionRow.escrow_funded)}`
+      );
+      return NextResponse.json(
+        { error: "Auction escrow is not in funded state." },
+        { status: 403, headers }
+      );
+    }
+
+    const sellerWallet = (auctionRow.seller_wallet as string).trim();
+    if (!sellerWallet) {
+      return NextResponse.json(
+        { error: "Auction seller not found." },
+        { status: 404, headers }
+      );
+    }
+
+    const resolvedThreadId =
+      threadId ?? (await getAuctionThreadId(auctionId, callerWallet));
+
+    const buyerAuthorized = await isBuyerForAuction(
+      auctionId,
+      callerWallet,
+      threadId ?? resolvedThreadId
+    );
+    console.log(
+      `[escrow/payment-notifications] buyer auth - auctionId: ${auctionId}, buyerWallet: ${callerWallet}, isBuyerForAuction: ${buyerAuthorized}`
+    );
+    if (!buyerAuthorized) {
       return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
     }
 
     if (!resolvedThreadId) {
       console.error(
-        `[escrow/payment-notifications] missing thread - auctionId: ${auctionId}, buyerWallet: ${buyerWallet}`
+        `[escrow/payment-notifications] missing thread - auctionId: ${auctionId}, buyerWallet: ${callerWallet}`
       );
       return NextResponse.json(
         { error: "Message thread not found for this auction." },
@@ -113,7 +136,7 @@ export async function POST(request: Request) {
       await insertThreadSystemMessage(
         resolvedThreadId,
         `💰 Payment secured in escrow. ${formatSol(totalSol)} locked for ${auctionTitle}.`,
-        buyerWallet,
+        callerWallet,
         db
       );
     } catch (systemMessageError) {
@@ -124,7 +147,7 @@ export async function POST(request: Request) {
     }
 
     await notifyPaymentConfirmed({
-      buyerWallet,
+      buyerWallet: callerWallet,
       sellerWallet,
       auctionTitle,
       threadId: resolvedThreadId,

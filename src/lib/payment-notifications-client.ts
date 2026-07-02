@@ -1,13 +1,11 @@
 export async function postPaymentSecuredNotifications({
   auctionId,
   buyerWallet,
-  sellerWallet,
   threadId,
   totalSol,
 }: {
   auctionId: string;
   buyerWallet: string;
-  sellerWallet: string;
   threadId?: string | null;
   totalSol: number;
 }): Promise<void> {
@@ -19,8 +17,6 @@ export async function postPaymentSecuredNotifications({
     },
     body: JSON.stringify({
       auctionId,
-      buyerWallet,
-      sellerWallet,
       threadId,
       totalSol,
     }),

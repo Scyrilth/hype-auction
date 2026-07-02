@@ -351,7 +351,6 @@ export async function initiatePayment(
       await postPaymentSecuredNotifications({
         auctionId,
         buyerWallet,
-        sellerWallet,
         threadId: resolvedThreadId,
         totalSol: totalLamports / LAMPORTS_PER_SOL,
       });
