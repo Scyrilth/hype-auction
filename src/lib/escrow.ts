@@ -12,14 +12,14 @@ import { createSolanaConnection, isSolanaDevnet } from "@/lib/solana-config";
 import { HYPE_ESCROW_IDL } from "@/lib/hype-escrow-idl";
 import { fetchSolUsdRate } from "@/lib/sol-price";
 import { getErrorMessage } from "@/lib/errors";
-import { formatSol } from "@/lib/format";
-import { getAuctionThreadId, insertThreadSystemMessage } from "@/lib/messages";
+import { getAuctionThreadId } from "@/lib/messages";
 import {
   logEscrowFunded,
   logEscrowRefunded,
   logEscrowDisputeResolved,
 } from "@/lib/escrow-ledger";
-import { notifyDisputeResolved, notifyPaymentConfirmed } from "@/lib/notifications";
+import { notifyDisputeResolved } from "@/lib/notifications";
+import { postPaymentSecuredNotifications } from "@/lib/payment-notifications-client";
 import { supabase } from "@/lib/supabase";
 
 const DEVNET_PROGRAM_ID = "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs";
@@ -348,41 +348,13 @@ export async function initiatePayment(
     }
 
     try {
-      const [{ data: auctionRow }] = await Promise.all([
-        supabase
-          .from("auctions")
-          .select("title")
-          .eq("id", auctionId)
-          .maybeSingle(),
-      ]);
-
-      if (resolvedThreadId && auctionRow?.title) {
-        const auctionTitle = auctionRow.title as string;
-        const totalSol = totalLamports / LAMPORTS_PER_SOL;
-
-        await insertThreadSystemMessage(
-          resolvedThreadId,
-          `💰 Payment secured in escrow. ${formatSol(totalSol)} locked for ${auctionTitle}.`,
-          buyerWallet
-        );
-
-        await notifyPaymentConfirmed({
-          buyerWallet,
-          sellerWallet,
-          auctionTitle,
-          threadId: resolvedThreadId,
-          totalSol,
-        });
-
-        const { error: threadEscrowError } = await supabase
-          .from("message_threads")
-          .update({ escrow_status: "funded" })
-          .eq("id", resolvedThreadId);
-
-        if (threadEscrowError) {
-          console.error("message_threads escrow_status update failed:", threadEscrowError);
-        }
-      }
+      await postPaymentSecuredNotifications({
+        auctionId,
+        buyerWallet,
+        sellerWallet,
+        threadId: resolvedThreadId,
+        totalSol: totalLamports / LAMPORTS_PER_SOL,
+      });
     } catch (notifyError) {
       console.error("Payment notification failed:", notifyError);
     }

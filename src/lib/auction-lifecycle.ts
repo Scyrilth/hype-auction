@@ -177,6 +177,12 @@ export async function createWinnerThread(
       auction.seller_wallet,
       client
     );
+    await insertThreadSystemMessage(
+      thread.id,
+      `🎉 You sold ${auction.title}! The buyer will complete escrow payment shortly.`,
+      winnerWallet,
+      client
+    );
     console.error("[winner-flow] createWinnerThread: summary message inserted", {
       auctionId: auction.id,
       threadId: thread.id,

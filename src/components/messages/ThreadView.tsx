@@ -543,6 +543,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
       setPaymentTx(result.txSignature);
       showToast("✅ Payment confirmed! SOL locked in escrow.");
+      router.refresh();
       await loadThread();
     } catch (error) {
       setPaymentError(getErrorMessage(error));

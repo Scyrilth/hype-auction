@@ -443,24 +443,51 @@ export async function notifyPaymentConfirmed({
   threadId: string;
   totalSol: number;
 }): Promise<void> {
+  console.log("notifyPaymentConfirmed called", {
+    buyerWallet,
+    sellerWallet,
+    auctionTitle,
+    threadId,
+    totalSol,
+  });
+
   const link = `/messages/${threadId}`;
   const total = formatSol(totalSol);
+  const client = getNotificationClient();
 
-  await createNotification(
+  const buyerAlreadySent = await hasNotification(
     buyerWallet,
     "payment_confirmed",
-    "Payment secured! 🔒",
-    `Your payment of ${total} for ${auctionTitle} is locked in escrow. The seller will ship soon.`,
-    link
+    link,
+    client
   );
+  if (!buyerAlreadySent) {
+    await createNotification(
+      buyerWallet,
+      "payment_confirmed",
+      "Payment secured! 🔒",
+      `Your payment of ${total} for ${auctionTitle} is locked in escrow. The seller will ship soon.`,
+      link,
+      client
+    );
+  }
 
-  await createNotification(
+  const sellerAlreadySent = await hasNotification(
     sellerWallet,
     "payment_confirmed",
-    "Payment received! 💰",
-    `${total} has been secured in escrow for ${auctionTitle}. Please ship the item and upload tracking.`,
-    link
+    link,
+    client
   );
+  if (!sellerAlreadySent) {
+    await createNotification(
+      sellerWallet,
+      "payment_confirmed",
+      "Payment received! 💰",
+      `${total} has been secured in escrow for ${auctionTitle}. Please ship the item and upload tracking.`,
+      link,
+      client
+    );
+  }
 }
 
 export async function notifyTransactionComplete({
