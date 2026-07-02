@@ -6,6 +6,7 @@ import {
   fetchActiveBuyerStrikes,
   summarizeBuyerStrikes,
 } from "@/lib/buyer-strikes";
+import { getMinimumBidIncrement } from "@/lib/bid-utils";
 import { logSupabaseError } from "@/lib/errors";
 import {
   getUserDisplayName,
@@ -94,12 +95,14 @@ export async function placeBidWithValidation({
     throw new Error("Unable to place bid. Please try again.");
   }
 
-  if (amount <= currentBid) {
-    throw new BidPlacementError("Bid must be higher than the current bid.");
-  }
+  const floor = Math.max(currentBid, startPrice);
+  const increment = getMinimumBidIncrement(floor);
+  const minimumBid = Math.round((floor + increment) * 100) / 100;
 
-  if (amount <= startPrice) {
-    throw new BidPlacementError("Bid must be higher than the starting price.");
+  if (amount < minimumBid) {
+    throw new BidPlacementError(
+      `Minimum bid is ${minimumBid} SOL (${floor} + ${increment} minimum increment)`
+    );
   }
 
   if (bidderWallet === auction.seller_wallet) {

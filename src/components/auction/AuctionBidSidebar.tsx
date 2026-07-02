@@ -23,15 +23,15 @@ import {
   summarizeBuyerStrikes,
   type BuyerStrikeSummary,
 } from "@/lib/buyer-strikes";
+import { getMinimumBidAmount, getMinimumBidIncrement } from "@/lib/bid-utils";
 import type { Auction, User } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { getEscrowStatusLabel, getExplorerTxUrl } from "@/lib/escrow";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import { formatSol, shortenAddress } from "@/lib/format";
 
-function getMinimumBid(auction: Auction) {
-  const floor = getEffectiveBid(auction);
-  return Math.round((floor + 0.1) * 100) / 100;
+function roundBidAmount(amount: number): number {
+  return Math.round(amount * 100) / 100;
 }
 
 export default function AuctionBidSidebar({
@@ -82,10 +82,14 @@ export default function AuctionBidSidebar({
   );
   const seenBidIdsRef = useRef(new Set<string>());
 
-  const minimumBid = useMemo(
-    () => getMinimumBid({ ...auction, current_bid: currentBid }),
-    [auction, currentBid]
-  );
+  const { minimumBid, bidIncrement, bidFloor } = useMemo(() => {
+    const floor = getEffectiveBid({ ...auction, current_bid: currentBid });
+    return {
+      bidFloor: floor,
+      minimumBid: getMinimumBidAmount(floor),
+      bidIncrement: getMinimumBidIncrement(floor),
+    };
+  }, [auction, currentBid]);
 
   const isLive =
     auction.status === "live" &&
@@ -168,7 +172,7 @@ export default function AuctionBidSidebar({
           if (bidderWallet !== wallet) {
             setBidCount((count) => count + 1);
           }
-          setBidInput((Math.round((amount + 0.1) * 100) / 100).toFixed(2));
+          setBidInput(getMinimumBidAmount(amount).toFixed(2));
         }
       )
       .subscribe();
@@ -204,8 +208,13 @@ export default function AuctionBidSidebar({
     if (!publicKey) return;
 
     const floor = Math.max(currentBid, getEffectiveBid(auction));
-    if (amount <= floor) {
-      showToast("Bid must be higher than the current bid.", "error");
+    const minBid = getMinimumBidAmount(floor);
+    if (amount < minBid) {
+      const increment = getMinimumBidIncrement(floor);
+      showToast(
+        `Minimum bid is ${minBid} SOL (${floor} + ${increment} minimum increment)`,
+        "error"
+      );
       return;
     }
 
@@ -223,7 +232,7 @@ export default function AuctionBidSidebar({
       setBidCount((count) => count + 1);
       setTopBidder(walletAddress);
       setTopBidderUsername(null);
-      setBidInput((Math.round((amount + 0.1) * 100) / 100).toFixed(2));
+      setBidInput(getMinimumBidAmount(amount).toFixed(2));
       showToast("Bid placed successfully!");
       router.refresh();
     } catch (error) {
@@ -252,11 +261,19 @@ export default function AuctionBidSidebar({
     await gateBid(() => executePlaceBid(amount));
   };
 
-  const floor = Math.max(currentBid, getEffectiveBid(auction));
   const quickBids = [
-    { label: "+0.1 SOL", amount: Math.round((floor + 0.1) * 100) / 100 },
-    { label: "+0.5 SOL", amount: Math.round((floor + 0.5) * 100) / 100 },
-    { label: "+1 SOL", amount: Math.round((floor + 1) * 100) / 100 },
+    {
+      label: `+${bidIncrement} SOL`,
+      amount: roundBidAmount(bidFloor + bidIncrement),
+    },
+    {
+      label: `+${bidIncrement * 5} SOL`,
+      amount: roundBidAmount(bidFloor + bidIncrement * 5),
+    },
+    {
+      label: `+${bidIncrement * 10} SOL`,
+      amount: roundBidAmount(bidFloor + bidIncrement * 10),
+    },
   ];
 
   return (
@@ -326,7 +343,7 @@ export default function AuctionBidSidebar({
                     id="bid-amount"
                     type="number"
                     min={minimumBid}
-                    step="0.01"
+                    step={bidIncrement}
                     value={bidInput}
                     onChange={(event) => setBidInput(event.target.value)}
                     className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-white outline-none focus:border-accent"
