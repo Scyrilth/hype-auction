@@ -2,9 +2,9 @@
 
 CREATE SEQUENCE IF NOT EXISTS platform_transaction_seq START 1;
 
-DROP FUNCTION IF EXISTS public.next_platform_transaction_id();
+DROP FUNCTION IF EXISTS public.next_platform_transaction_seq();
 
-CREATE OR REPLACE FUNCTION public.next_platform_transaction_seq()
+CREATE OR REPLACE FUNCTION public.next_platform_transaction_id()
 RETURNS BIGINT
 LANGUAGE sql
 VOLATILE

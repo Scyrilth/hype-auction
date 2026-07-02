@@ -163,7 +163,7 @@ export function formatPlatformTransactionId(
 }
 
 async function nextPlatformTransactionSeq(client: SupabaseClient): Promise<number> {
-  const { data, error } = await client.rpc("next_platform_transaction_seq");
+  const { data, error } = await client.rpc("next_platform_transaction_id");
   if (error) throw error;
   const seq = Number(data);
   if (!Number.isFinite(seq) || seq < 1) {

@@ -1,5 +1,5 @@
 -- One-time migration: reformat legacy HA-TXN-000001 IDs to the new per-event format.
--- Run in Supabase SQL Editor after deploying next_platform_transaction_seq RPC.
+-- Run in Supabase SQL Editor after deploying next_platform_transaction_id RPC.
 
 UPDATE public.escrow_transactions
 SET platform_transaction_id = 'HA-TXN-S5KREM-F000001'
