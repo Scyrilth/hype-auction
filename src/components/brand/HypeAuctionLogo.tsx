@@ -29,7 +29,11 @@ function BrandText({ variant = "default" }: { variant?: "default" | "sidebar" })
   const isSidebar = variant === "sidebar";
 
   return (
-    <div className="flex min-w-0 flex-col">
+    <div
+      className={`flex min-w-0 flex-col overflow-hidden ${
+        isSidebar ? "flex-1" : ""
+      }`.trim()}
+    >
       <span
         className={
           isSidebar
@@ -64,8 +68,14 @@ export default function HypeAuctionLogo({
   showText?: boolean;
   variant?: "default" | "sidebar";
 }) {
+  const isSidebar = variant === "sidebar";
+
   const content = (
-    <div className={`flex items-center gap-2 ${className}`.trim()}>
+    <div
+      className={`flex items-center gap-2 ${
+        isSidebar ? "w-full min-w-0" : ""
+      } ${className}`.trim()}
+    >
       <LogoMark className={imageClassName} />
       {showText ? <BrandText variant={variant} /> : null}
     </div>
@@ -74,7 +84,11 @@ export default function HypeAuctionLogo({
   if (!asLink) return content;
 
   return (
-    <Link href="/" className="inline-block" aria-label="Hype Auction home">
+    <Link
+      href="/"
+      className={isSidebar ? "block w-full min-w-0" : "inline-block"}
+      aria-label="Hype Auction home"
+    >
       {content}
     </Link>
   );
