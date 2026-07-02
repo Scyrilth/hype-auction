@@ -448,8 +448,8 @@ export async function notifyPaymentConfirmed({
   await createNotification(
     buyerWallet,
     "payment_confirmed",
-    "Payment confirmed",
-    `Your payment for ${auctionTitle} is secured in escrow.`,
+    "Payment secured!",
+    `Your payment of ${total} for ${auctionTitle} is locked in escrow. The seller will ship soon.`,
     link
   );
 
@@ -507,6 +507,30 @@ export async function notifyItemShipped({
     "Your item has been shipped!",
     `${auctionTitle} is on its way. Tracking: ${trackingNumber} via ${courier}`,
     `/messages/${threadId}`
+  );
+}
+
+export async function notifyTrackingUploaded({
+  sellerWallet,
+  threadId,
+}: {
+  sellerWallet: string;
+  threadId: string;
+}): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(
+    sellerWallet,
+    "tracking_uploaded",
+    link
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    sellerWallet,
+    "tracking_uploaded",
+    "Tracking uploaded",
+    "Shipment recorded on-chain. The buyer has been notified.",
+    link
   );
 }
 

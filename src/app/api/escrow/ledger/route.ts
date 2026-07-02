@@ -45,24 +45,44 @@ async function auctionParties(auctionId: string) {
   };
 }
 
-async function isBuyerForAuction(auctionId: string, buyerWallet: string) {
+async function isBuyerForAuction(
+  auctionId: string,
+  buyerWallet: string,
+  threadId?: string | null
+): Promise<boolean> {
   const db = getNotificationClient();
   const normalizedBuyer = buyerWallet.trim();
+  const normalizedThreadId = threadId?.trim() ?? "";
 
-  const { data: thread, error: threadError } = await db
+  if (normalizedThreadId) {
+    const { data: thread, error } = await db
+      .from("message_threads")
+      .select("id, buyer_wallet, auction_id")
+      .eq("id", normalizedThreadId)
+      .maybeSingle();
+
+    if (!error && thread) {
+      const threadAuctionId = (thread.auction_id as string | null)?.trim() ?? "";
+      const threadBuyer = (thread.buyer_wallet as string).trim();
+      if (threadAuctionId === auctionId && threadBuyer === normalizedBuyer) {
+        return true;
+      }
+    }
+  }
+
+  const { data: buyerThreads, error: threadError } = await db
     .from("message_threads")
     .select("id")
     .eq("auction_id", auctionId)
     .eq("buyer_wallet", normalizedBuyer)
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
   if (threadError) throw threadError;
-  if (thread) return true;
+  if (buyerThreads && buyerThreads.length > 0) return true;
 
   const { data: auction, error: auctionError } = await db
     .from("auctions")
-    .select("next_bidder_wallet")
+    .select("next_bidder_wallet, escrow_funded")
     .eq("id", auctionId)
     .maybeSingle();
 
@@ -73,16 +93,72 @@ async function isBuyerForAuction(auctionId: string, buyerWallet: string) {
     return true;
   }
 
-  const { data: topBid, error: bidError } = await db
+  const { data: topBids, error: bidError } = await db
     .from("bids")
     .select("bidder_wallet")
     .eq("auction_id", auctionId)
     .order("amount", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
 
   if (bidError) throw bidError;
-  return (topBid?.bidder_wallet as string | undefined)?.trim() === normalizedBuyer;
+
+  const topBidderWallet = (topBids?.[0]?.bidder_wallet as string | undefined)?.trim();
+  if (topBidderWallet && topBidderWallet === normalizedBuyer) {
+    return true;
+  }
+
+  if (auction?.escrow_funded) {
+    const { data: fundedRows, error: fundedError } = await db
+      .from("escrow_transactions")
+      .select("id")
+      .eq("auction_id", auctionId)
+      .eq("event_type", "funded")
+      .eq("from_wallet", normalizedBuyer)
+      .limit(1);
+
+    if (fundedError) throw fundedError;
+    if (fundedRows && fundedRows.length > 0) return true;
+
+    const { data: buyerBids, error: anyBidError } = await db
+      .from("bids")
+      .select("id")
+      .eq("auction_id", auctionId)
+      .eq("bidder_wallet", normalizedBuyer)
+      .limit(1);
+
+    if (anyBidError) throw anyBidError;
+    if (buyerBids && buyerBids.length > 0) return true;
+  }
+
+  return false;
+}
+
+async function isSellerForAuction(
+  auctionId: string,
+  sellerWallet: string,
+  threadId?: string | null
+): Promise<boolean> {
+  const normalizedSeller = sellerWallet.trim();
+  const parties = await auctionParties(auctionId);
+  if (parties.sellerWallet === normalizedSeller) return true;
+
+  const normalizedThreadId = threadId?.trim() ?? "";
+  if (!normalizedThreadId) return false;
+
+  const db = getNotificationClient();
+  const { data: thread, error } = await db
+    .from("message_threads")
+    .select("seller_wallet, auction_id")
+    .eq("id", normalizedThreadId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!thread) return false;
+
+  return (
+    (thread.auction_id as string | null)?.trim() === auctionId &&
+    (thread.seller_wallet as string).trim() === normalizedSeller
+  );
 }
 
 export async function OPTIONS(request: Request) {
@@ -151,7 +227,7 @@ export async function POST(request: Request) {
           return NextResponse.json({ error: "Invalid funded payload." }, { status: 400, headers });
         }
 
-        if (!(await isBuyerForAuction(auctionId, buyerWallet))) {
+        if (!(await isBuyerForAuction(auctionId, buyerWallet, threadId))) {
           return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
         }
 
@@ -176,7 +252,7 @@ export async function POST(request: Request) {
 
         if (
           sellerWallet !== callerWallet ||
-          sellerWallet !== parties.sellerWallet ||
+          !(await isSellerForAuction(auctionId, sellerWallet, threadId)) ||
           !escrowPda ||
           !amountLamports
         ) {
@@ -205,7 +281,7 @@ export async function POST(request: Request) {
           !escrowPda ||
           !totalLamports ||
           !onChainSignature ||
-          !(await isBuyerForAuction(auctionId, callerWallet))
+          !(await isBuyerForAuction(auctionId, callerWallet, threadId))
         ) {
           return NextResponse.json({ error: "Invalid released payload." }, { status: 400, headers });
         }
@@ -236,6 +312,10 @@ export async function POST(request: Request) {
           !onChainSignature
         ) {
           return NextResponse.json({ error: "Invalid refunded payload." }, { status: 400, headers });
+        }
+
+        if (!(await isBuyerForAuction(auctionId, buyerWallet, threadId))) {
+          return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
         }
 
         await logEscrowRefunded({

@@ -255,7 +255,8 @@ export async function initiatePayment(
   shippingUsd: number,
   sellerWallet: string,
   platformWallet: string = PLATFORM_WALLET,
-  attemptNumber = 1
+  attemptNumber = 1,
+  threadId?: string | null
 ): Promise<EscrowPaymentResult> {
   try {
     const amountLamports = Math.ceil(bidAmountSol * LAMPORTS_PER_SOL);
@@ -320,6 +321,9 @@ export async function initiatePayment(
     }
 
     const buyerWallet = wallet.publicKey.toBase58();
+    const resolvedThreadId =
+      threadId?.trim() ||
+      (await getAuctionThreadId(auctionId, buyerWallet));
 
     const { error } = await supabase
       .from("auctions")
@@ -332,7 +336,7 @@ export async function initiatePayment(
       try {
         await logEscrowFunded({
           auctionId,
-          threadId: await getAuctionThreadId(auctionId, buyerWallet),
+          threadId: resolvedThreadId,
           buyerWallet,
           escrowPda: escrowPda.toBase58(),
           amountLamports: totalLamports,
@@ -344,21 +348,20 @@ export async function initiatePayment(
     }
 
     try {
-      const [{ data: auctionRow }, threadId] = await Promise.all([
+      const [{ data: auctionRow }] = await Promise.all([
         supabase
           .from("auctions")
           .select("title")
           .eq("id", auctionId)
           .maybeSingle(),
-        getAuctionThreadId(auctionId, buyerWallet),
       ]);
 
-      if (threadId && auctionRow?.title) {
+      if (resolvedThreadId && auctionRow?.title) {
         const auctionTitle = auctionRow.title as string;
         const totalSol = totalLamports / LAMPORTS_PER_SOL;
 
         await insertThreadSystemMessage(
-          threadId,
+          resolvedThreadId,
           `💰 Payment secured in escrow. ${formatSol(totalSol)} locked for ${auctionTitle}.`,
           buyerWallet
         );
@@ -367,14 +370,14 @@ export async function initiatePayment(
           buyerWallet,
           sellerWallet,
           auctionTitle,
-          threadId,
+          threadId: resolvedThreadId,
           totalSol,
         });
 
         const { error: threadEscrowError } = await supabase
           .from("message_threads")
           .update({ escrow_status: "funded" })
-          .eq("id", threadId);
+          .eq("id", resolvedThreadId);
 
         if (threadEscrowError) {
           console.error("message_threads escrow_status update failed:", threadEscrowError);

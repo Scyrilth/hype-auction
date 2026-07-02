@@ -236,15 +236,43 @@ export async function getAuctionThreadId(
   auctionId: string,
   buyerWallet: string
 ): Promise<string | null> {
-  const { data, error } = await supabase
+  const normalizedBuyer = buyerWallet.trim();
+
+  const { data: directThreads, error: directError } = await supabase
     .from("message_threads")
     .select("id")
     .eq("auction_id", auctionId)
-    .eq("buyer_wallet", buyerWallet)
+    .eq("buyer_wallet", normalizedBuyer)
+    .limit(1);
+
+  if (directError) throw directError;
+  if (directThreads?.length) {
+    return directThreads[0].id as string;
+  }
+
+  const { data: auction, error: auctionError } = await supabase
+    .from("auctions")
+    .select("next_bidder_wallet")
+    .eq("id", auctionId)
     .maybeSingle();
 
-  if (error) throw error;
-  return (data?.id as string | undefined) ?? null;
+  if (auctionError) throw auctionError;
+
+  const nextBidderWallet = (auction?.next_bidder_wallet as string | null)?.trim();
+  if (nextBidderWallet === normalizedBuyer) {
+    const { data: offerThreads, error: offerThreadError } = await supabase
+      .from("message_threads")
+      .select("id")
+      .eq("auction_id", auctionId)
+      .limit(1);
+
+    if (offerThreadError) throw offerThreadError;
+    if (offerThreads?.length) {
+      return offerThreads[0].id as string;
+    }
+  }
+
+  return null;
 }
 
 export async function checkAndArchiveThreads(

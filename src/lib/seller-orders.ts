@@ -5,7 +5,7 @@ import {
   insertThreadSystemMessage,
   type MessageThread,
 } from "@/lib/messages";
-import { notifyItemShipped } from "@/lib/notifications";
+import { notifyItemShipped, notifyTrackingUploaded } from "@/lib/notifications";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export const THREAD_SHIPPING_CARRIERS = [
@@ -253,6 +253,11 @@ export async function submitThreadShippingTracking({
     auctionTitle: auction.title,
     courier: trimmedCarrier,
     trackingNumber: trimmedTracking,
+    threadId,
+  });
+
+  await notifyTrackingUploaded({
+    sellerWallet,
     threadId,
   });
 

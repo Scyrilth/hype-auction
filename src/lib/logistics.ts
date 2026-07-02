@@ -10,6 +10,7 @@ import {
 } from "@/lib/messages";
 import {
   notifyItemShipped,
+  notifyTrackingUploaded,
 } from "@/lib/notifications";
 import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { supabase } from "@/lib/supabase";
@@ -178,6 +179,15 @@ export async function saveAuctionShippingTracking({
   }
 
   if (winnerBid?.bidder_wallet) {
+    const { data: threadRow } = await supabase
+      .from("message_threads")
+      .select("id")
+      .eq("auction_id", auctionId)
+      .eq("buyer_wallet", winnerBid?.bidder_wallet as string)
+      .maybeSingle();
+
+    const resolvedThreadId = (threadRow?.id as string | undefined) ?? null;
+
     await notifyBuyerShipment({
       auctionId,
       auctionTitle: existing.title as string,
@@ -186,6 +196,13 @@ export async function saveAuctionShippingTracking({
       courier: trimmedCourier,
       trackingNumber: trimmedTracking,
     });
+
+    if (resolvedThreadId) {
+      await notifyTrackingUploaded({
+        sellerWallet,
+        threadId: resolvedThreadId,
+      });
+    }
   }
 
   return parseAuctionRow(data as Record<string, unknown>);

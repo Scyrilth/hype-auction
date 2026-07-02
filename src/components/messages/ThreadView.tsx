@@ -484,7 +484,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         shippingUsd,
         thread.seller_wallet,
         PLATFORM_WALLET,
-        thread.auction.escrow_attempt_number || 1
+        thread.auction.escrow_attempt_number || 1,
+        threadId
       );
 
       if (!result.success) {
@@ -574,7 +575,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         shippingUsd,
         thread.seller_wallet,
         PLATFORM_WALLET,
-        thread.auction.escrow_attempt_number || 1
+        thread.auction.escrow_attempt_number || 1,
+        threadId
       );
 
       if (!result.success) {
