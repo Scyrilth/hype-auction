@@ -1,18 +1,14 @@
 import AuctionCardLink from "@/components/auction/AuctionCardLink";
-import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
+import AuctionCardPricingFooter from "@/components/auction/AuctionCardPricingFooter";
 import {
   AUCTION_CARD_MIN_WIDTH,
   AuctionCardCategorySlot,
   AuctionCardContent,
-  AuctionCardFooterStats,
   AuctionCardImage,
-  AuctionCardShippingLine,
-  AuctionCardTimeLeftLabel,
   AuctionCardTitle,
   auctionCardShippingPropsFromAuction,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
-import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import type { Auction } from "@/lib/database.types";
 
@@ -80,24 +76,12 @@ export default function BrowseAuctionCard({
           </>
         }
         footer={
-          <AuctionCardFooterStats
-            bidColumn={
-              <>
-                <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
-                <AuctionCardBidLine amount={displayBid} />
-                <AuctionCardShippingLine
-                  {...auctionCardShippingPropsFromAuction(auction)}
-                />
-              </>
-            }
-            timeColumn={
-              isLive ? (
-                <>
-                  <AuctionCardTimeLeftLabel />
-                  <CountdownTimer endTime={auction.end_time} compact />
-                </>
-              ) : undefined
-            }
+          <AuctionCardPricingFooter
+            amount={displayBid}
+            shipping={auctionCardShippingPropsFromAuction(auction)}
+            endTime={auction.end_time}
+            showTimeLeft={isLive}
+            bidCount={bidCount}
           />
         }
       />

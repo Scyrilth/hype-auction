@@ -18,7 +18,7 @@ export default function AuctionCardBidLine({
 
   return (
     <p
-      className={`whitespace-nowrap text-base font-bold tabular-nums leading-tight text-accent ${className}`.trim()}
+      className={`whitespace-nowrap text-[15px] font-bold tabular-nums leading-tight text-accent ${className}`.trim()}
     >
       {formatSol(amount)}
       {usd !== null && Number.isFinite(usd) && usd >= 0 ? (

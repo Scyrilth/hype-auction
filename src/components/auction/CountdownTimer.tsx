@@ -16,10 +16,12 @@ export default function CountdownTimer({
   endTime,
   compact = false,
   large = false,
+  variant = "default",
 }: {
   endTime: string;
   compact?: boolean;
   large?: boolean;
+  variant?: "default" | "card";
 }) {
   const [seconds, setSeconds] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -34,19 +36,25 @@ export default function CountdownTimer({
 
   const colorClass = !mounted
     ? "text-muted"
-    : seconds <= 0
+    : variant === "card"
       ? "text-muted"
-      : getTimerColor(seconds);
+      : seconds <= 0
+        ? "text-muted"
+        : getTimerColor(seconds);
 
   const sizeClass = large
     ? "text-[clamp(1.75rem,4vw,2.75rem)]"
-    : compact
-      ? "text-xs"
-      : "text-[clamp(1.125rem,2.5vw,1.5rem)]";
+    : variant === "card"
+      ? "text-[10px] font-normal tracking-normal"
+      : compact
+        ? "text-xs"
+        : "text-[clamp(1.125rem,2.5vw,1.5rem)]";
+
+  const weightClass = variant === "card" ? "font-normal" : "font-bold";
 
   return (
     <span
-      className={`whitespace-nowrap font-mono font-bold tracking-wider ${sizeClass} ${colorClass}`}
+      className={`whitespace-nowrap font-mono ${weightClass} tracking-wider ${sizeClass} ${colorClass}`}
     >
       {!mounted ? "--:--:--" : seconds <= 0 ? "00:00:00" : formatTime(seconds)}
     </span>

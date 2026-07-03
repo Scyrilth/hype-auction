@@ -2,11 +2,9 @@
 
 import Image from "next/image";
 
-import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
-import CountdownTimer from "@/components/auction/CountdownTimer";
+import AuctionCardPricingFooter from "@/components/auction/AuctionCardPricingFooter";
 import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
-import { formatAuctionCardShippingLine } from "@/lib/auction-shipping";
 import {
   buildGradingItemDetails,
   type GradingCompany,
@@ -17,18 +15,18 @@ import {
   type CategoryFieldType,
 } from "@/lib/category-fields";
 
-function listingPreviewShippingLine(form: ListingFormState): string | null {
+function listingPreviewShippingProps(form: ListingFormState) {
   if (form.freeDomesticShipping) {
-    return formatAuctionCardShippingLine({ freeShipping: true });
+    return { freeShipping: true as const };
   }
 
   if (form.domesticShippingUsd.trim() === "") {
-    return null;
+    return undefined;
   }
 
   const domestic = parseFloat(form.domesticShippingUsd);
   if (isNaN(domestic)) {
-    return null;
+    return undefined;
   }
 
   let international = 0;
@@ -42,10 +40,10 @@ function listingPreviewShippingLine(form: ListingFormState): string | null {
     }
   }
 
-  return formatAuctionCardShippingLine({
+  return {
     domesticShippingUsd: domestic,
     internationalShippingUsd: international,
-  });
+  };
 }
 
 export type ItemDetailRow = {
@@ -99,7 +97,7 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
       ? buildGradingItemDetails(form.gradingCompany, form.gradingGradeId)
       : null;
 
-  const shippingLine = listingPreviewShippingLine(form);
+  const previewShipping = listingPreviewShippingProps(form);
 
   return (
     <div className="sticky top-5 rounded-2xl border border-border bg-surface p-5">
@@ -163,22 +161,14 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
             </dl>
           )}
 
-          <div className="mt-4 flex items-end justify-between gap-3">
-            <div>
-              <p className="text-xs text-muted">Starting bid</p>
-              {displayBid > 0 ? (
-                <AuctionCardBidLine amount={displayBid} />
-              ) : (
-                <p className="text-lg font-bold text-accent">— SOL</p>
-              )}
-              {shippingLine ? (
-                <p className="text-[10px] text-muted">🚚 {shippingLine}</p>
-              ) : null}
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted">Time left</p>
-              <CountdownTimer endTime={endTime} compact />
-            </div>
+          <div className="mt-4">
+            <AuctionCardPricingFooter
+              amount={displayBid}
+              shipping={previewShipping}
+              endTime={endTime}
+              showTimeLeft
+              bidCount={0}
+            />
           </div>
         </div>
       </article>

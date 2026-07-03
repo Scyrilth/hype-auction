@@ -1,19 +1,15 @@
 "use client";
 
 import AuctionCardLink from "@/components/auction/AuctionCardLink";
-import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
+import AuctionCardPricingFooter from "@/components/auction/AuctionCardPricingFooter";
 import {
   AUCTION_CARD_MIN_WIDTH,
   AuctionCardCategorySlot,
   AuctionCardContent,
-  AuctionCardFooterStats,
   AuctionCardImage,
-  AuctionCardShippingLine,
-  AuctionCardTimeLeftLabel,
   AuctionCardTitle,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
-import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import type { AuctionSearchHit } from "@/lib/search";
 
@@ -24,6 +20,8 @@ export default function SearchAuctionCard({
 }) {
   const displayBid =
     auction.currentBid > 0 ? auction.currentBid : auction.startPrice;
+  const isLive = auction.status === "live";
+
   return (
     <AuctionCardLink
       href={`/auction/${auction.id}`}
@@ -71,32 +69,17 @@ export default function SearchAuctionCard({
           </>
         }
         footer={
-          <>
-            <p className="mb-2 text-xs text-muted">
-              {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
-            </p>
-            <AuctionCardFooterStats
-              bidColumn={
-                <>
-                  <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
-                  <AuctionCardBidLine amount={displayBid} />
-                  <AuctionCardShippingLine
-                    domesticShippingUsd={auction.domesticShippingUsd}
-                    internationalShippingUsd={auction.internationalShippingUsd}
-                    isExempt={auction.isDummy}
-                  />
-                </>
-              }
-              timeColumn={
-                auction.status === "live" ? (
-                  <>
-                    <AuctionCardTimeLeftLabel />
-                    <CountdownTimer endTime={auction.endTime} compact />
-                  </>
-                ) : undefined
-              }
-            />
-          </>
+          <AuctionCardPricingFooter
+            amount={displayBid}
+            shipping={{
+              domesticShippingUsd: auction.domesticShippingUsd,
+              internationalShippingUsd: auction.internationalShippingUsd,
+              isExempt: auction.isDummy,
+            }}
+            endTime={auction.endTime}
+            showTimeLeft={isLive}
+            bidCount={auction.bidCount}
+          />
         }
       />
     </AuctionCardLink>
