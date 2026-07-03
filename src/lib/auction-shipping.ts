@@ -67,6 +67,44 @@ export function formatDomesticShippingLine(domesticShippingUsd: number): string 
   return `+ $${domesticShippingUsd.toFixed(2)} shipping`;
 }
 
+export function formatAuctionCardShippingLine({
+  domesticShippingUsd = 0,
+  internationalShippingUsd = 0,
+  freeShipping = false,
+  isExempt = false,
+}: {
+  domesticShippingUsd?: number;
+  internationalShippingUsd?: number;
+  freeShipping?: boolean;
+  isExempt?: boolean;
+}): string | null {
+  if (isExempt) return null;
+
+  const domestic = domesticShippingUsd ?? 0;
+  const international = internationalShippingUsd ?? 0;
+
+  if (freeShipping || (domestic <= 0 && international <= 0)) {
+    return "Free shipping";
+  }
+
+  const hasDomestic = domestic > 0;
+  const hasInternational = international > 0;
+
+  if (hasDomestic && hasInternational) {
+    return `$${domestic.toFixed(2)} domestic · $${international.toFixed(2)} intl`;
+  }
+
+  if (hasDomestic) {
+    return `$${domestic.toFixed(2)} shipping`;
+  }
+
+  if (hasInternational) {
+    return `$${international.toFixed(2)} shipping`;
+  }
+
+  return null;
+}
+
 export function formatShippingUsd(amount: number): string {
   if (amount <= 0) return "Free";
   return `$${amount.toFixed(2)}`;

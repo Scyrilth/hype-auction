@@ -1,9 +1,9 @@
 "use client";
 
 import AuctionCardLink from "@/components/auction/AuctionCardLink";
+import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
 import {
   AUCTION_CARD_MIN_WIDTH,
-  AuctionCardBidPrice,
   AuctionCardCategorySlot,
   AuctionCardContent,
   AuctionCardFooterStats,
@@ -15,7 +15,6 @@ import {
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
-import FiatValue from "@/components/ui/FiatValue";
 import type { AuctionSearchHit } from "@/lib/search";
 
 export default function SearchAuctionCard({
@@ -80,11 +79,12 @@ export default function SearchAuctionCard({
               bidColumn={
                 <>
                   <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
-                  <AuctionCardBidPrice amount={displayBid} />
+                  <AuctionCardBidLine amount={displayBid} />
                   <AuctionCardShippingLine
                     domesticShippingUsd={auction.domesticShippingUsd}
+                    internationalShippingUsd={auction.internationalShippingUsd}
+                    isExempt={auction.isDummy}
                   />
-                  <FiatValue solAmount={displayBid} />
                 </>
               }
               timeColumn={

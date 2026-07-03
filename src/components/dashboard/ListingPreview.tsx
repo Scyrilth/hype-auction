@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 
+import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
+import { formatAuctionCardShippingLine } from "@/lib/auction-shipping";
 import {
   buildGradingItemDetails,
   type GradingCompany,
@@ -14,7 +16,37 @@ import {
   getItemDetailLabel,
   type CategoryFieldType,
 } from "@/lib/category-fields";
-import { formatSol } from "@/lib/format";
+
+function listingPreviewShippingLine(form: ListingFormState): string | null {
+  if (form.freeDomesticShipping) {
+    return formatAuctionCardShippingLine({ freeShipping: true });
+  }
+
+  if (form.domesticShippingUsd.trim() === "") {
+    return null;
+  }
+
+  const domestic = parseFloat(form.domesticShippingUsd);
+  if (isNaN(domestic)) {
+    return null;
+  }
+
+  let international = 0;
+  if (
+    !form.freeInternationalShipping &&
+    form.internationalShippingUsd.trim() !== ""
+  ) {
+    const parsed = parseFloat(form.internationalShippingUsd);
+    if (!isNaN(parsed)) {
+      international = parsed;
+    }
+  }
+
+  return formatAuctionCardShippingLine({
+    domesticShippingUsd: domestic,
+    internationalShippingUsd: international,
+  });
+}
 
 export type ItemDetailRow = {
   key: string;
@@ -66,6 +98,8 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
     form.hasProfessionalGrade && form.gradingGradeId
       ? buildGradingItemDetails(form.gradingCompany, form.gradingGradeId)
       : null;
+
+  const shippingLine = listingPreviewShippingLine(form);
 
   return (
     <div className="sticky top-5 rounded-2xl border border-border bg-surface p-5">
@@ -132,9 +166,14 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
           <div className="mt-4 flex items-end justify-between gap-3">
             <div>
               <p className="text-xs text-muted">Starting bid</p>
-              <p className="text-lg font-bold text-accent">
-                {displayBid > 0 ? formatSol(displayBid) : "— SOL"}
-              </p>
+              {displayBid > 0 ? (
+                <AuctionCardBidLine amount={displayBid} />
+              ) : (
+                <p className="text-lg font-bold text-accent">— SOL</p>
+              )}
+              {shippingLine ? (
+                <p className="text-[10px] text-muted">🚚 {shippingLine}</p>
+              ) : null}
             </div>
             <div className="text-right">
               <p className="text-xs text-muted">Time left</p>

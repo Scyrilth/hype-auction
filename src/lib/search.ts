@@ -155,6 +155,8 @@ export interface AuctionSearchHit {
   itemDetails: Record<string, string>;
   isFeatured: boolean;
   domesticShippingUsd: number;
+  internationalShippingUsd: number;
+  isDummy: boolean;
 }
 
 export interface CategorySearchHit {
@@ -196,6 +198,8 @@ function toAuctionHit(
     itemDetails: auction.item_details,
     isFeatured: auction.is_featured,
     domesticShippingUsd: auction.domestic_shipping_usd,
+    internationalShippingUsd: auction.international_shipping_usd,
+    isDummy: auction.is_dummy,
   };
 }
 

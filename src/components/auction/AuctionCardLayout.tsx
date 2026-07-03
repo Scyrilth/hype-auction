@@ -2,7 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { formatDomesticShippingLine } from "@/lib/auction-shipping";
+import {
+  formatAuctionCardShippingLine,
+  isShippingExemptAuction,
+} from "@/lib/auction-shipping";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol } from "@/lib/format";
 
@@ -162,18 +165,42 @@ export function AuctionCardTitle({
 
 export function AuctionCardShippingLine({
   domesticShippingUsd = 0,
+  internationalShippingUsd = 0,
+  freeShipping = false,
+  isExempt = false,
   className = "",
 }: {
   domesticShippingUsd?: number;
+  internationalShippingUsd?: number;
+  freeShipping?: boolean;
+  isExempt?: boolean;
   className?: string;
 }) {
+  const line = formatAuctionCardShippingLine({
+    domesticShippingUsd,
+    internationalShippingUsd,
+    freeShipping,
+    isExempt,
+  });
+
+  if (!line) return null;
+
   return (
-    <p
-      className={`text-xs text-muted ${className}`.trim()}
-    >
-      {formatDomesticShippingLine(domesticShippingUsd)}
-    </p>
+    <p className={`text-[10px] text-muted ${className}`.trim()}>🚚 {line}</p>
   );
+}
+
+export function auctionCardShippingPropsFromAuction(auction: {
+  domestic_shipping_usd: number;
+  international_shipping_usd: number;
+  is_dummy?: boolean;
+  seller_wallet?: string;
+}) {
+  return {
+    domesticShippingUsd: auction.domestic_shipping_usd,
+    internationalShippingUsd: auction.international_shipping_usd,
+    isExempt: isShippingExemptAuction(auction),
+  };
 }
 
 export function AuctionCardBidPrice({

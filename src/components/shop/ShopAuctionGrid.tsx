@@ -1,18 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
 import {
   AuctionCardCategorySlot,
   AuctionCardContent,
   AuctionCardShippingLine,
   AuctionCardTitle,
+  auctionCardShippingPropsFromAuction,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
-import FiatValue from "@/components/ui/FiatValue";
 import type { Auction } from "@/lib/database.types";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
-import { formatSol } from "@/lib/format";
 
 export default function ShopAuctionGrid({
   auctions,
@@ -78,13 +78,10 @@ export default function ShopAuctionGrid({
                 <div className="flex items-end justify-between gap-2">
                   <div>
                     <p className="text-xs text-muted">Current bid</p>
-                    <p className="text-lg font-bold text-accent">
-                      {formatSol(displayBid)}
-                    </p>
+                    <AuctionCardBidLine amount={displayBid} />
                     <AuctionCardShippingLine
-                      domesticShippingUsd={auction.domestic_shipping_usd}
+                      {...auctionCardShippingPropsFromAuction(auction)}
                     />
-                    <FiatValue solAmount={displayBid} />
                   </div>
                   {showCountdown && (
                     <div className="text-right">

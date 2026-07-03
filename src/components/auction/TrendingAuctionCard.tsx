@@ -1,18 +1,18 @@
 import AuctionCardLink from "@/components/auction/AuctionCardLink";
+import AuctionCardBidLine from "@/components/auction/AuctionCardBidLine";
 import {
   AUCTION_CARD_MIN_WIDTH,
-  AuctionCardBidPrice,
   AuctionCardContent,
   AuctionCardFooterStats,
   AuctionCardImage,
   AuctionCardShippingLine,
   AuctionCardTimeLeftLabel,
   AuctionCardTitle,
+  auctionCardShippingPropsFromAuction,
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
-import FiatValue from "@/components/ui/FiatValue";
 import type { Auction } from "@/lib/database.types";
 
 export default function TrendingAuctionCard({
@@ -83,11 +83,10 @@ export default function TrendingAuctionCard({
             bidColumn={
               <>
                 <p className="whitespace-nowrap text-xs text-muted">Current bid</p>
-                <AuctionCardBidPrice amount={displayBid} />
+                <AuctionCardBidLine amount={displayBid} />
                 <AuctionCardShippingLine
-                  domesticShippingUsd={auction.domestic_shipping_usd}
+                  {...auctionCardShippingPropsFromAuction(auction)}
                 />
-                <FiatValue solAmount={displayBid} />
               </>
             }
             timeColumn={
