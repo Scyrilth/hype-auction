@@ -15,6 +15,8 @@ pub const PAYMENT_WINDOW_ATTEMPT_3: i64 = 14_400;
 pub const SHIPPING_DEADLINE_SECONDS: i64 = 259_200;
 /// Permissionless auto-refund after 7 days without shipping confirmation.
 pub const AUTO_REFUND_SECONDS: i64 = 604_800;
+/// Permissionless auto-release to seller 3 days after shipping confirmation.
+pub const AUTO_RELEASE_SECONDS: i64 = 259_200;
 
 #[program]
 pub mod hype_escrow {
@@ -344,6 +346,48 @@ pub mod hype_escrow {
         Ok(())
     }
 
+    pub fn auto_release(ctx: Context<AutoRelease>, auction_id: [u8; 32]) -> Result<()> {
+        let (seller, seller_amount, platform_fee) = {
+            let escrow = &ctx.accounts.escrow;
+            require!(escrow.auction_id == auction_id, EscrowError::InvalidState);
+            require!(escrow.state == EscrowState::Shipped, EscrowError::InvalidState);
+
+            let now = Clock::get()?.unix_timestamp;
+            require!(
+                now > escrow
+                    .shipped_at
+                    .checked_add(AUTO_RELEASE_SECONDS)
+                    .ok_or(EscrowError::InvalidAmount)?,
+                EscrowError::AutoReleaseNotReady
+            );
+
+            require_keys_eq!(escrow.seller, ctx.accounts.seller.key(), EscrowError::Unauthorized);
+            require_keys_eq!(
+                escrow.platform_wallet,
+                ctx.accounts.platform_wallet.key(),
+                EscrowError::Unauthorized
+            );
+
+            let (seller_amount, platform_fee) = escrow.fee_split()?;
+            (escrow.seller, seller_amount, platform_fee)
+        };
+
+        let release_accounts = ctx.accounts.into_release_accounts();
+        release_to_seller_and_platform(&ctx.accounts.escrow, &release_accounts)?;
+
+        let escrow = &mut ctx.accounts.escrow;
+        escrow.state = EscrowState::Complete;
+
+        emit!(ReleaseEvent {
+            auction_id,
+            seller,
+            seller_amount,
+            platform_fee,
+        });
+
+        Ok(())
+    }
+
     pub fn cancel(ctx: Context<Cancel>, auction_id: [u8; 32]) -> Result<()> {
         let escrow = &mut ctx.accounts.escrow;
         require!(escrow.auction_id == auction_id, EscrowError::InvalidState);
@@ -663,6 +707,38 @@ impl<'info> AutoRefund<'info> {
 
 #[derive(Accounts)]
 #[instruction(auction_id: [u8; 32])]
+pub struct AutoRelease<'info> {
+    /// CHECK: Must match escrow.seller; receives seller proceeds.
+    #[account(mut, address = escrow.seller)]
+    pub seller: UncheckedAccount<'info>,
+
+    /// CHECK: Must match escrow.platform_wallet; receives platform fee.
+    #[account(mut, address = escrow.platform_wallet)]
+    pub platform_wallet: UncheckedAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"escrow", auction_id.as_ref()],
+        bump = escrow.bump
+    )]
+    pub escrow: Account<'info, EscrowAccount>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> AutoRelease<'info> {
+    fn into_release_accounts(&self) -> ReleaseAccounts<'info> {
+        ReleaseAccounts {
+            seller: self.seller.to_account_info(),
+            platform_wallet: self.platform_wallet.to_account_info(),
+            escrow: self.escrow.to_account_info(),
+            system_program: self.system_program.to_account_info(),
+        }
+    }
+}
+
+#[derive(Accounts)]
+#[instruction(auction_id: [u8; 32])]
 pub struct Cancel<'info> {
     pub platform_wallet: Signer<'info>,
 
@@ -823,6 +899,8 @@ pub enum EscrowError {
     PaymentWindowNotExpired,
     #[msg("Auto-refund is not yet available")]
     TooEarlyForRefund,
+    #[msg("Auto-release is not yet available")]
+    AutoReleaseNotReady,
     #[msg("Seller confirmation window has passed")]
     TooLateToShip,
     #[msg("Attempt number must be 1, 2, or 3")]

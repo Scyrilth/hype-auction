@@ -500,6 +500,56 @@ export async function resolveDisputeOnChain(
   }
 }
 
+export async function expireEscrowOnChain(
+  auctionId: string,
+  provider: AnchorProvider
+): Promise<EscrowTxResult> {
+  try {
+    const auctionIdArg = auctionIdToBytes(auctionId);
+    const [escrowPda] = getEscrowPDA(auctionId);
+    const program = getProgram(provider);
+
+    const txSignature = (await program.methods
+      .expireEscrow(auctionIdArg)
+      .accounts({
+        escrow: escrowPda,
+      })
+      .rpc()) as TransactionSignature;
+
+    return { success: true, txSignature };
+  } catch (error) {
+    console.error("expireEscrowOnChain failed:", error);
+    return { success: false, error: formatAnchorError(error) };
+  }
+}
+
+export async function autoReleaseOnChain(
+  auctionId: string,
+  sellerWallet: string,
+  platformWallet: string = PLATFORM_WALLET,
+  provider: AnchorProvider
+): Promise<EscrowTxResult> {
+  try {
+    const auctionIdArg = auctionIdToBytes(auctionId);
+    const [escrowPda] = getEscrowPDA(auctionId);
+    const program = getProgram(provider);
+
+    const txSignature = (await program.methods
+      .autoRelease(auctionIdArg)
+      .accounts({
+        seller: new PublicKey(sellerWallet),
+        platformWallet: new PublicKey(platformWallet),
+        escrow: escrowPda,
+      })
+      .rpc()) as TransactionSignature;
+
+    return { success: true, txSignature };
+  } catch (error) {
+    console.error("autoReleaseOnChain failed:", error);
+    return { success: false, error: formatAnchorError(error) };
+  }
+}
+
 export async function autoRefundOnChain(
   auctionId: string,
   buyerWallet: string,

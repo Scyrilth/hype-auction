@@ -576,6 +576,7 @@ export async function acceptNextBidderOffer({
     .from("auctions")
     .update({
       next_bidder_response_deadline: paymentDeadline.toISOString(),
+      payment_deadline: paymentDeadline.toISOString(),
       escrow_attempt_number: 1,
       escrow_state: "pending",
     })

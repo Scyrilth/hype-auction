@@ -234,6 +234,7 @@ export async function submitThreadShippingTracking({
       tracking_courier: trimmedCarrier,
       tracking_number: trimmedTracking,
       tracking_uploaded_at: now,
+      shipped_at: now,
       shipping_status: "shipped",
       escrow_state: "shipped",
     })

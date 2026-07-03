@@ -120,6 +120,17 @@ export const HYPE_ESCROW_IDL = {
       args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
     },
     {
+      name: "auto_release",
+      discriminator: [212, 34, 30, 246, 192, 13, 97, 31],
+      accounts: [
+        { name: "seller", writable: true },
+        { name: "platform_wallet", writable: true },
+        { name: "escrow", writable: true },
+        { name: "system_program", address: "11111111111111111111111111111111" },
+      ],
+      args: [{ name: "auction_id", type: { array: ["u8", 32] } }],
+    },
+    {
       name: "cancel",
       discriminator: [232, 219, 223, 41, 219, 236, 220, 190],
       accounts: [

@@ -147,6 +147,7 @@ export async function saveAuctionShippingTracking({
       tracking_courier: trimmedCourier,
       tracking_number: trimmedTracking,
       tracking_uploaded_at: now,
+      shipped_at: now,
       shipping_status: "shipped" satisfies ShippingStatus,
       escrow_state: "shipped",
     })
