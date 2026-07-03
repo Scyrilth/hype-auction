@@ -8,7 +8,169 @@ import {
   parseNextBidderOfferMessage,
 } from "@/lib/non-payment-resolution";
 import type { ShippingAddress } from "@/lib/database.types";
-import { supabase, type SupabaseClient } from "@/lib/supabase";
+import { getNotificationClient, supabase, type SupabaseClient } from "@/lib/supabase";
+
+const THREAD_SELECT =
+  "id, buyer_wallet, seller_wallet, auction_id, escrow_status, shipping_address_id, shipping_usd, shipping_country";
+
+function getThreadShippingClient(client?: SupabaseClient): SupabaseClient {
+  return client ?? getNotificationClient();
+}
+
+async function fetchThreadRowById(
+  threadId: string,
+  client: SupabaseClient
+): Promise<{ row: Record<string, unknown> | null; error: Error | null }> {
+  const { data, error } = await client
+    .from("message_threads")
+    .select(THREAD_SELECT)
+    .eq("id", threadId.trim())
+    .maybeSingle();
+
+  if (error) {
+    console.error("[thread-shipping] Supabase thread lookup by id failed", {
+      threadId,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    return { row: null, error };
+  }
+
+  return { row: (data as Record<string, unknown> | null) ?? null, error: null };
+}
+
+async function fetchThreadRowByAuctionBuyer(
+  auctionId: string,
+  buyerWallet: string,
+  client: SupabaseClient
+): Promise<{ row: Record<string, unknown> | null; error: Error | null }> {
+  const normalizedBuyer = buyerWallet.trim();
+  const normalizedAuctionId = auctionId.trim();
+
+  const { data: directThreads, error: directError } = await client
+    .from("message_threads")
+    .select(THREAD_SELECT)
+    .eq("auction_id", normalizedAuctionId)
+    .eq("buyer_wallet", normalizedBuyer)
+    .limit(1);
+
+  if (directError) {
+    console.error("[thread-shipping] Supabase auction+buyer thread lookup failed", {
+      auctionId: normalizedAuctionId,
+      buyerWallet: normalizedBuyer,
+      code: directError.code,
+      message: directError.message,
+      details: directError.details,
+      hint: directError.hint,
+    });
+    return { row: null, error: directError };
+  }
+
+  if (directThreads?.[0]) {
+    return { row: directThreads[0] as Record<string, unknown>, error: null };
+  }
+
+  const { data: auction, error: auctionError } = await client
+    .from("auctions")
+    .select("next_bidder_wallet")
+    .eq("id", normalizedAuctionId)
+    .maybeSingle();
+
+  if (auctionError) {
+    console.error("[thread-shipping] Supabase auction lookup for thread fallback failed", {
+      auctionId: normalizedAuctionId,
+      code: auctionError.code,
+      message: auctionError.message,
+      details: auctionError.details,
+      hint: auctionError.hint,
+    });
+    return { row: null, error: auctionError };
+  }
+
+  const nextBidderWallet = (auction?.next_bidder_wallet as string | null)?.trim();
+  if (nextBidderWallet === normalizedBuyer) {
+    const { data: offerThreads, error: offerThreadError } = await client
+      .from("message_threads")
+      .select(THREAD_SELECT)
+      .eq("auction_id", normalizedAuctionId)
+      .limit(1);
+
+    if (offerThreadError) {
+      console.error("[thread-shipping] Supabase next-bidder thread lookup failed", {
+        auctionId: normalizedAuctionId,
+        buyerWallet: normalizedBuyer,
+        code: offerThreadError.code,
+        message: offerThreadError.message,
+        details: offerThreadError.details,
+        hint: offerThreadError.hint,
+      });
+      return { row: null, error: offerThreadError };
+    }
+
+    if (offerThreads?.[0]) {
+      return { row: offerThreads[0] as Record<string, unknown>, error: null };
+    }
+  }
+
+  return { row: null, error: null };
+}
+
+async function resolveThreadForBuyerShipping({
+  threadId,
+  buyerWallet,
+  auctionId,
+  client = supabase,
+}: {
+  threadId?: string | null;
+  buyerWallet: string;
+  auctionId?: string | null;
+  client?: SupabaseClient;
+}): Promise<Record<string, unknown>> {
+  const db = getThreadShippingClient(client);
+  const normalizedThreadId = threadId?.trim() ?? "";
+  const normalizedBuyer = buyerWallet.trim();
+
+  if (normalizedThreadId) {
+    const byId = await fetchThreadRowById(normalizedThreadId, db);
+    if (byId.error) throw byId.error;
+    if (byId.row) {
+      return byId.row;
+    }
+  }
+
+  if (auctionId?.trim()) {
+    console.warn("[thread-shipping] thread not found by id; trying auction fallback", {
+      threadId: normalizedThreadId,
+      auctionId: auctionId.trim(),
+      buyerWallet: normalizedBuyer,
+    });
+
+    const byAuction = await fetchThreadRowByAuctionBuyer(
+      auctionId,
+      normalizedBuyer,
+      db
+    );
+    if (byAuction.error) throw byAuction.error;
+    if (byAuction.row) {
+      console.log("[thread-shipping] resolved thread via auction fallback", {
+        requestedThreadId: normalizedThreadId,
+        resolvedThreadId: byAuction.row.id,
+        auctionId: auctionId.trim(),
+        buyerWallet: normalizedBuyer,
+      });
+      return byAuction.row;
+    }
+  }
+
+  console.error("[thread-shipping] conversation not found after lookup attempts", {
+    threadId: normalizedThreadId || null,
+    auctionId: auctionId?.trim() ?? null,
+    buyerWallet: normalizedBuyer,
+  });
+  throw new ThreadShippingError("Conversation not found.");
+}
 
 export class ThreadShippingError extends Error {
   constructor(message: string) {
@@ -124,39 +286,34 @@ async function getLatestAcceptedOfferAmount(
 export async function assertBuyerCanConfirmThreadShipping({
   threadId,
   buyerWallet,
+  auctionId,
   client = supabase,
 }: {
   threadId: string;
   buyerWallet: string;
+  auctionId?: string | null;
   client?: SupabaseClient;
 }) {
-  const { data: thread, error: threadError } = await client
-    .from("message_threads")
-    .select(
-      "id, buyer_wallet, seller_wallet, auction_id, escrow_status, shipping_address_id, shipping_usd, shipping_country"
-    )
-    .eq("id", threadId)
-    .maybeSingle();
-
-  if (threadError) throw threadError;
-  if (!thread) {
-    throw new ThreadShippingError("Conversation not found.");
-  }
-
-  if (thread.buyer_wallet !== buyerWallet) {
-    throw new ThreadShippingError("Only the buyer can confirm a shipping address.");
-  }
+  const db = getThreadShippingClient(client);
+  const normalizedBuyer = buyerWallet.trim();
+  const thread = await resolveThreadForBuyerShipping({
+    threadId,
+    buyerWallet: normalizedBuyer,
+    auctionId,
+    client: db,
+  });
+  const effectiveThreadId = thread.id as string;
 
   if (!thread.auction_id) {
     throw new ThreadShippingError("This conversation is not linked to an auction.");
   }
 
-  const { data: auction, error: auctionError } = await client
+  const { data: auction, error: auctionError } = await db
     .from("auctions")
     .select(
       "id, status, escrow_state, current_bid, start_price, next_bidder_wallet, is_dummy, seller_wallet, domestic_shipping_usd, international_shipping_usd"
     )
-    .eq("id", thread.auction_id)
+    .eq("id", thread.auction_id as string)
     .maybeSingle();
 
   if (auctionError) throw auctionError;
@@ -179,55 +336,76 @@ export async function assertBuyerCanConfirmThreadShipping({
     );
   }
 
+  const { data: topBid, error: topBidError } = await db
+    .from("bids")
+    .select("bidder_wallet")
+    .eq("auction_id", thread.auction_id as string)
+    .order("amount", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (topBidError) throw topBidError;
+
+  const topBidderWallet = (topBid?.bidder_wallet as string | null)?.trim() ?? null;
+
   const isNextBidderBuyer =
-    auction.next_bidder_wallet === buyerWallet &&
-    thread.buyer_wallet === buyerWallet;
+    (auction.next_bidder_wallet as string | null)?.trim() === normalizedBuyer;
   const acceptedOfferAmount = isNextBidderBuyer
-    ? await getLatestAcceptedOfferAmount(threadId, buyerWallet, client)
+    ? await getLatestAcceptedOfferAmount(effectiveThreadId, normalizedBuyer, db)
     : null;
 
   const isOriginalWinner =
-    !auction.next_bidder_wallet && thread.buyer_wallet === buyerWallet;
+    !(auction.next_bidder_wallet as string | null)?.trim() &&
+    normalizedBuyer === (topBidderWallet ?? (thread.buyer_wallet as string).trim());
 
-  if (!isOriginalWinner && !(isNextBidderBuyer && acceptedOfferAmount !== null)) {
+  const isAuthorizedBuyer =
+    isOriginalWinner || (isNextBidderBuyer && acceptedOfferAmount !== null);
+
+  if (!isAuthorizedBuyer) {
     throw new ThreadShippingError(
       "Only the winning buyer can confirm a shipping address."
     );
   }
 
-  return { thread, auction, acceptedOfferAmount };
+  return { thread, auction, acceptedOfferAmount, effectiveThreadId };
 }
 
 export async function confirmThreadShippingAddress({
   threadId,
   buyerWallet,
   addressId,
+  auctionId,
   client = supabase,
 }: {
   threadId: string;
   buyerWallet: string;
   addressId: string;
+  auctionId?: string | null;
   client?: SupabaseClient;
 }): Promise<{
   shippingUsd: number;
   shippingCountry: string;
   address: ShippingAddress;
+  threadId: string;
 }> {
   if (!addressId?.trim()) {
     throw new ThreadShippingError("Select a shipping address.");
   }
 
-  const { thread, auction } = await assertBuyerCanConfirmThreadShipping({
-    threadId,
-    buyerWallet,
-    client,
-  });
+  const db = getThreadShippingClient(client);
+  const { thread, auction, effectiveThreadId } =
+    await assertBuyerCanConfirmThreadShipping({
+      threadId,
+      buyerWallet,
+      auctionId,
+      client: db,
+    });
 
-  const { data: addressRow, error: addressError } = await client
+  const { data: addressRow, error: addressError } = await db
     .from("shipping_addresses")
     .select("*")
     .eq("id", addressId)
-    .eq("wallet_address", buyerWallet)
+    .eq("wallet_address", buyerWallet.trim())
     .maybeSingle();
 
   if (addressError) throw addressError;
@@ -237,10 +415,10 @@ export async function confirmThreadShippingAddress({
 
   const address = addressRow as ShippingAddress;
 
-  const { data: seller, error: sellerError } = await client
+  const { data: seller, error: sellerError } = await db
     .from("users")
     .select("country, ships_internationally")
-    .eq("wallet_address", thread.seller_wallet)
+    .eq("wallet_address", thread.seller_wallet as string)
     .maybeSingle();
 
   if (sellerError) throw sellerError;
@@ -252,15 +430,14 @@ export async function confirmThreadShippingAddress({
     shipsInternationally: Boolean(seller?.ships_internationally),
   });
 
-  const { error: updateError } = await client
+  const { error: updateError } = await db
     .from("message_threads")
     .update({
       shipping_address_id: address.id,
       shipping_usd: shippingUsd,
       shipping_country: address.country,
     })
-    .eq("id", threadId)
-    .eq("buyer_wallet", buyerWallet);
+    .eq("id", effectiveThreadId);
 
   if (updateError) {
     logSupabaseError("confirmThreadShippingAddress", updateError);
@@ -271,28 +448,34 @@ export async function confirmThreadShippingAddress({
     shippingUsd,
     shippingCountry: address.country,
     address,
+    threadId: effectiveThreadId,
   };
 }
 
 export async function verifyThreadShippingForPayment({
   threadId,
   buyerWallet,
+  auctionId,
   client = supabase,
 }: {
   threadId: string;
   buyerWallet: string;
+  auctionId?: string | null;
   client?: SupabaseClient;
 }): Promise<{
   shippingUsd: number;
   shippingCountry: string;
   shippingAddressId: string;
   bidAmountSol: number;
+  threadId: string;
 }> {
+  const db = getThreadShippingClient(client);
   const { thread, auction, acceptedOfferAmount } =
     await assertBuyerCanConfirmThreadShipping({
       threadId,
       buyerWallet,
-      client,
+      auctionId,
+      client: db,
     });
 
   const shippingAddressId = thread.shipping_address_id as string | null;
@@ -305,11 +488,11 @@ export async function verifyThreadShippingForPayment({
     );
   }
 
-  const { data: addressRow, error: addressError } = await client
+  const { data: addressRow, error: addressError } = await db
     .from("shipping_addresses")
     .select("*")
     .eq("id", shippingAddressId)
-    .eq("wallet_address", buyerWallet)
+    .eq("wallet_address", buyerWallet.trim())
     .maybeSingle();
 
   if (addressError) throw addressError;
@@ -321,10 +504,10 @@ export async function verifyThreadShippingForPayment({
 
   const address = addressRow as ShippingAddress;
 
-  const { data: seller, error: sellerError } = await client
+  const { data: seller, error: sellerError } = await db
     .from("users")
     .select("country, ships_internationally")
-    .eq("wallet_address", thread.seller_wallet)
+    .eq("wallet_address", thread.seller_wallet as string)
     .maybeSingle();
 
   if (sellerError) throw sellerError;
@@ -359,6 +542,7 @@ export async function verifyThreadShippingForPayment({
     shippingCountry: address.country,
     shippingAddressId,
     bidAmountSol,
+    threadId: thread.id as string,
   };
 }
 

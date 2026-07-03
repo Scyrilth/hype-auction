@@ -182,6 +182,7 @@ function InlineAddressForm({
 export default function ThreadShippingAddressModal({
   open,
   threadId,
+  auctionId,
   buyerWallet,
   sellerCountry,
   shipsInternationally,
@@ -194,6 +195,7 @@ export default function ThreadShippingAddressModal({
 }: {
   open: boolean;
   threadId: string;
+  auctionId: string;
   buyerWallet: string;
   sellerCountry: string | null;
   shipsInternationally: boolean;
@@ -283,10 +285,14 @@ export default function ThreadShippingAddressModal({
     try {
       const response = await fetch("/api/messages/shipping-address", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-wallet-address": buyerWallet,
+        },
         body: JSON.stringify({
           action: "confirm",
           threadId,
+          auctionId,
           buyerWallet,
           addressId: selectedId,
         }),

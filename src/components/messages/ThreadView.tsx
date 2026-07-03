@@ -77,17 +77,23 @@ function canBuyerPayThread(thread: ThreadDetail, wallet: string): boolean {
 
 async function verifyThreadPaymentShipping({
   threadId,
+  auctionId,
   buyerWallet,
 }: {
   threadId: string;
+  auctionId: string;
   buyerWallet: string;
 }): Promise<{ shippingUsd: number; bidAmountSol: number }> {
   const response = await fetch("/api/messages/shipping-address", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-wallet-address": buyerWallet,
+    },
     body: JSON.stringify({
       action: "verify-payment",
       threadId,
+      auctionId,
       buyerWallet,
     }),
   });
@@ -587,6 +593,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     try {
       const { shippingUsd, bidAmountSol } = await verifyThreadPaymentShipping({
         threadId,
+        auctionId: thread.auction_id,
         buyerWallet: wallet,
       });
       const bidAmount =
@@ -665,6 +672,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       try {
         const verified = await verifyThreadPaymentShipping({
           threadId,
+          auctionId: thread.auction_id,
           buyerWallet: wallet,
         });
         shippingUsd = verified.shippingUsd;
@@ -1076,6 +1084,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         <ThreadShippingAddressModal
           open={showAddressModal}
           threadId={thread.id}
+          auctionId={thread.auction.id}
           buyerWallet={wallet}
           sellerCountry={sellerCountry}
           shipsInternationally={shipsInternationally}
