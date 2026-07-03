@@ -152,6 +152,29 @@ function directionClass(direction: "inward" | "outward") {
   return direction === "inward" ? "text-emerald-400" : "text-red-400";
 }
 
+function trimBreakdownSol(sol: number): string {
+  return sol
+    .toFixed(4)
+    .replace(/(\.\d*?[1-9])0+$/, "$1")
+    .replace(/\.0+$/, "");
+}
+
+function showBidShippingBreakdown(
+  row: SellerTransactionRow | BuyerTransactionRow,
+  role: TransactionRole
+): boolean {
+  if (row.amounts.shippingSol <= 0) return false;
+  if (row.eventType !== "funded") return false;
+  if (role === "buying") {
+    const buyerRow = row as BuyerTransactionRow;
+    return (
+      buyerRow.displayStatus === "pending" ||
+      buyerRow.displayStatus === "completed"
+    );
+  }
+  return true;
+}
+
 function TransactionAmountCell({
   row,
   role,
@@ -170,48 +193,21 @@ function TransactionAmountCell({
     );
   }
 
-  if (role === "buying") {
-    const buyerRow = row as BuyerTransactionRow;
-    const showShippingBreakdown =
-      buyerRow.eventType === "funded" &&
-      (buyerRow.displayStatus === "pending" ||
-        buyerRow.displayStatus === "completed") &&
-      buyerRow.amounts.shippingSol > 0;
-
-    if (showShippingBreakdown) {
-      return (
-        <div className="whitespace-nowrap text-[11px] leading-tight">
-          <p className="font-mono">
-            Bid: {buyerRow.amounts.itemSol.toFixed(4)} SOL
-          </p>
-          <p className="font-mono">
-            Shipping: {buyerRow.amounts.shippingSol.toFixed(4)} SOL
-          </p>
-          <p className="font-mono font-medium">
-            Total: {buyerRow.amounts.totalSol.toFixed(4)} SOL
-          </p>
-          <p className="mt-0.5 text-[10px] text-muted">
-            ~${buyerRow.amounts.usdApprox.toFixed(2)}
-          </p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="whitespace-nowrap text-[11px] leading-tight">
-        <p className="font-mono">{buyerRow.amounts.totalSol.toFixed(4)} SOL</p>
-        <p className="mt-0.5 text-[10px] text-muted">
-          ~${buyerRow.amounts.usdApprox.toFixed(2)}
-        </p>
-      </div>
-    );
-  }
-
-  const amountSol = (row as SellerTransactionRow).amounts.netSol;
+  const amountSol =
+    role === "selling"
+      ? (row as SellerTransactionRow).amounts.netSol
+      : (row as BuyerTransactionRow).amounts.totalSol;
+  const showBreakdown = showBidShippingBreakdown(row, role);
 
   return (
     <div className="whitespace-nowrap text-[11px] leading-tight">
       <p className="font-mono">{amountSol.toFixed(4)} SOL</p>
+      {showBreakdown ? (
+        <p className="mt-0.5 text-[10px] text-muted">
+          {trimBreakdownSol(row.amounts.itemSol)} bid +{" "}
+          {trimBreakdownSol(row.amounts.shippingSol)} shipping
+        </p>
+      ) : null}
       <p className="mt-0.5 text-[10px] text-muted">
         ~${row.amounts.usdApprox.toFixed(2)}
       </p>
