@@ -25,7 +25,9 @@ function buildAmountsFromLamports(
   amountLamports: number,
   solUsdRateAtPayment: number | null,
   domesticShippingUsd: number,
-  currentRateFallback: number
+  currentRateFallback: number,
+  ledgerBidLamports?: number | null,
+  ledgerShippingLamports?: number | null
 ): TransactionAmounts {
   const totalSol = lamportsToSol(amountLamports);
   const stored = solUsdRateAtPayment;
@@ -38,6 +40,29 @@ function buildAmountsFromLamports(
   const usesHistoricalRate =
     stored != null && Number.isFinite(stored) && stored > 0;
   const shippingUsd = domesticShippingUsd;
+
+  const hasLedgerSplit =
+    ledgerBidLamports != null &&
+    ledgerBidLamports > 0 &&
+    ledgerShippingLamports != null &&
+    ledgerShippingLamports > 0;
+
+  if (hasLedgerSplit) {
+    const itemSol = lamportsToSol(ledgerBidLamports);
+    const shippingSol = lamportsToSol(ledgerShippingLamports);
+    return {
+      itemSol,
+      shippingSol,
+      shippingUsd,
+      feeSol: 0,
+      netSol: totalSol,
+      totalSol,
+      usdApprox: totalSol * solUsdRate,
+      usdRateUsed: solUsdRate,
+      usesHistoricalRate,
+    };
+  }
+
   const shippingSol = solUsdRate > 0 ? shippingUsd / solUsdRate : 0;
   const itemSol = Math.max(0, totalSol - shippingSol);
   const feeSol = 0;
@@ -82,7 +107,9 @@ function buildSellerRow(
       event.amount_lamports,
       event.auction.sol_usd_rate_at_payment,
       event.auction.domestic_shipping_usd ?? 0,
-      currentRateFallback
+      currentRateFallback,
+      event.event_type === "funded" ? event.bid_lamports : null,
+      event.event_type === "funded" ? event.shipping_lamports : null
     ),
     escrowState,
     displayStatus,
@@ -132,7 +159,9 @@ function buildBuyerRow(
       event.amount_lamports,
       event.auction.sol_usd_rate_at_payment,
       event.auction.domestic_shipping_usd ?? 0,
-      currentRateFallback
+      currentRateFallback,
+      event.event_type === "funded" ? event.bid_lamports : null,
+      event.event_type === "funded" ? event.shipping_lamports : null
     ),
     escrowState,
     displayStatus,

@@ -43,3 +43,6 @@ target/
 **/*.d
 **/*.so
 **/*.rlib
+
+# Local test wallet keypairs (never commit)
+scripts/test-keys/*.json

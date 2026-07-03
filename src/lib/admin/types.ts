@@ -117,6 +117,8 @@ export interface EscrowMonitorRow {
   solscanUrl: string | null;
   /** SOL/USD rate stored on the auction at payment time (historical row USD). */
   solUsdRateAtPayment: number | null;
+  bidSol: number | null;
+  shippingSol: number | null;
 }
 
 export interface EscrowStateCount {

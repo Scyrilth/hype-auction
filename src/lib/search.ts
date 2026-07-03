@@ -142,6 +142,7 @@ export interface VendorSearchHit {
 export interface AuctionSearchHit {
   id: string;
   title: string;
+  description: string | null;
   category: string | null;
   currentBid: number;
   startPrice: number;
@@ -181,6 +182,7 @@ function toAuctionHit(
   return {
     id: auction.id,
     title: auction.title,
+    description: auction.description,
     category: auction.category,
     currentBid: auction.current_bid,
     startPrice: auction.start_price,

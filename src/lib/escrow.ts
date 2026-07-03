@@ -163,6 +163,7 @@ export async function usdToLamports(usdAmount: number): Promise<number> {
 }
 
 export interface PaymentBreakdown {
+  bidSol: number;
   itemSol: number;
   shippingSol: number;
   shippingUsd: number;
@@ -175,6 +176,7 @@ export async function calculatePaymentBreakdown(
 ): Promise<PaymentBreakdown> {
   const shippingSol = await usdToSol(shippingUsd);
   return {
+    bidSol: bidAmountSol,
     itemSol: bidAmountSol,
     shippingSol,
     shippingUsd,
@@ -340,6 +342,8 @@ export async function initiatePayment(
           buyerWallet,
           escrowPda: escrowPda.toBase58(),
           amountLamports: totalLamports,
+          bidLamports: amountLamports,
+          shippingLamports,
           onChainSignature: depositSig,
         });
       } catch (ledgerError) {

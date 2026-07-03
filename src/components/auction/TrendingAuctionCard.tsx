@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import AuctionCardLink from "@/components/auction/AuctionCardLink";
 import {
   AUCTION_CARD_MIN_WIDTH,
   AuctionCardBidPrice,
@@ -32,8 +31,9 @@ export default function TrendingAuctionCard({
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
   return (
-    <Link
+    <AuctionCardLink
       href={`/auction/${auction.id}`}
+      description={auction.description}
       className="group flex h-full w-full min-w-[12rem] flex-col rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
@@ -99,6 +99,6 @@ export default function TrendingAuctionCard({
           />
         }
       />
-    </Link>
+    </AuctionCardLink>
   );
 }

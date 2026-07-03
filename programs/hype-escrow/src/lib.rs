@@ -3,12 +3,17 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{self, Transfer};
 
-declare_id!("FSfoXgb1g1zuW2n9VyUegWqf9fc6mfdaRrND4nFdLkMS");
+declare_id!("DWvYLFF7iYYsZF97mYP7EhkEXXf1FPxs6SieTfgT5dYT");
 
+/// Payment window for winner attempt 1 (10 minutes).
 pub const PAYMENT_WINDOW_ATTEMPT_1: i64 = 600;
+/// Payment window for winner attempt 2 (2 hours).
 pub const PAYMENT_WINDOW_ATTEMPT_2: i64 = 7_200;
+/// Payment window for winner attempt 3 (4 hours).
 pub const PAYMENT_WINDOW_ATTEMPT_3: i64 = 14_400;
+/// Seller must confirm shipping within 3 days of funding.
 pub const SHIPPING_DEADLINE_SECONDS: i64 = 259_200;
+/// Permissionless auto-refund after 7 days without shipping confirmation.
 pub const AUTO_REFUND_SECONDS: i64 = 604_800;
 
 #[program]
@@ -30,6 +35,7 @@ pub mod hype_escrow {
             EscrowError::InvalidAttemptNumber
         );
         require!(amount_lamports > 0, EscrowError::InvalidAmount);
+
         require_keys_eq!(ctx.accounts.seller.key(), seller, EscrowError::Unauthorized);
         require_keys_eq!(
             ctx.accounts.platform_wallet.key(),
@@ -38,7 +44,7 @@ pub mod hype_escrow {
         );
 
         let now = Clock::get()?.unix_timestamp;
-        let window = payment_window_for_attempt(attempt_number)?;
+        let window = payment_window_seconds(attempt_number)?;
 
         let escrow = &mut ctx.accounts.escrow;
         escrow.auction_id = auction_id;
@@ -65,15 +71,20 @@ pub mod hype_escrow {
         let (total, amount_lamports, shipping_lamports, buyer) = {
             let escrow = &ctx.accounts.escrow;
             require!(escrow.auction_id == auction_id, EscrowError::InvalidState);
+
             match escrow.state {
                 EscrowState::Pending => {}
                 EscrowState::Funded => return err!(EscrowError::AlreadyClaimed),
                 _ => return err!(EscrowError::InvalidState),
             }
+
             require_keys_eq!(escrow.buyer, ctx.accounts.buyer.key(), EscrowError::Unauthorized);
 
             let now = Clock::get()?.unix_timestamp;
-            require!(now <= escrow.payment_deadline, EscrowError::PaymentWindowExpired);
+            require!(
+                now <= escrow.payment_deadline,
+                EscrowError::PaymentWindowExpired
+            );
 
             (
                 escrow.total_lamports()?,
@@ -83,8 +94,8 @@ pub mod hype_escrow {
             )
         };
 
-        transfer_lamports(
-            &ctx.accounts.buyer.to_account_info(),
+        fund_escrow(
+            &ctx.accounts.buyer,
             &ctx.accounts.escrow.to_account_info(),
             &ctx.accounts.system_program,
             total,
@@ -112,7 +123,10 @@ pub mod hype_escrow {
         require!(escrow.state == EscrowState::Pending, EscrowError::InvalidState);
 
         let now = Clock::get()?.unix_timestamp;
-        require!(now > escrow.payment_deadline, EscrowError::PaymentWindowNotExpired);
+        require!(
+            now > escrow.payment_deadline,
+            EscrowError::PaymentWindowNotExpired
+        );
 
         let attempt_number = escrow.attempt_number;
         escrow.state = EscrowState::Expired;
@@ -136,6 +150,7 @@ pub mod hype_escrow {
         platform_fee_bps: u16,
     ) -> Result<()> {
         require!(amount_lamports > 0, EscrowError::InvalidAmount);
+
         require_keys_eq!(ctx.accounts.seller.key(), seller, EscrowError::Unauthorized);
         require_keys_eq!(
             ctx.accounts.platform_wallet.key(),
@@ -161,8 +176,8 @@ pub mod hype_escrow {
             (escrow.total_lamports()?, escrow.buyer)
         };
 
-        transfer_lamports(
-            &ctx.accounts.buyer.to_account_info(),
+        fund_escrow(
+            &ctx.accounts.buyer,
             &ctx.accounts.escrow.to_account_info(),
             &ctx.accounts.system_program,
             total,
@@ -191,11 +206,11 @@ pub mod hype_escrow {
         require_keys_eq!(escrow.seller, ctx.accounts.seller.key(), EscrowError::Unauthorized);
 
         let now = Clock::get()?.unix_timestamp;
-        let deadline = escrow
+        let shipping_deadline = escrow
             .funded_at
             .checked_add(SHIPPING_DEADLINE_SECONDS)
             .ok_or(EscrowError::InvalidAmount)?;
-        require!(now <= deadline, EscrowError::TooLateToShip);
+        require!(now <= shipping_deadline, EscrowError::TooLateToShip);
 
         escrow.state = EscrowState::Shipped;
         escrow.shipped_at = now;
@@ -212,14 +227,12 @@ pub mod hype_escrow {
             escrow.seller
         };
 
-        let (seller_amount, platform_fee) = execute_release(
-            &ctx.accounts.escrow,
-            &ctx.accounts.seller.to_account_info(),
-            &ctx.accounts.platform_wallet.to_account_info(),
-            &ctx.accounts.system_program,
-        )?;
+        let release_accounts = ctx.accounts.into_release_accounts();
+        let (seller_amount, platform_fee) =
+            release_to_seller_and_platform(&ctx.accounts.escrow, &release_accounts)?;
 
-        ctx.accounts.escrow.state = EscrowState::Complete;
+        let escrow = &mut ctx.accounts.escrow;
+        escrow.state = EscrowState::Complete;
 
         emit!(ReleaseEvent {
             auction_id,
@@ -262,28 +275,29 @@ pub mod hype_escrow {
         let now = Clock::get()?.unix_timestamp;
 
         if release_to_seller {
-            let seller = ctx.accounts.escrow.seller;
-            let (seller_amount, platform_fee) = execute_release(
-                &ctx.accounts.escrow,
-                &ctx.accounts.seller.to_account_info(),
-                &ctx.accounts.platform_wallet.to_account_info(),
-                &ctx.accounts.system_program,
-            )?;
+            let release_accounts = ctx.accounts.into_release_accounts();
+            let (seller_amount, platform_fee) =
+                release_to_seller_and_platform(&ctx.accounts.escrow, &release_accounts)?;
+
             ctx.accounts.escrow.state = EscrowState::Complete;
 
             emit!(ReleaseEvent {
                 auction_id,
-                seller,
+                seller: ctx.accounts.escrow.seller,
                 seller_amount,
                 platform_fee,
             });
         } else {
-            execute_refund(
-                &ctx.accounts.escrow,
-                &ctx.accounts.buyer.to_account_info(),
-                &ctx.accounts.system_program,
-            )?;
+            let refund_accounts = ctx.accounts.into_refund_accounts();
+            let amount = refund_buyer(&ctx.accounts.escrow, &refund_accounts)?;
             ctx.accounts.escrow.state = EscrowState::Refunded;
+
+            emit!(AutoRefundEvent {
+                auction_id,
+                buyer: ctx.accounts.escrow.buyer,
+                amount,
+                refunded_at: now,
+            });
         }
 
         emit!(DisputeResolvedEvent {
@@ -302,23 +316,23 @@ pub mod hype_escrow {
             require!(escrow.state == EscrowState::Funded, EscrowError::InvalidState);
 
             let now = Clock::get()?.unix_timestamp;
-            let deadline = escrow
-                .funded_at
-                .checked_add(AUTO_REFUND_SECONDS)
-                .ok_or(EscrowError::InvalidAmount)?;
-            require!(now > deadline, EscrowError::TooEarlyForRefund);
+            require!(
+                now > escrow
+                    .funded_at
+                    .checked_add(AUTO_REFUND_SECONDS)
+                    .ok_or(EscrowError::InvalidAmount)?,
+                EscrowError::TooEarlyForRefund
+            );
 
             (escrow.buyer, escrow.total_lamports()?)
         };
 
-        execute_refund(
-            &ctx.accounts.escrow,
-            &ctx.accounts.buyer.to_account_info(),
-            &ctx.accounts.system_program,
-        )?;
+        let refund_accounts = ctx.accounts.into_refund_accounts();
+        refund_buyer(&ctx.accounts.escrow, &refund_accounts)?;
 
         let now = Clock::get()?.unix_timestamp;
-        ctx.accounts.escrow.state = EscrowState::Refunded;
+        let escrow = &mut ctx.accounts.escrow;
+        escrow.state = EscrowState::Refunded;
 
         emit!(AutoRefundEvent {
             auction_id,
@@ -350,7 +364,7 @@ pub mod hype_escrow {
 }
 
 // ---------------------------------------------------------------------------
-// State
+// Accounts
 // ---------------------------------------------------------------------------
 
 #[account]
@@ -392,24 +406,17 @@ impl EscrowAccount {
     }
 
     pub fn fee_split(&self) -> Result<(u64, u64)> {
-        let total = self.total_lamports()?;
-        let platform_fee = total
+        let platform_fee = self
+            .amount_lamports
             .checked_mul(self.platform_fee_bps as u64)
             .ok_or(error!(EscrowError::InvalidAmount))?
             .checked_div(10_000)
             .ok_or(error!(EscrowError::InvalidAmount))?;
-        let seller_amount = total
+        let seller_amount = self
+            .total_lamports()?
             .checked_sub(platform_fee)
             .ok_or(error!(EscrowError::InvalidAmount))?;
         Ok((seller_amount, platform_fee))
-    }
-
-    fn signer_seeds(&self) -> [&[u8]; 3] {
-        [
-            b"escrow",
-            self.auction_id.as_ref(),
-            core::slice::from_ref(&self.bump),
-        ]
     }
 }
 
@@ -457,7 +464,7 @@ pub struct DisputeResolvedEvent {
 }
 
 // ---------------------------------------------------------------------------
-// Account contexts
+// Instruction contexts
 // ---------------------------------------------------------------------------
 
 #[derive(Accounts)]
@@ -465,10 +472,13 @@ pub struct DisputeResolvedEvent {
 pub struct InitializeEscrow<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
-    /// CHECK: Validated against instruction arg.
+
+    /// CHECK: Validated against instruction arg and stored on escrow.
     pub seller: UncheckedAccount<'info>,
-    /// CHECK: Validated against instruction arg.
+
+    /// CHECK: Validated against instruction arg and stored on escrow.
     pub platform_wallet: UncheckedAccount<'info>,
+
     #[account(
         init,
         payer = buyer,
@@ -477,6 +487,7 @@ pub struct InitializeEscrow<'info> {
         bump
     )]
     pub escrow: Account<'info, EscrowAccount>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -485,12 +496,14 @@ pub struct InitializeEscrow<'info> {
 pub struct Deposit<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
+
     #[account(
         mut,
         seeds = [b"escrow", auction_id.as_ref()],
         bump = escrow.bump
     )]
     pub escrow: Account<'info, EscrowAccount>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -510,10 +523,13 @@ pub struct ExpireEscrow<'info> {
 pub struct BuyNow<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
-    /// CHECK: Validated against instruction arg.
+
+    /// CHECK: Validated against instruction arg and stored on escrow.
     pub seller: UncheckedAccount<'info>,
-    /// CHECK: Validated against instruction arg.
+
+    /// CHECK: Validated against instruction arg and stored on escrow.
     pub platform_wallet: UncheckedAccount<'info>,
+
     #[account(
         init,
         payer = buyer,
@@ -522,6 +538,7 @@ pub struct BuyNow<'info> {
         bump
     )]
     pub escrow: Account<'info, EscrowAccount>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -529,6 +546,7 @@ pub struct BuyNow<'info> {
 #[instruction(auction_id: [u8; 32])]
 pub struct ConfirmShipping<'info> {
     pub seller: Signer<'info>,
+
     #[account(
         mut,
         seeds = [b"escrow", auction_id.as_ref()],
@@ -541,18 +559,22 @@ pub struct ConfirmShipping<'info> {
 #[instruction(auction_id: [u8; 32])]
 pub struct Release<'info> {
     pub buyer: Signer<'info>,
-    /// CHECK: Must match escrow.seller.
+
+    /// CHECK: Must match escrow.seller; receives seller proceeds.
     #[account(mut, address = escrow.seller)]
     pub seller: UncheckedAccount<'info>,
-    /// CHECK: Must match escrow.platform_wallet.
+
+    /// CHECK: Must match escrow.platform_wallet; receives platform fee.
     #[account(mut, address = escrow.platform_wallet)]
     pub platform_wallet: UncheckedAccount<'info>,
+
     #[account(
         mut,
         seeds = [b"escrow", auction_id.as_ref()],
         bump = escrow.bump
     )]
     pub escrow: Account<'info, EscrowAccount>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -560,6 +582,7 @@ pub struct Release<'info> {
 #[instruction(auction_id: [u8; 32])]
 pub struct OpenDispute<'info> {
     pub buyer: Signer<'info>,
+
     #[account(
         mut,
         seeds = [b"escrow", auction_id.as_ref()],
@@ -571,20 +594,44 @@ pub struct OpenDispute<'info> {
 #[derive(Accounts)]
 #[instruction(auction_id: [u8; 32])]
 pub struct ResolveDispute<'info> {
+    #[account(mut)]
     pub platform_wallet: Signer<'info>,
-    /// CHECK: Must match escrow.buyer.
+
+    /// CHECK: Must match escrow.buyer; refund destination when applicable.
     #[account(mut, address = escrow.buyer)]
     pub buyer: UncheckedAccount<'info>,
-    /// CHECK: Must match escrow.seller.
+
+    /// CHECK: Must match escrow.seller; release destination when applicable.
     #[account(mut, address = escrow.seller)]
     pub seller: UncheckedAccount<'info>,
+
     #[account(
         mut,
         seeds = [b"escrow", auction_id.as_ref()],
         bump = escrow.bump
     )]
     pub escrow: Account<'info, EscrowAccount>,
+
     pub system_program: Program<'info, System>,
+}
+
+impl<'info> ResolveDispute<'info> {
+    fn into_release_accounts(&self) -> ReleaseAccounts<'info> {
+        ReleaseAccounts {
+            seller: self.seller.to_account_info(),
+            platform_wallet: self.platform_wallet.to_account_info(),
+            escrow: self.escrow.to_account_info(),
+            system_program: self.system_program.to_account_info(),
+        }
+    }
+
+    fn into_refund_accounts(&self) -> RefundAccounts<'info> {
+        RefundAccounts {
+            buyer: self.buyer.to_account_info(),
+            escrow: self.escrow.to_account_info(),
+            system_program: self.system_program.to_account_info(),
+        }
+    }
 }
 
 #[derive(Accounts)]
@@ -593,21 +640,35 @@ pub struct AutoRefund<'info> {
     /// CHECK: Must match escrow.buyer.
     #[account(mut, address = escrow.buyer)]
     pub buyer: UncheckedAccount<'info>,
+
     #[account(
         mut,
         seeds = [b"escrow", auction_id.as_ref()],
         bump = escrow.bump
     )]
     pub escrow: Account<'info, EscrowAccount>,
+
     pub system_program: Program<'info, System>,
+}
+
+impl<'info> AutoRefund<'info> {
+    fn into_refund_accounts(&self) -> RefundAccounts<'info> {
+        RefundAccounts {
+            buyer: self.buyer.to_account_info(),
+            escrow: self.escrow.to_account_info(),
+            system_program: self.system_program.to_account_info(),
+        }
+    }
 }
 
 #[derive(Accounts)]
 #[instruction(auction_id: [u8; 32])]
 pub struct Cancel<'info> {
     pub platform_wallet: Signer<'info>,
+
     #[account(mut)]
     pub buyer: SystemAccount<'info>,
+
     #[account(
         mut,
         close = buyer,
@@ -618,10 +679,23 @@ pub struct Cancel<'info> {
 }
 
 // ---------------------------------------------------------------------------
-// Helpers
+// CPI helpers
 // ---------------------------------------------------------------------------
 
-fn payment_window_for_attempt(attempt_number: u8) -> Result<i64> {
+struct ReleaseAccounts<'info> {
+    seller: AccountInfo<'info>,
+    platform_wallet: AccountInfo<'info>,
+    escrow: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+}
+
+struct RefundAccounts<'info> {
+    buyer: AccountInfo<'info>,
+    escrow: AccountInfo<'info>,
+    system_program: AccountInfo<'info>,
+}
+
+fn payment_window_seconds(attempt_number: u8) -> Result<i64> {
     match attempt_number {
         1 => Ok(PAYMENT_WINDOW_ATTEMPT_1),
         2 => Ok(PAYMENT_WINDOW_ATTEMPT_2),
@@ -630,81 +704,69 @@ fn payment_window_for_attempt(attempt_number: u8) -> Result<i64> {
     }
 }
 
-fn transfer_lamports<'info>(
-    from: &AccountInfo<'info>,
-    to: &AccountInfo<'info>,
+fn fund_escrow<'info>(
+    buyer: &Signer<'info>,
+    escrow: &AccountInfo<'info>,
     system_program: &Program<'info, System>,
     amount: u64,
 ) -> Result<()> {
     require!(amount > 0, EscrowError::InvalidAmount);
+
     system_program::transfer(
         CpiContext::new(
             system_program.to_account_info(),
             Transfer {
-                from: from.clone(),
-                to: to.clone(),
+                from: buyer.to_account_info(),
+                to: escrow.clone(),
             },
         ),
         amount,
     )
 }
 
-fn execute_release<'info>(
-    escrow: &Account<'info, EscrowAccount>,
-    seller: &AccountInfo<'info>,
-    platform_wallet: &AccountInfo<'info>,
-    system_program: &Program<'info, System>,
+fn transfer_lamports_from_escrow<'info>(
+    escrow: &AccountInfo<'info>,
+    recipient: &AccountInfo<'info>,
+    amount: u64,
+) -> Result<()> {
+    require!(amount > 0, EscrowError::InvalidAmount);
+
+    let mut escrow_lamports = escrow.try_borrow_mut_lamports()?;
+    let mut recipient_lamports = recipient.try_borrow_mut_lamports()?;
+
+    **escrow_lamports = escrow_lamports
+        .checked_sub(amount)
+        .ok_or(EscrowError::InvalidAmount)?;
+    **recipient_lamports = recipient_lamports
+        .checked_add(amount)
+        .ok_or(EscrowError::InvalidAmount)?;
+
+    Ok(())
+}
+
+fn release_to_seller_and_platform<'info>(
+    escrow: &EscrowAccount,
+    accounts: &ReleaseAccounts<'info>,
 ) -> Result<(u64, u64)> {
     let (seller_amount, platform_fee) = escrow.fee_split()?;
     let total = escrow.total_lamports()?;
+
     require!(
-        escrow.to_account_info().lamports() >= total,
+        accounts.escrow.lamports() >= total,
         EscrowError::InvalidAmount
     );
 
-    let seeds = escrow.signer_seeds();
-    let signer = &[&seeds[..]];
-    let escrow_info = escrow.to_account_info();
-
-    if seller.key() == platform_wallet.key() {
-        if total > 0 {
-            system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.to_account_info(),
-                    Transfer {
-                        from: escrow_info,
-                        to: seller.clone(),
-                    },
-                    signer,
-                ),
-                total,
-            )?;
-        }
+    if accounts.seller.key() == accounts.platform_wallet.key() {
+        transfer_lamports_from_escrow(&accounts.escrow, &accounts.seller, total)?;
     } else {
         if seller_amount > 0 {
-            system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.to_account_info(),
-                    Transfer {
-                        from: escrow_info.clone(),
-                        to: seller.clone(),
-                    },
-                    signer,
-                ),
-                seller_amount,
-            )?;
+            transfer_lamports_from_escrow(&accounts.escrow, &accounts.seller, seller_amount)?;
         }
 
         if platform_fee > 0 {
-            system_program::transfer(
-                CpiContext::new_with_signer(
-                    system_program.to_account_info(),
-                    Transfer {
-                        from: escrow_info,
-                        to: platform_wallet.clone(),
-                    },
-                    signer,
-                ),
+            transfer_lamports_from_escrow(
+                &accounts.escrow,
+                &accounts.platform_wallet,
                 platform_fee,
             )?;
         }
@@ -713,31 +775,36 @@ fn execute_release<'info>(
     Ok((seller_amount, platform_fee))
 }
 
-fn execute_refund<'info>(
-    escrow: &Account<'info, EscrowAccount>,
-    buyer: &AccountInfo<'info>,
-    system_program: &Program<'info, System>,
-) -> Result<()> {
+fn refund_buyer<'info>(escrow: &EscrowAccount, accounts: &RefundAccounts<'info>) -> Result<u64> {
     let total = escrow.total_lamports()?;
+
     require!(
-        escrow.to_account_info().lamports() >= total,
+        accounts.escrow.lamports() >= total,
         EscrowError::InvalidAmount
     );
 
-    let seeds = escrow.signer_seeds();
-    let signer = &[&seeds[..]];
+    transfer_lamports_from_escrow(&accounts.escrow, &accounts.buyer, total)?;
 
-    system_program::transfer(
-        CpiContext::new_with_signer(
-            system_program.to_account_info(),
-            Transfer {
-                from: escrow.to_account_info(),
-                to: buyer.clone(),
-            },
-            signer,
-        ),
-        total,
-    )
+    Ok(total)
+}
+
+fn escrow_signer_seeds(escrow: &EscrowAccount) -> [&[u8]; 3] {
+    [
+        b"escrow",
+        escrow.auction_id.as_ref(),
+        core::slice::from_ref(&escrow.bump),
+    ]
+}
+
+impl<'info> Release<'info> {
+    fn into_release_accounts(&self) -> ReleaseAccounts<'info> {
+        ReleaseAccounts {
+            seller: self.seller.to_account_info(),
+            platform_wallet: self.platform_wallet.to_account_info(),
+            escrow: self.escrow.to_account_info(),
+            system_program: self.system_program.to_account_info(),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

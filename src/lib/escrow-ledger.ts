@@ -32,6 +32,8 @@ export interface EscrowTransaction {
   from_wallet: string;
   to_wallet: string;
   amount_lamports: number;
+  bid_lamports: number | null;
+  shipping_lamports: number | null;
   is_platform_fee: boolean;
   on_chain_signature: string | null;
   solscan_url: string | null;
@@ -61,7 +63,7 @@ export interface EscrowTransactionWithAuction extends EscrowTransaction {
 }
 
 const LEDGER_COLUMNS =
-  "id, platform_transaction_id, auction_id, thread_id, event_type, direction, from_wallet, to_wallet, amount_lamports, is_platform_fee, on_chain_signature, solscan_url, escrow_pda, created_at";
+  "id, platform_transaction_id, auction_id, thread_id, event_type, direction, from_wallet, to_wallet, amount_lamports, bid_lamports, shipping_lamports, is_platform_fee, on_chain_signature, solscan_url, escrow_pda, created_at";
 
 export function buildSolscanUrl(signature: string | null | undefined): string | null {
   const trimmed = signature?.trim();
@@ -70,14 +72,47 @@ export function buildSolscanUrl(signature: string | null | undefined): string | 
 }
 
 export function splitEscrowLamports(
-  totalLamports: number,
+  bidLamports: number,
+  shippingLamports: number,
   feeBps = PLATFORM_FEE_BPS
-): { sellerLamports: number; platformFeeLamports: number } {
-  const platformFeeLamports = Math.floor((totalLamports * feeBps) / 10_000);
+): { sellerLamports: number; platformFeeLamports: number; totalLamports: number } {
+  const platformFeeLamports = Math.floor((bidLamports * feeBps) / 10_000);
+  const totalLamports = bidLamports + shippingLamports;
   return {
     sellerLamports: totalLamports - platformFeeLamports,
     platformFeeLamports,
+    totalLamports,
   };
+}
+
+export async function getFundedEscrowSplit(
+  auctionId: string,
+  client: SupabaseClient = getNotificationClient()
+): Promise<{ bidLamports: number; shippingLamports: number } | null> {
+  const { data, error } = await client
+    .from("escrow_transactions")
+    .select("bid_lamports, shipping_lamports, amount_lamports")
+    .eq("auction_id", auctionId)
+    .eq("event_type", "funded")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const bidLamports = Number(data.bid_lamports ?? 0);
+  const shippingLamports = Number(data.shipping_lamports ?? 0);
+  if (bidLamports > 0 || shippingLamports > 0) {
+    return { bidLamports, shippingLamports };
+  }
+
+  const totalLamports = Number(data.amount_lamports ?? 0);
+  if (totalLamports > 0) {
+    return { bidLamports: totalLamports, shippingLamports: 0 };
+  }
+
+  return null;
 }
 
 export function lamportsToSol(lamports: number): number {
@@ -95,6 +130,10 @@ function parseLedgerRow(row: Record<string, unknown>): EscrowTransaction {
     from_wallet: (row.from_wallet as string).trim(),
     to_wallet: (row.to_wallet as string).trim(),
     amount_lamports: Number(row.amount_lamports),
+    bid_lamports:
+      row.bid_lamports != null ? Number(row.bid_lamports) : null,
+    shipping_lamports:
+      row.shipping_lamports != null ? Number(row.shipping_lamports) : null,
     is_platform_fee: Boolean(row.is_platform_fee),
     on_chain_signature: (row.on_chain_signature as string | null) ?? null,
     solscan_url: (row.solscan_url as string | null) ?? null,
@@ -236,6 +275,8 @@ export async function insertEscrowTransaction(
     fromWallet: string;
     toWallet: string;
     amountLamports: number;
+    bidLamports?: number | null;
+    shippingLamports?: number | null;
     isPlatformFee?: boolean;
     onChainSignature?: string | null;
     escrowPda?: string | null;
@@ -269,6 +310,8 @@ export async function insertEscrowTransaction(
     from_wallet: input.fromWallet,
     to_wallet: input.toWallet,
     amount_lamports: input.amountLamports,
+    bid_lamports: input.bidLamports ?? null,
+    shipping_lamports: input.shippingLamports ?? null,
     is_platform_fee: Boolean(input.isPlatformFee),
     on_chain_signature: signature,
     solscan_url: buildSolscanUrl(signature),
@@ -290,6 +333,55 @@ export async function insertEscrowTransaction(
   return parseLedgerRow(data as Record<string, unknown>);
 }
 
+async function resolveFundedLamportsFromAuction(
+  auctionId: string,
+  amountLamports: number,
+  bidLamports: number,
+  shippingLamports: number,
+  db: SupabaseClient
+): Promise<{ bidLamports: number; shippingLamports: number }> {
+  if (
+    bidLamports > 0 &&
+    shippingLamports >= 0 &&
+    bidLamports + shippingLamports === amountLamports
+  ) {
+    return { bidLamports, shippingLamports };
+  }
+
+  const { data, error } = await db
+    .from("auctions")
+    .select("domestic_shipping_usd, sol_usd_rate_at_payment")
+    .eq("id", auctionId)
+    .maybeSingle();
+
+  if (error) {
+    logSupabaseError("resolveFundedLamportsFromAuction", error);
+    return { bidLamports, shippingLamports };
+  }
+  if (!data) {
+    return { bidLamports, shippingLamports };
+  }
+
+  const shippingUsd = Number(data.domestic_shipping_usd ?? 0);
+  const rate = Number(data.sol_usd_rate_at_payment ?? 0);
+  let resolvedShipping = shippingLamports;
+  if (resolvedShipping <= 0 && shippingUsd > 0 && rate > 0) {
+    resolvedShipping = Math.ceil((shippingUsd / rate) * LAMPORTS_PER_SOL);
+  }
+
+  let resolvedBid = bidLamports;
+  if (resolvedBid <= 0 && amountLamports > resolvedShipping) {
+    resolvedBid = amountLamports - resolvedShipping;
+  } else if (resolvedBid + resolvedShipping !== amountLamports) {
+    resolvedBid = Math.max(0, amountLamports - resolvedShipping);
+  }
+
+  return {
+    bidLamports: resolvedBid,
+    shippingLamports: resolvedShipping,
+  };
+}
+
 export async function logEscrowFunded({
   auctionId,
   auctionReferenceNumber,
@@ -297,6 +389,8 @@ export async function logEscrowFunded({
   buyerWallet,
   escrowPda,
   amountLamports,
+  bidLamports,
+  shippingLamports,
   onChainSignature,
 }: {
   auctionId: string;
@@ -305,6 +399,8 @@ export async function logEscrowFunded({
   buyerWallet: string;
   escrowPda: string;
   amountLamports: number;
+  bidLamports: number;
+  shippingLamports: number;
   onChainSignature: string;
 }): Promise<void> {
   console.log("[escrow-ledger] logEscrowFunded called", {
@@ -313,6 +409,8 @@ export async function logEscrowFunded({
     buyerWallet,
     escrowPda,
     amountLamports,
+    bidLamports,
+    shippingLamports,
     onChainSignature,
   });
 
@@ -325,12 +423,24 @@ export async function logEscrowFunded({
         buyerWallet,
         escrowPda,
         amountLamports,
+        bidLamports,
+        shippingLamports,
         onChainSignature,
       },
       buyerWallet
     );
     return;
   }
+
+  const db = await getWriteClient();
+  const { bidLamports: resolvedBid, shippingLamports: resolvedShipping } =
+    await resolveFundedLamportsFromAuction(
+      auctionId,
+      amountLamports,
+      bidLamports,
+      shippingLamports,
+      db
+    );
 
   await insertEscrowTransaction({
     auctionId,
@@ -341,6 +451,8 @@ export async function logEscrowFunded({
     fromWallet: buyerWallet,
     toWallet: escrowPda,
     amountLamports,
+    bidLamports: resolvedBid,
+    shippingLamports: resolvedShipping,
     onChainSignature,
     escrowPda,
   });
@@ -388,6 +500,9 @@ export async function logEscrowShipped({
     return;
   }
 
+  const db = await getWriteClient();
+  const fundedSplit = await getFundedEscrowSplit(auctionId, db);
+
   await insertEscrowTransaction({
     auctionId,
     auctionReferenceNumber,
@@ -397,6 +512,8 @@ export async function logEscrowShipped({
     fromWallet: sellerWallet,
     toWallet: escrowPda,
     amountLamports,
+    bidLamports: fundedSplit?.bidLamports ?? null,
+    shippingLamports: fundedSplit?.shippingLamports ?? null,
     onChainSignature,
     escrowPda,
   });
@@ -411,6 +528,8 @@ async function persistEscrowReleased({
   totalLamports,
   onChainSignature,
   platformWallet = PLATFORM_WALLET,
+  bidLamports,
+  shippingLamports,
 }: {
   auctionId: string;
   auctionReferenceNumber?: string | null;
@@ -420,8 +539,21 @@ async function persistEscrowReleased({
   totalLamports: number;
   onChainSignature: string;
   platformWallet?: string;
+  bidLamports?: number | null;
+  shippingLamports?: number | null;
 }): Promise<void> {
-  const { sellerLamports, platformFeeLamports } = splitEscrowLamports(totalLamports);
+  const db = await getWriteClient();
+  const fundedSplit =
+    bidLamports != null && shippingLamports != null
+      ? { bidLamports, shippingLamports }
+      : await getFundedEscrowSplit(auctionId, db);
+
+  const resolvedBid = fundedSplit?.bidLamports ?? totalLamports;
+  const resolvedShipping = fundedSplit?.shippingLamports ?? 0;
+  const { sellerLamports, platformFeeLamports } = splitEscrowLamports(
+    resolvedBid,
+    resolvedShipping
+  );
 
   await insertEscrowTransaction({
     auctionId,
@@ -432,6 +564,8 @@ async function persistEscrowReleased({
     fromWallet: escrowPda,
     toWallet: sellerWallet,
     amountLamports: sellerLamports,
+    bidLamports: resolvedBid,
+    shippingLamports: resolvedShipping,
     onChainSignature,
     escrowPda,
   });
@@ -446,6 +580,8 @@ async function persistEscrowReleased({
       fromWallet: escrowPda,
       toWallet: platformWallet,
       amountLamports: platformFeeLamports,
+      bidLamports: resolvedBid,
+      shippingLamports: resolvedShipping,
       isPlatformFee: true,
       onChainSignature,
       escrowPda,

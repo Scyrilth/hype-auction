@@ -135,10 +135,22 @@ function EscrowAmountCell({ row }: { row: EscrowMonitorRow }) {
   }
 
   const usd = historicalUsdAtPayment(row.amountSol, row.solUsdRateAtPayment);
+  const showBreakdown =
+    row.eventType === "funded" &&
+    row.bidSol != null &&
+    row.bidSol > 0 &&
+    row.shippingSol != null &&
+    row.shippingSol > 0;
 
   return (
     <span className="whitespace-nowrap text-[11px]">
       {row.amountSol.toFixed(4)} SOL
+      {showBreakdown ? (
+        <span className="mt-0.5 block text-[10px] font-normal text-muted">
+          {row.bidSol!.toFixed(4)} SOL bid + {row.shippingSol!.toFixed(4)} SOL
+          shipping
+        </span>
+      ) : null}
       {usd != null ? (
         <span
           className="ml-1 text-[10px] text-muted"

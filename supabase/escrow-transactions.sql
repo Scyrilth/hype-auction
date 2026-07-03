@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS public.escrow_transactions (
   platform_transaction_id TEXT NOT NULL,
   auction_id UUID NOT NULL REFERENCES public.auctions (id) ON DELETE RESTRICT,
   thread_id UUID REFERENCES public.message_threads (id) ON DELETE SET NULL,
+  bid_lamports BIGINT,
+  shipping_lamports BIGINT,
   event_type TEXT NOT NULL CHECK (
     event_type IN (
       'funded',

@@ -881,7 +881,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             <div className="space-y-2">
               {paymentBreakdown && (
                 <div className="rounded-xl border border-border bg-background/60 px-3 py-2 text-xs text-zinc-300">
-                  Item: {formatSol(paymentBreakdown.itemSol)} + Shipping:{" "}
+                  Bid: {formatSol(paymentBreakdown.bidSol)} + Shipping:{" "}
                   {formatSol(paymentBreakdown.shippingSol)} = Total:{" "}
                   {formatSol(paymentBreakdown.totalSol)}
                 </div>

@@ -20,6 +20,8 @@ type LedgerRequestBody = {
   sellerWallet?: unknown;
   escrowPda?: unknown;
   amountLamports?: unknown;
+  bidLamports?: unknown;
+  shippingLamports?: unknown;
   totalLamports?: unknown;
   onChainSignature?: unknown;
   releaseToSeller?: unknown;
@@ -28,6 +30,12 @@ type LedgerRequestBody = {
 function parsePositiveInt(value: unknown): number | null {
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.floor(n);
+}
+
+function parseNonNegativeInt(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
   return Math.floor(n);
 }
 
@@ -134,11 +142,16 @@ export async function POST(request: Request) {
         const escrowPda =
           typeof body.escrowPda === "string" ? body.escrowPda.trim() : "";
         const amountLamports = parsePositiveInt(body.amountLamports);
+        const bidLamports = parsePositiveInt(body.bidLamports);
+        const shippingLamports = parseNonNegativeInt(body.shippingLamports);
 
         if (
           buyerWallet !== callerWallet ||
           !escrowPda ||
           !amountLamports ||
+          bidLamports == null ||
+          shippingLamports == null ||
+          bidLamports + shippingLamports !== amountLamports ||
           !onChainSignature
         ) {
           return NextResponse.json({ error: "Invalid funded payload." }, { status: 400, headers });
@@ -160,6 +173,8 @@ export async function POST(request: Request) {
           buyerWallet,
           escrowPda,
           amountLamports,
+          bidLamports,
+          shippingLamports,
           onChainSignature,
         });
         break;

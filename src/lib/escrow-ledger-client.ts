@@ -6,6 +6,8 @@ type EscrowLedgerApiPayload = {
   sellerWallet?: string;
   escrowPda?: string;
   amountLamports?: number;
+  bidLamports?: number;
+  shippingLamports?: number;
   totalLamports?: number;
   onChainSignature?: string | null;
   releaseToSeller?: boolean;

@@ -170,10 +170,44 @@ function TransactionAmountCell({
     );
   }
 
-  const amountSol =
-    role === "selling"
-      ? (row as SellerTransactionRow).amounts.netSol
-      : (row as BuyerTransactionRow).amounts.totalSol;
+  if (role === "buying") {
+    const buyerRow = row as BuyerTransactionRow;
+    const showShippingBreakdown =
+      buyerRow.eventType === "funded" &&
+      (buyerRow.displayStatus === "pending" ||
+        buyerRow.displayStatus === "completed") &&
+      buyerRow.amounts.shippingSol > 0;
+
+    if (showShippingBreakdown) {
+      return (
+        <div className="whitespace-nowrap text-[11px] leading-tight">
+          <p className="font-mono">
+            Bid: {buyerRow.amounts.itemSol.toFixed(4)} SOL
+          </p>
+          <p className="font-mono">
+            Shipping: {buyerRow.amounts.shippingSol.toFixed(4)} SOL
+          </p>
+          <p className="font-mono font-medium">
+            Total: {buyerRow.amounts.totalSol.toFixed(4)} SOL
+          </p>
+          <p className="mt-0.5 text-[10px] text-muted">
+            ~${buyerRow.amounts.usdApprox.toFixed(2)}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="whitespace-nowrap text-[11px] leading-tight">
+        <p className="font-mono">{buyerRow.amounts.totalSol.toFixed(4)} SOL</p>
+        <p className="mt-0.5 text-[10px] text-muted">
+          ~${buyerRow.amounts.usdApprox.toFixed(2)}
+        </p>
+      </div>
+    );
+  }
+
+  const amountSol = (row as SellerTransactionRow).amounts.netSol;
 
   return (
     <div className="whitespace-nowrap text-[11px] leading-tight">

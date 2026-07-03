@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-
+import AuctionCardLink from "@/components/auction/AuctionCardLink";
 import {
   AUCTION_CARD_MIN_WIDTH,
   AuctionCardBidPrice,
@@ -35,8 +34,9 @@ export default function LiveAuctionCard({
   const displayBid = getEffectiveBid(auction);
 
   return (
-    <Link
+    <AuctionCardLink
       href={`/auction/${auction.id}`}
+      description={auction.description}
       className="group flex h-full w-full max-w-full min-w-0 flex-col rounded-2xl border border-border bg-surface transition-colors hover:border-accent/50"
       style={{ minWidth: AUCTION_CARD_MIN_WIDTH }}
     >
@@ -104,6 +104,6 @@ export default function LiveAuctionCard({
           className="group-hover:bg-accent-hover"
         />
       </div>
-    </Link>
+    </AuctionCardLink>
   );
 }
