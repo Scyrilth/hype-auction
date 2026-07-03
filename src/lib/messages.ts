@@ -32,6 +32,9 @@ export interface MessageThread {
   tracking_number?: string | null;
   carrier?: string | null;
   shipped_at?: string | null;
+  shipping_address_id?: string | null;
+  shipping_usd?: number | null;
+  shipping_country?: string | null;
 }
 
 export interface DirectMessage {
@@ -109,6 +112,12 @@ function parseThread(row: Record<string, unknown>): MessageThread {
     tracking_number: (row.tracking_number as string | null) ?? null,
     carrier: (row.carrier as string | null) ?? null,
     shipped_at: (row.shipped_at as string | null) ?? null,
+    shipping_address_id: (row.shipping_address_id as string | null) ?? null,
+    shipping_usd:
+      row.shipping_usd === null || row.shipping_usd === undefined
+        ? null
+        : Number(row.shipping_usd),
+    shipping_country: (row.shipping_country as string | null) ?? null,
   };
 }
 

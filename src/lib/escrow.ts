@@ -20,6 +20,7 @@ import {
 } from "@/lib/escrow-ledger";
 import { notifyDisputeResolved } from "@/lib/notifications";
 import { postPaymentSecuredNotifications } from "@/lib/payment-notifications-client";
+import { lockThreadShippingAddressForAuction } from "@/lib/thread-shipping";
 import { supabase } from "@/lib/supabase";
 
 const DEVNET_PROGRAM_ID = "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs";
@@ -360,6 +361,17 @@ export async function initiatePayment(
       });
     } catch (notifyError) {
       console.error("Payment notification failed:", notifyError);
+    }
+
+    if (resolvedThreadId) {
+      try {
+        await lockThreadShippingAddressForAuction({
+          threadId: resolvedThreadId,
+          auctionId,
+        });
+      } catch (lockError) {
+        console.error("Failed to lock shipping address:", lockError);
+      }
     }
 
     return {

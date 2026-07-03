@@ -10,6 +10,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import AuctionSummaryTile from "@/components/messages/AuctionSummaryTile";
 import MessageContent from "@/components/messages/MessageContent";
 import NextBidderOfferTile from "@/components/messages/NextBidderOfferTile";
+import ThreadShippingAddressModal from "@/components/messages/ThreadShippingAddressModal";
 import UploadTrackingCard from "@/components/messages/UploadTrackingCard";
 import { parseAuctionSummaryMessage } from "@/lib/auction-lifecycle";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
@@ -28,10 +29,7 @@ import {
   type EnrichedDirectMessage,
   type ThreadDetail,
 } from "@/lib/messages";
-import {
-  isShippingExemptAuction,
-  resolveShippingUsd,
-} from "@/lib/auction-shipping";
+import { isShippingExemptAuction } from "@/lib/auction-shipping";
 import {
   calculatePaymentBreakdown,
   checkWalletBalance,
@@ -51,7 +49,64 @@ import {
   parseNextBidderOfferMessage,
   type NextBidderOfferPayload,
 } from "@/lib/non-payment-resolution";
-import { getDefaultShippingAddress } from "@/lib/shipping";
+import { formatBuyerShippingCountryLabel } from "@/lib/thread-shipping";
+
+function canBuyerPayThread(thread: ThreadDetail, wallet: string): boolean {
+  const escrowState =
+    thread.escrow_status ?? thread.auction?.escrow_state ?? null;
+  const needsEscrowPayment =
+    !escrowState || escrowState === "none" || escrowState === "pending";
+  const latestOffer = getLatestOfferForWallet(thread.messages, wallet);
+  const isNextBidderBuyer =
+    thread.auction?.next_bidder_wallet === thread.buyer_wallet &&
+    thread.buyer_wallet === wallet;
+  const isOriginalWinner =
+    wallet === (thread.top_bidder_wallet ?? thread.buyer_wallet) &&
+    !thread.auction?.next_bidder_wallet;
+
+  return (
+    wallet === thread.buyer_wallet &&
+    Boolean(thread.auction_id) &&
+    Boolean(thread.auction) &&
+    thread.auction?.status === "ended" &&
+    needsEscrowPayment &&
+    (isOriginalWinner ||
+      (isNextBidderBuyer && latestOffer?.status === "accepted"))
+  );
+}
+
+async function verifyThreadPaymentShipping({
+  threadId,
+  buyerWallet,
+}: {
+  threadId: string;
+  buyerWallet: string;
+}): Promise<{ shippingUsd: number; bidAmountSol: number }> {
+  const response = await fetch("/api/messages/shipping-address", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "verify-payment",
+      threadId,
+      buyerWallet,
+    }),
+  });
+
+  const payload = (await response.json()) as {
+    error?: string;
+    shippingUsd?: number;
+    bidAmountSol?: number;
+  };
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Unable to verify shipping address.");
+  }
+
+  return {
+    shippingUsd: payload.shippingUsd ?? 0,
+    bidAmountSol: payload.bidAmountSol ?? 0,
+  };
+}
 
 function getLatestOfferForWallet(
   messages: EnrichedDirectMessage[],
@@ -249,6 +304,10 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const [paymentBreakdown, setPaymentBreakdown] =
     useState<PaymentBreakdown | null>(null);
   const [offerResponding, setOfferResponding] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [addressModalDismissed, setAddressModalDismissed] = useState(false);
+  const [sellerCountry, setSellerCountry] = useState<string | null>(null);
+  const [shipsInternationally, setShipsInternationally] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const payInFlightRef = useRef(false);
 
@@ -312,6 +371,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
       return;
     }
 
+    if (!canBuyerPayThread(thread, wallet)) {
+      setPaymentBreakdown(null);
+      return;
+    }
+
     let cancelled = false;
 
     void (async () => {
@@ -322,25 +386,15 @@ export default function ThreadView({ threadId }: { threadId: string }) {
           latestOffer?.status === "accepted"
             ? latestOffer.amount_sol
             : getEffectiveBid(auction);
-        const { data: seller } = await client
-          .from("users")
-          .select("country, ships_internationally")
-          .eq("wallet_address", thread.seller_wallet)
-          .maybeSingle();
-        const defaultAddress = await getDefaultShippingAddress(wallet, client).catch(
-          () => null
+        if (thread.shipping_usd === null || thread.shipping_usd === undefined) {
+          if (!cancelled) setPaymentBreakdown(null);
+          return;
+        }
+
+        const breakdown = await calculatePaymentBreakdown(
+          bidAmount,
+          thread.shipping_usd
         );
-        const isExempt = isShippingExemptAuction(auction);
-        const shippingUsd =
-          resolveShippingUsd({
-            domesticShippingUsd: auction.domestic_shipping_usd,
-            internationalShippingUsd: auction.international_shipping_usd,
-            sellerCountry: (seller?.country as string | null) ?? null,
-            buyerCountry: defaultAddress?.country ?? null,
-            shipsInternationally: Boolean(seller?.ships_internationally),
-            isExempt,
-          }) ?? 0;
-        const breakdown = await calculatePaymentBreakdown(bidAmount, shippingUsd);
         if (!cancelled) setPaymentBreakdown(breakdown);
       } catch {
         if (!cancelled) setPaymentBreakdown(null);
@@ -350,7 +404,52 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [client, thread, wallet]);
+  }, [thread, wallet]);
+
+  useEffect(() => {
+    if (!thread?.seller_wallet) {
+      setSellerCountry(null);
+      setShipsInternationally(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const { data: seller } = await client
+          .from("users")
+          .select("country, ships_internationally")
+          .eq("wallet_address", thread.seller_wallet)
+          .maybeSingle();
+
+        if (cancelled) return;
+        setSellerCountry((seller?.country as string | null) ?? null);
+        setShipsInternationally(Boolean(seller?.ships_internationally));
+      } catch {
+        if (!cancelled) {
+          setSellerCountry(null);
+          setShipsInternationally(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, thread?.seller_wallet]);
+
+  useEffect(() => {
+    if (loading || !thread || !wallet) return;
+
+    if (
+      canBuyerPayThread(thread, wallet) &&
+      !thread.shipping_address_id &&
+      !addressModalDismissed
+    ) {
+      setShowAddressModal(true);
+    }
+  }, [addressModalDismissed, loading, thread, wallet]);
 
   useEffect(() => {
     if (!wallet) return;
@@ -481,33 +580,17 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     const latestOffer = thread
       ? getLatestOfferForWallet(thread.messages, wallet)
       : null;
-    const bidAmount =
-      latestOffer?.status === "accepted"
-        ? latestOffer.amount_sol
-        : getEffectiveBid(thread.auction);
 
     setPaying(true);
     setPaymentError(null);
 
     try {
-      const { data: seller } = await client
-        .from("users")
-        .select("country, ships_internationally")
-        .eq("wallet_address", thread.seller_wallet)
-        .maybeSingle();
-      const defaultAddress = await getDefaultShippingAddress(wallet, client).catch(
-        () => null
-      );
-      const isExempt = isShippingExemptAuction(thread.auction);
-      const shippingUsd =
-        resolveShippingUsd({
-          domesticShippingUsd: thread.auction.domestic_shipping_usd,
-          internationalShippingUsd: thread.auction.international_shipping_usd,
-          sellerCountry: (seller?.country as string | null) ?? null,
-          buyerCountry: defaultAddress?.country ?? null,
-          shipsInternationally: Boolean(seller?.ships_internationally),
-          isExempt,
-        }) ?? 0;
+      const { shippingUsd, bidAmountSol } = await verifyThreadPaymentShipping({
+        threadId,
+        buyerWallet: wallet,
+      });
+      const bidAmount =
+        latestOffer?.status === "accepted" ? latestOffer.amount_sol : bidAmountSol;
 
       const breakdown =
         paymentBreakdown ??
@@ -570,8 +653,6 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
     try {
       const latestOffer = getLatestOfferForWallet(thread.messages, wallet);
-      const bidAmount =
-        latestOffer?.amount_sol ?? getEffectiveBid(thread.auction);
 
       await acceptNextBidderOffer({
         auctionId: thread.auction_id,
@@ -579,24 +660,23 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         threadId,
       });
 
-      const { data: seller } = await client
-        .from("users")
-        .select("country, ships_internationally")
-        .eq("wallet_address", thread.seller_wallet)
-        .maybeSingle();
-      const defaultAddress = await getDefaultShippingAddress(wallet, client).catch(
-        () => null
-      );
-      const isExempt = isShippingExemptAuction(thread.auction);
-      const shippingUsd =
-        resolveShippingUsd({
-          domesticShippingUsd: thread.auction.domestic_shipping_usd,
-          internationalShippingUsd: thread.auction.international_shipping_usd,
-          sellerCountry: (seller?.country as string | null) ?? null,
-          buyerCountry: defaultAddress?.country ?? null,
-          shipsInternationally: Boolean(seller?.ships_internationally),
-          isExempt,
-        }) ?? 0;
+      let shippingUsd: number;
+      let bidAmount: number;
+      try {
+        const verified = await verifyThreadPaymentShipping({
+          threadId,
+          buyerWallet: wallet,
+        });
+        shippingUsd = verified.shippingUsd;
+        bidAmount = latestOffer?.amount_sol ?? verified.bidAmountSol;
+      } catch (verifyError) {
+        showToast(
+          getErrorMessage(verifyError, "Offer accepted. Confirm your shipping address, then use Pay Now."),
+          "error"
+        );
+        await loadThread();
+        return;
+      }
 
       const breakdown = await calculatePaymentBreakdown(bidAmount, shippingUsd);
 
@@ -688,28 +768,12 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   const hasUploadedTracking = Boolean(
     thread.tracking_number?.trim() || thread.auction?.tracking_number?.trim()
   );
-  const needsEscrowPayment =
-    !escrowState || escrowState === "none" || escrowState === "pending";
 
-  const latestOffer =
-    wallet && thread
-      ? getLatestOfferForWallet(thread.messages, wallet)
-      : null;
-  const isNextBidderBuyer =
-    thread?.auction?.next_bidder_wallet === thread?.buyer_wallet &&
-    thread.buyer_wallet === wallet;
-  const isOriginalWinner =
-    Boolean(wallet) &&
-    wallet === (thread?.top_bidder_wallet ?? thread?.buyer_wallet) &&
-    !thread?.auction?.next_bidder_wallet;
-  const canPayAsBuyer =
-    Boolean(isBuyer) &&
-    Boolean(thread?.auction_id) &&
-    Boolean(thread?.auction) &&
-    thread.auction?.status === "ended" &&
-    needsEscrowPayment &&
-    (isOriginalWinner ||
-      (isNextBidderBuyer && latestOffer?.status === "accepted"));
+  const canPayAsBuyer = thread ? canBuyerPayThread(thread, wallet!) : false;
+  const hasConfirmedShippingAddress = Boolean(thread?.shipping_address_id);
+  const buyerShippingCountryLabel = formatBuyerShippingCountryLabel(
+    thread?.shipping_country
+  );
 
   const showPayNow = canPayAsBuyer;
 
@@ -762,7 +826,14 @@ export default function ThreadView({ threadId }: { threadId: string }) {
   });
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col sm:h-[calc(100vh-8rem)]">
+    <div className="relative mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col sm:h-[calc(100vh-8rem)]">
+      <div
+        className={
+          showAddressModal && !hasConfirmedShippingAddress
+            ? "pointer-events-none flex min-h-0 flex-1 flex-col opacity-40"
+            : "flex min-h-0 flex-1 flex-col"
+        }
+      >
       <div className="shrink-0 rounded-2xl border border-border bg-surface p-3 sm:p-3">
         <div className="flex items-start gap-2.5 sm:gap-3">
           <div className="relative hidden h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface-elevated sm:block">
@@ -782,6 +853,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             <p className="text-xs text-muted">
               {formatOrderRef(thread.auction_id)} · with {otherLabel}
             </p>
+            {isSeller && buyerShippingCountryLabel && (
+              <p className="mt-1 text-xs text-muted">
+                Shipping to: {buyerShippingCountryLabel}
+              </p>
+            )}
             {thread.auction?.reference_number && (
               <div className="mt-1 sm:mt-1.5">
                 <ReferenceNumber referenceNumber={thread.auction.reference_number} />
@@ -879,6 +955,15 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
           {showPayNow && (
             <div className="space-y-2">
+              {hasConfirmedShippingAddress && (
+                <button
+                  type="button"
+                  onClick={() => setShowAddressModal(true)}
+                  className="text-xs font-medium text-accent hover:text-purple-300"
+                >
+                  Change shipping address
+                </button>
+              )}
               {paymentBreakdown && (
                 <div className="rounded-xl border border-border bg-background/60 px-3 py-2 text-xs text-zinc-300">
                   Bid: {formatSol(paymentBreakdown.bidSol)} + Shipping:{" "}
@@ -886,10 +971,15 @@ export default function ThreadView({ threadId }: { threadId: string }) {
                   {formatSol(paymentBreakdown.totalSol)}
                 </div>
               )}
+              {!hasConfirmedShippingAddress && (
+                <p className="text-xs text-amber-200/90">
+                  Confirm your shipping address before paying.
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => void handlePayNow()}
-                disabled={paying}
+                disabled={paying || !hasConfirmedShippingAddress}
                 className="w-full rounded-full bg-purple-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {paying ? "Processing payment..." : "Pay Now"}
@@ -979,6 +1069,30 @@ export default function ThreadView({ threadId }: { threadId: string }) {
             </div>
           </div>
         </div>
+      )}
+      </div>
+
+      {thread.auction && wallet && canPayAsBuyer && (
+        <ThreadShippingAddressModal
+          open={showAddressModal}
+          threadId={thread.id}
+          buyerWallet={wallet}
+          sellerCountry={sellerCountry}
+          shipsInternationally={shipsInternationally}
+          domesticShippingUsd={thread.auction.domestic_shipping_usd}
+          internationalShippingUsd={thread.auction.international_shipping_usd}
+          isExempt={isShippingExemptAuction(thread.auction)}
+          initialAddressId={thread.shipping_address_id}
+          onConfirmed={() => {
+            setShowAddressModal(false);
+            setAddressModalDismissed(false);
+            void refreshThread();
+          }}
+          onDismiss={() => {
+            setShowAddressModal(false);
+            setAddressModalDismissed(true);
+          }}
+        />
       )}
     </div>
   );
