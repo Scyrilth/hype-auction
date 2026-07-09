@@ -89,6 +89,11 @@ export interface Auction {
   next_bidder_wallet: string | null;
   relisted_auction_id: string | null;
   payment_excluded_wallets: string[];
+  ended_early: boolean;
+  early_end_reason: string | null;
+  early_end_at: string | null;
+  early_end_by: string | null;
+  winner_wallet: string | null;
 }
 
 export interface Bid {

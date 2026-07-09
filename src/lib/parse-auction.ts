@@ -114,5 +114,10 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     payment_excluded_wallets: Array.isArray(row.payment_excluded_wallets)
       ? (row.payment_excluded_wallets as string[])
       : [],
+    ended_early: Boolean(row.ended_early),
+    early_end_reason: (row.early_end_reason as string | null) ?? null,
+    early_end_at: (row.early_end_at as string | null) ?? null,
+    early_end_by: (row.early_end_by as string | null) ?? null,
+    winner_wallet: (row.winner_wallet as string | null) ?? null,
   };
 }

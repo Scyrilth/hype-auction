@@ -124,7 +124,8 @@ export async function createWinnerThread(
   auction: Auction,
   winnerWallet: string,
   winnerBidAmount: number,
-  client: SupabaseClient = getWinnerFlowClient(auction.seller_wallet)
+  client: SupabaseClient = getWinnerFlowClient(auction.seller_wallet),
+  options?: { skipNotifications?: boolean }
 ): Promise<MessageThread> {
   console.error("[winner-flow] createWinnerThread: start", {
     auctionId: auction.id,
@@ -196,50 +197,52 @@ export async function createWinnerThread(
     throw error;
   }
 
-  try {
-    await notifyAuctionWon(
-      {
+  if (!options?.skipNotifications) {
+    try {
+      await notifyAuctionWon(
+        {
+          winnerWallet,
+          auctionTitle: auction.title,
+          amount: winnerBidAmount,
+          threadId: thread.id,
+        },
+        getAuthenticatedClient(winnerWallet)
+      );
+      console.error("[winner-flow] createWinnerThread: winner notification sent", {
+        auctionId: auction.id,
         winnerWallet,
-        auctionTitle: auction.title,
-        amount: winnerBidAmount,
-        threadId: thread.id,
-      },
-      getAuthenticatedClient(winnerWallet)
-    );
-    console.error("[winner-flow] createWinnerThread: winner notification sent", {
-      auctionId: auction.id,
-      winnerWallet,
-    });
-  } catch (error) {
-    console.error("[winner-flow] createWinnerThread: winner notification failed", {
-      auctionId: auction.id,
-      error,
-    });
-    throw error;
-  }
+      });
+    } catch (error) {
+      console.error("[winner-flow] createWinnerThread: winner notification failed", {
+        auctionId: auction.id,
+        error,
+      });
+      throw error;
+    }
 
-  try {
-    const winnerDisplayName = await getUserDisplayName(winnerWallet);
-    await notifySellerAuctionEnded(
-      {
+    try {
+      const winnerDisplayName = await getUserDisplayName(winnerWallet);
+      await notifySellerAuctionEnded(
+        {
+          sellerWallet: auction.seller_wallet,
+          auctionTitle: auction.title,
+          winnerDisplayName,
+          amount: winnerBidAmount,
+          threadId: thread.id,
+        },
+        client
+      );
+      console.error("[winner-flow] createWinnerThread: seller notification sent", {
+        auctionId: auction.id,
         sellerWallet: auction.seller_wallet,
-        auctionTitle: auction.title,
-        winnerDisplayName,
-        amount: winnerBidAmount,
-        threadId: thread.id,
-      },
-      client
-    );
-    console.error("[winner-flow] createWinnerThread: seller notification sent", {
-      auctionId: auction.id,
-      sellerWallet: auction.seller_wallet,
-    });
-  } catch (error) {
-    console.error("[winner-flow] createWinnerThread: seller notification failed", {
-      auctionId: auction.id,
-      error,
-    });
-    throw error;
+      });
+    } catch (error) {
+      console.error("[winner-flow] createWinnerThread: seller notification failed", {
+        auctionId: auction.id,
+        error,
+      });
+      throw error;
+    }
   }
 
   return thread;
@@ -279,7 +282,8 @@ async function getWinningBid(auctionId: string): Promise<{
 export async function finalizeAuctionWinnerFlow(
   auctionId: string,
   preloadedAuction?: Auction,
-  client?: SupabaseClient
+  client?: SupabaseClient,
+  options?: { skipNotifications?: boolean }
 ): Promise<boolean> {
   console.error("[winner-flow] finalizeAuctionWinnerFlow: start", { auctionId });
 
@@ -364,7 +368,8 @@ export async function finalizeAuctionWinnerFlow(
     { ...auction, current_bid: winningBid.amount },
     winningBid.bidder_wallet,
     winningBid.amount,
-    flowClient
+    flowClient,
+    { skipNotifications: options?.skipNotifications }
   );
 
   console.error("[winner-flow] finalizeAuctionWinnerFlow: success", {

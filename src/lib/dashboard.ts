@@ -4,7 +4,10 @@ import type {
   User,
 } from "@/lib/database.types";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { finalizeAuctionWinnerFlow } from "@/lib/auction-lifecycle";
+import {
+  endAuctionEarlyAsSeller,
+  type EarlyEndReason,
+} from "@/lib/auction-early-end";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 import { getVendorReviews, getVendorSettings } from "@/lib/vendors";
@@ -306,26 +309,13 @@ export async function getSellerDashboardData(
 export async function endSellerAuction(
   auctionId: string,
   sellerWallet: string,
+  reason?: EarlyEndReason | null,
   client: SupabaseClient = supabase
 ): Promise<void> {
-  const { data: updated, error } = await client
-    .from("auctions")
-    .update({
-      status: "ended",
-      end_time: new Date().toISOString(),
-    })
-    .eq("id", auctionId)
-    .eq("seller_wallet", sellerWallet)
-    .select("*")
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!updated) throw new Error("Auction not found.");
-
-  const auction = parseAuctionRow(updated as Record<string, unknown>);
-  console.error("[winner-flow] endSellerAuction: status updated, finalizing", {
+  await endAuctionEarlyAsSeller({
     auctionId,
+    sellerWallet,
+    reason,
+    client,
   });
-
-  await finalizeAuctionWinnerFlow(auctionId, auction, client);
 }

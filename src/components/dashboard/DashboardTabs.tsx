@@ -12,6 +12,7 @@ import {
 } from "@/components/auction/AuctionCardLayout";
 import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import CountdownTimer from "@/components/auction/CountdownTimer";
+import EndAuctionEarlyModal from "@/components/dashboard/EndAuctionEarlyModal";
 import PastAuctionShipping from "@/components/dashboard/PastAuctionShipping";
 import MessageThreadButton from "@/components/messages/MessageThreadButton";
 import ReviewCard from "@/components/reviews/ReviewCard";
@@ -19,6 +20,8 @@ import FiatValue from "@/components/ui/FiatValue";
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
+import { shouldHideEndAuctionButton } from "@/lib/auction-early-end";
+import type { EarlyEndReason } from "@/lib/auction-early-end";
 import type {
   DashboardActivityItem,
   SellerAuctionWithStats,
@@ -51,19 +54,33 @@ function ActiveAuctionCard({
   const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [ending, setEnding] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const displayBid =
     auction.current_bid > 0 ? auction.current_bid : auction.start_price;
   const imageSrc = resolveAuctionImageUrl(auction.image_url, auction);
+  const hideEndButton = shouldHideEndAuctionButton(auction.escrow_state);
+  const hasBids = auction.bidCount > 0;
 
-  const handleEnd = async (event: React.MouseEvent) => {
+  const handleOpenEndModal = (event: React.MouseEvent) => {
     event.stopPropagation();
     event.preventDefault();
+    if (!publicKey || ending || hideEndButton) return;
+    setModalOpen(true);
+  };
+
+  const handleConfirmEnd = async (reason: EarlyEndReason | null) => {
     if (!publicKey || ending) return;
     setEnding(true);
     try {
-      await endSellerAuction(auction.id, publicKey.toBase58(), client);
-      showToast("Auction ended.");
+      await endSellerAuction(
+        auction.id,
+        publicKey.toBase58(),
+        reason,
+        client
+      );
+      showToast(hasBids ? "Auction ended early." : "Auction closed.");
+      setModalOpen(false);
       onEnded();
     } catch (error) {
       logSupabaseError("ActiveAuctionCard", error);
@@ -142,17 +159,32 @@ function ActiveAuctionCard({
             >
               View Item
             </button>
-            <button
-              type="button"
-              onClick={handleEnd}
-              disabled={ending}
-              className="flex-1 rounded-full bg-surface-elevated py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-accent/20 hover:text-white disabled:opacity-60"
-            >
-              {ending ? "Ending..." : "End Auction"}
-            </button>
+            {!hideEndButton ? (
+              <button
+                type="button"
+                onClick={handleOpenEndModal}
+                disabled={ending}
+                className="flex-1 rounded-full bg-surface-elevated py-2 text-xs font-semibold text-zinc-300 transition-colors hover:bg-accent/20 hover:text-white disabled:opacity-60"
+              >
+                {ending ? "Ending..." : "End Auction"}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
+
+      <EndAuctionEarlyModal
+        open={modalOpen}
+        hasBids={hasBids}
+        itemTitle={auction.title}
+        highestBidSol={displayBid}
+        highestBidderWallet={auction.winnerWallet}
+        loading={ending}
+        onClose={() => {
+          if (!ending) setModalOpen(false);
+        }}
+        onConfirm={(reason) => void handleConfirmEnd(reason)}
+      />
     </article>
   );
 }

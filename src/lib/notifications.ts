@@ -398,6 +398,52 @@ export async function notifyAuctionWon({
   );
 }
 
+export async function notifyEarlyEndWinner({
+  winnerWallet,
+  auctionTitle,
+  amount,
+  threadId,
+  client,
+}: {
+  winnerWallet: string;
+  auctionTitle: string;
+  amount: number;
+  threadId: string | null;
+  client?: SupabaseClient;
+}): Promise<void> {
+  const link = threadId ? `/messages/${threadId}` : null;
+  await createNotification(
+    winnerWallet,
+    "auction_won",
+    "You won! 🏆",
+    `The seller ended the auction early. You won ${auctionTitle} with a bid of ${formatSol(amount)}. Complete payment to secure your item.`,
+    link,
+    client
+  );
+}
+
+export async function notifyEarlyEndSeller({
+  sellerWallet,
+  auctionTitle,
+  threadId,
+  client,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  threadId: string | null;
+  client?: SupabaseClient;
+}): Promise<void> {
+  const link = threadId ? `/messages/${threadId}` : "/dashboard";
+  await createNotification(
+    sellerWallet,
+    "auction_ended",
+    "Auction ended early",
+    `Your auction for ${auctionTitle} has been ended. The highest bidder has been notified to complete payment.`,
+    link,
+    client
+  );
+}
+
 export async function notifySellerAuctionEnded({
   sellerWallet,
   auctionTitle,

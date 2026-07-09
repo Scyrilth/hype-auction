@@ -67,6 +67,25 @@ export interface FlaggedOrder {
   escrowState: EscrowState;
 }
 
+export interface AdminLiveAuctionRow {
+  auctionId: string;
+  itemTitle: string;
+  sellerWallet: string;
+  currentBidSol: number;
+  bidCount: number;
+  endTime: string;
+}
+
+export interface EarlyEndedAuctionRow {
+  auctionId: string;
+  itemTitle: string;
+  sellerWallet: string;
+  earlyEndReason: string;
+  earlyEndAt: string;
+  highestBidSol: number;
+  buyerWallet: string;
+}
+
 export interface DisputeRow {
   auctionId: string;
   reference: string | null;

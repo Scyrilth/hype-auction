@@ -10,6 +10,7 @@ import {
   type EscrowTransactionWithAuction,
   type EscrowLedgerEventType,
 } from "@/lib/escrow-ledger";
+import { fetchEarlyEndedAuctions as loadEarlyEndedAuctions } from "@/lib/auction-early-end";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
@@ -30,10 +31,12 @@ import type {
   AdminVendorRow,
   BuyerStrikeRow,
   DisputeRow,
+  EarlyEndedAuctionRow,
   EscrowMonitorRow,
   EscrowMonitorData,
   EscrowStateCount,
   FlaggedOrder,
+  AdminLiveAuctionRow,
   RecentUserRow,
   AdminUserProfile,
 } from "./types";
@@ -377,6 +380,56 @@ export async function fetchFlaggedOrders(
       amountSol: auctionCurrentBidSol(auction),
       isInternational,
       escrowState: auction.escrow_state,
+    };
+  });
+}
+
+export async function fetchEarlyEndedAuctions(
+  showDummyData: boolean
+): Promise<EarlyEndedAuctionRow[]> {
+  return loadEarlyEndedAuctions(showDummyData);
+}
+
+export async function fetchAdminLiveAuctions(
+  showDummyData: boolean
+): Promise<AdminLiveAuctionRow[]> {
+  const { data, error } = await supabase
+    .from("auctions")
+    .select("id, title, seller_wallet, current_bid, start_price, end_time, is_dummy")
+    .eq("status", "live")
+    .order("end_time", { ascending: true });
+
+  if (error) throw error;
+
+  const auctions = (data ?? []).filter((row) =>
+    showDummyData ? true : !row.is_dummy
+  );
+  const ids = auctions.map((row) => row.id as string);
+
+  const bidCounts = new Map<string, number>();
+  if (ids.length) {
+    const { data: bids, error: bidsError } = await supabase
+      .from("bids")
+      .select("auction_id")
+      .in("auction_id", ids);
+
+    if (bidsError) throw bidsError;
+
+    for (const bid of bids ?? []) {
+      const auctionId = bid.auction_id as string;
+      bidCounts.set(auctionId, (bidCounts.get(auctionId) ?? 0) + 1);
+    }
+  }
+
+  return auctions.map((row) => {
+    const auction = parseAuctionRow(row as Record<string, unknown>);
+    return {
+      auctionId: auction.id,
+      itemTitle: auction.title,
+      sellerWallet: auction.seller_wallet,
+      currentBidSol: getEffectiveBid(auction),
+      bidCount: bidCounts.get(auction.id) ?? 0,
+      endTime: auction.end_time,
     };
   });
 }
