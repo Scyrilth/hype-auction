@@ -121,6 +121,8 @@ function buildSellerRow(
     category: event.auction.category,
     solUsdRateAtPayment: event.auction.sol_usd_rate_at_payment,
     paymentCompletedAt: event.auction.payment_completed_at,
+    purchaseType: event.auction.purchase_type,
+    listingType: event.auction.listing_type,
   };
 }
 
@@ -173,6 +175,8 @@ function buildBuyerRow(
     category: event.auction.category,
     solUsdRateAtPayment: event.auction.sol_usd_rate_at_payment,
     paymentCompletedAt: event.auction.payment_completed_at,
+    purchaseType: event.auction.purchase_type,
+    listingType: event.auction.listing_type,
   };
 }
 

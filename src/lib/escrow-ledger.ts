@@ -58,6 +58,8 @@ export interface EscrowTransactionWithAuction extends EscrowTransaction {
     | "escrow_tx_signature"
     | "sol_usd_rate_at_payment"
     | "domestic_shipping_usd"
+    | "listing_type"
+    | "purchase_type"
   >;
   buyer_wallet: string | null;
 }
@@ -786,7 +788,7 @@ export function directionForWallet(
 }
 
 const AUCTION_LEDGER_COLUMNS =
-  "id, title, reference_number, seller_wallet, category, escrow_state, shipping_status, tracking_number, tracking_courier, payment_completed_at, is_dummy, escrow_tx_signature, sol_usd_rate_at_payment, domestic_shipping_usd";
+  "id, title, reference_number, seller_wallet, category, escrow_state, shipping_status, tracking_number, tracking_courier, payment_completed_at, is_dummy, escrow_tx_signature, sol_usd_rate_at_payment, domestic_shipping_usd, listing_type, purchase_type";
 
 async function attachAuctionsAndBuyers(
   rows: EscrowTransaction[],

@@ -22,6 +22,7 @@ import {
   SELLER_STATUS_LABELS,
   SHIPPED_EVENT_SUBTITLE,
 } from "@/lib/transactions";
+import { resolvePurchaseTypeBadge } from "@/lib/transactions/purchase-type";
 
 const PAGE_SIZE = 20;
 
@@ -230,12 +231,24 @@ function StatusWithDirection({
     role === "selling"
       ? sellerStatusBadgeClass((row as SellerTransactionRow).displayStatus)
       : buyerStatusBadgeClass((row as BuyerTransactionRow).displayStatus);
+  const purchaseBadge = resolvePurchaseTypeBadge(
+    row.purchaseType,
+    row.listingType,
+    role
+  );
 
   return (
     <div className="flex flex-col items-start gap-0.5">
       <span className={`rounded-full px-1.5 py-px text-[10px] ${badgeClass}`}>
         {label}
       </span>
+      {purchaseBadge ? (
+        <span
+          className={`rounded-full px-1.5 py-px text-[9px] font-semibold ${purchaseBadge.className}`}
+        >
+          {purchaseBadge.label}
+        </span>
+      ) : null}
       <span
         className={`text-[9px] font-semibold uppercase ${directionClass(row.direction)}`}
       >

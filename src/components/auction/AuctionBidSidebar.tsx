@@ -7,6 +7,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import AuctionSellerCard from "@/components/auction/AuctionSellerCard";
 import AuctionShippingInfo from "@/components/auction/AuctionShippingInfo";
 import BidAddressPromptModal from "@/components/auction/BidAddressPromptModal";
+import BuyNowButton from "@/components/auction/BuyNowButton";
 import CountdownTimer from "@/components/auction/CountdownTimer";
 import LiveChat from "@/components/auction/LiveChat";
 import MessageThreadButton from "@/components/messages/MessageThreadButton";
@@ -29,6 +30,15 @@ import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { getEscrowStatusLabel, getExplorerTxUrl } from "@/lib/escrow";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import { formatSol, shortenAddress } from "@/lib/format";
+import {
+  getBuyNowPrice,
+  getListingExpiryLabel,
+  hasBuyNowOption,
+  isFixedPriceListing,
+  isGoodTillCancelled,
+  isListingLive,
+  shouldShowCountdown,
+} from "@/lib/listing-types";
 
 function roundBidAmount(amount: number): number {
   return Math.round(amount * 100) / 100;
@@ -91,9 +101,16 @@ export default function AuctionBidSidebar({
     };
   }, [auction, currentBid]);
 
-  const isLive =
-    auction.status === "live" &&
-    new Date(auction.end_time).getTime() > Date.now();
+  const isLive = isListingLive(auction);
+  const fixedPrice = isFixedPriceListing(auction);
+  const buyNowPrice = getBuyNowPrice(auction);
+  const showBuyNow =
+    hasBuyNowOption(auction) &&
+    buyNowPrice != null &&
+    isLive &&
+    wallet !== auction.seller_wallet &&
+    auction.escrow_state !== "funded" &&
+    auction.escrow_state !== "complete";
   const isWinner =
     Boolean(publicKey) &&
     topBidder === publicKey?.toBase58() &&
@@ -287,34 +304,56 @@ export default function AuctionBidSidebar({
     />
     <div className="space-y-4 lg:sticky lg:top-5">
       <div className="rounded-2xl border border-border bg-surface p-5">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-          Time Left
-        </p>
-        <div className="mt-2">
-          <CountdownTimer endTime={auction.end_time} large />
-        </div>
+        {shouldShowCountdown(auction) ? (
+          <>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Time Left
+            </p>
+            <div className="mt-2">
+              <CountdownTimer endTime={auction.end_time} large />
+            </div>
+          </>
+        ) : isGoodTillCancelled(auction) && isLive ? (
+          <p className="text-sm font-medium text-teal-300">Good Till Cancelled</p>
+        ) : getListingExpiryLabel(auction) ? (
+          <p className="text-sm text-muted">
+            Expires {getListingExpiryLabel(auction)}
+          </p>
+        ) : null}
 
         <div className="mt-5 border-t border-border pt-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-            Current Bid
+            {fixedPrice ? "Fixed Price" : "Current Bid"}
           </p>
           <p className="mt-1 text-3xl font-bold text-white">
-            {formatSol(currentBid)}
+            {formatSol(fixedPrice ? (buyNowPrice ?? 0) : currentBid)}
           </p>
-          <FiatValue solAmount={currentBid} />
-          <p className="mt-1 text-sm text-muted">
-            {bidCount} {bidCount === 1 ? "bid" : "bids"}
-          </p>
+          <FiatValue solAmount={fixedPrice ? (buyNowPrice ?? 0) : currentBid} />
+          {!fixedPrice && (
+            <p className="mt-1 text-sm text-muted">
+              {bidCount} {bidCount === 1 ? "bid" : "bids"}
+            </p>
+          )}
         </div>
 
-        <div className="mt-4 rounded-xl bg-background/60 px-3 py-3">
-          <p className="text-xs text-muted">Top bidder</p>
-          <p className="mt-1 text-sm font-medium text-white">
-            {topBidderLabel}
-          </p>
-        </div>
+        {!fixedPrice && (
+          <div className="mt-4 rounded-xl bg-background/60 px-3 py-3">
+            <p className="text-xs text-muted">Top bidder</p>
+            <p className="mt-1 text-sm font-medium text-white">
+              {topBidderLabel}
+            </p>
+          </div>
+        )}
 
-        {isLive ? (
+        {fixedPrice && showBuyNow ? (
+          <div className="mt-5">
+            <BuyNowButton
+              auction={auction}
+              sellerCountry={seller.country}
+              shipsInternationally={seller.ships_internationally}
+            />
+          </div>
+        ) : isLive ? (
           <div className="mt-5 space-y-3">
             {!isWalletConnected ? (
               <button
@@ -414,6 +453,16 @@ export default function AuctionBidSidebar({
                   ))}
                 </div>
               </>
+            )}
+            {showBuyNow && !fixedPrice && (
+              <div className="mt-4 border-t border-border pt-4">
+                <BuyNowButton
+                  auction={auction}
+                  sellerCountry={seller.country}
+                  shipsInternationally={seller.ships_internationally}
+                />
+                <p className="mt-2 text-center text-xs text-muted">or buy instantly</p>
+              </div>
             )}
           </div>
         ) : (

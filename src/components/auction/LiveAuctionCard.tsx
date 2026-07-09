@@ -15,6 +15,7 @@ import AuctionLabelBadges from "@/components/auction/AuctionLabelBadges";
 import WatchlistHeart from "@/components/auction/WatchlistHeart";
 import type { Auction } from "@/lib/database.types";
 import { getEffectiveBid } from "@/lib/parse-auction";
+import { isListingLive } from "@/lib/listing-types";
 
 export default function LiveAuctionCard({
   auction,
@@ -63,6 +64,7 @@ export default function LiveAuctionCard({
                 item_details: auction.item_details ?? {},
                 status: auction.status,
                 is_featured: auction.is_featured,
+                listing_type: auction.listing_type,
               }}
               bidCount={bidCount}
               bidCount24h={bidCount24h}
@@ -73,10 +75,11 @@ export default function LiveAuctionCard({
         }
         footer={
           <AuctionCardPricingFooter
+            auction={auction}
             amount={displayBid}
             shipping={auctionCardShippingPropsFromAuction(auction)}
             endTime={auction.end_time}
-            showTimeLeft
+            showTimeLeft={isListingLive(auction)}
             bidCount={bidCount}
           />
         }

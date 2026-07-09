@@ -32,6 +32,11 @@ import type { ReviewWithReviewer } from "@/lib/database.types";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { formatSol, shortenAddress } from "@/lib/format";
+import {
+  getBuyNowPrice,
+  isFixedPriceListing,
+  isGoodTillCancelled,
+} from "@/lib/listing-types";
 
 type TabId = "active" | "past" | "bids" | "reviews";
 
@@ -122,6 +127,24 @@ function ActiveAuctionCard({
                 bidCount={auction.bidCount}
                 className="mt-2"
               />
+              {auction.listing_type === "auction_buy_now" &&
+                getBuyNowPrice(auction) != null && (
+                  <span className="mt-2 inline-flex rounded-md bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-300">
+                    Buy Now: {formatSol(getBuyNowPrice(auction)!)}
+                  </span>
+                )}
+              {isFixedPriceListing(auction) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="inline-flex rounded-md bg-teal-500/20 px-2 py-0.5 text-[10px] font-bold text-teal-300">
+                    🏷️ Fixed
+                  </span>
+                  {isGoodTillCancelled(auction) && (
+                    <span className="inline-flex rounded-md bg-surface-elevated px-2 py-0.5 text-[10px] font-bold text-zinc-300">
+                      GTC
+                    </span>
+                  )}
+                </div>
+              )}
               {auction.reference_number && (
                 <div className="mt-2">
                   <ReferenceNumber referenceNumber={auction.reference_number} />
@@ -133,20 +156,36 @@ function ActiveAuctionCard({
             <>
               <div className="pointer-events-auto flex items-end justify-between gap-3">
                 <div>
-                  <p className="text-xs text-muted">Current bid</p>
-                  <p className="text-lg font-bold text-accent">
-                    {formatSol(displayBid)}
+                  <p className="text-xs text-muted">
+                    {isFixedPriceListing(auction) ? "Fixed Price" : "Current bid"}
                   </p>
-                  <FiatValue solAmount={displayBid} />
+                  <p className="text-lg font-bold text-accent">
+                    {formatSol(
+                      isFixedPriceListing(auction)
+                        ? (getBuyNowPrice(auction) ?? displayBid)
+                        : displayBid
+                    )}
+                  </p>
+                  <FiatValue
+                    solAmount={
+                      isFixedPriceListing(auction)
+                        ? (getBuyNowPrice(auction) ?? displayBid)
+                        : displayBid
+                    }
+                  />
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted">Time left</p>
-                  <CountdownTimer endTime={auction.end_time} compact />
-                </div>
+                {!isGoodTillCancelled(auction) && (
+                  <div className="text-right">
+                    <p className="text-xs text-muted">Time left</p>
+                    <CountdownTimer endTime={auction.end_time} compact />
+                  </div>
+                )}
               </div>
-              <p className="mt-2 text-xs text-muted">
-                {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
-              </p>
+              {!isFixedPriceListing(auction) && (
+                <p className="mt-2 text-xs text-muted">
+                  {auction.bidCount} {auction.bidCount === 1 ? "bid" : "bids"}
+                </p>
+              )}
             </>
           }
         />

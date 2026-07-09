@@ -14,6 +14,8 @@ import {
   getItemDetailLabel,
   type CategoryFieldType,
 } from "@/lib/category-fields";
+import type { ListingType } from "@/lib/database.types";
+import { GTC_END_TIME } from "@/lib/listing-types";
 
 function listingPreviewShippingProps(form: ListingFormState) {
   if (form.freeDomesticShipping) {
@@ -57,6 +59,10 @@ export type ItemDetailRow = {
 };
 
 export type ListingFormState = {
+  listingType: ListingType;
+  buyNowPrice: string;
+  goodTillCancelled: boolean;
+  durationMode: "set_duration" | "gtc";
   title: string;
   description: string;
   category: string;
@@ -76,12 +82,70 @@ export type ListingFormState = {
 };
 
 export default function ListingPreview({ form }: { form: ListingFormState }) {
-  const price = parseFloat(form.startPrice);
+  const isFixedPrice = form.listingType === "fixed_price";
+  const price = isFixedPrice
+    ? parseFloat(form.buyNowPrice)
+    : parseFloat(form.startPrice);
   const displayBid = !isNaN(price) && price > 0 ? price : 0;
   const durationHours = parseInt(form.durationHours, 10);
-  const endTime = new Date(
-    Date.now() + (isNaN(durationHours) ? 24 : durationHours) * 60 * 60 * 1000
-  ).toISOString();
+  const endTime = form.goodTillCancelled
+    ? GTC_END_TIME
+    : new Date(
+        Date.now() + (isNaN(durationHours) ? 24 : durationHours) * 60 * 60 * 1000
+      ).toISOString();
+
+  const previewAuction = {
+    id: "preview",
+    title: form.title || "Preview",
+    description: form.description,
+    image_url: form.imageUrl || null,
+    seller_wallet: "preview",
+    current_bid: 0,
+    start_price: displayBid,
+    end_time: endTime,
+    status: "live" as const,
+    category: form.category,
+    condition: form.condition,
+    additional_images: [],
+    item_details: {},
+    created_at: new Date().toISOString(),
+    is_featured: false,
+    reference_number: null,
+    tracking_courier: null,
+    tracking_number: null,
+    tracking_uploaded_at: null,
+    shipping_status: "pending" as const,
+    escrow_pda: null,
+    escrow_tx_signature: null,
+    escrow_funded: false,
+    escrow_funded_at: null,
+    escrow_amount_lamports: null,
+    escrow_attempt_number: 1,
+    escrow_state: "none" as const,
+    escrow_expired_at: null,
+    sol_usd_rate_at_payment: null,
+    payment_completed_at: null,
+    domestic_shipping_usd: parseFloat(form.domesticShippingUsd) || 0,
+    international_shipping_usd: parseFloat(form.internationalShippingUsd) || 0,
+    is_dummy: false,
+    next_bidder_offered_at: null,
+    next_bidder_response_deadline: null,
+    next_bidder_wallet: null,
+    relisted_auction_id: null,
+    payment_excluded_wallets: [],
+    ended_early: false,
+    early_end_reason: null,
+    early_end_at: null,
+    early_end_by: null,
+    winner_wallet: null,
+    buy_now_price:
+      form.listingType === "auction_buy_now" || isFixedPrice
+        ? parseFloat(form.buyNowPrice) || null
+        : null,
+    purchase_type: "auction" as const,
+    listing_type: form.listingType,
+    good_till_cancelled: form.goodTillCancelled,
+  };
 
   const imageSrc = resolveAuctionImageUrl(form.imageUrl || null, {
     title: form.title || "Preview",
@@ -163,10 +227,11 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
 
           <div className="mt-4">
             <AuctionCardPricingFooter
+              auction={previewAuction}
               amount={displayBid}
               shipping={previewShipping}
               endTime={endTime}
-              showTimeLeft
+              showTimeLeft={!form.goodTillCancelled}
               bidCount={0}
             />
           </div>

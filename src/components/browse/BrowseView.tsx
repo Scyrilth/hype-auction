@@ -7,9 +7,11 @@ import BrowseSearchHero from "@/components/browse/BrowseSearchHero";
 import BrowseSection from "@/components/browse/BrowseSection";
 import { FilterIcon } from "@/components/icons";
 import {
+  BROWSE_LISTING_FILTER_OPTIONS,
   filterBrowseAuctions,
   isBrowseFilterActive,
   sortBrowseAuctions,
+  type BrowseListingFilter,
   type BrowseSectionSortOption,
 } from "@/lib/browse-filters";
 import { getTopFeaturedAuctionIds } from "@/lib/auction-labels";
@@ -57,10 +59,11 @@ function FilterOption({
 function buildSectionItems(
   items: BrowseAuctionItem[],
   globalCategory: string,
+  listingFilter: BrowseListingFilter,
   sortBy: BrowseSectionSortOption,
   limit: number
 ) {
-  const filtered = filterBrowseAuctions(items, globalCategory);
+  const filtered = filterBrowseAuctions(items, globalCategory, listingFilter);
   return sortBrowseAuctions(filtered, sortBy).slice(0, limit);
 }
 
@@ -74,6 +77,7 @@ export default function BrowseView({
   const [globalCategory, setGlobalCategory] = useState(
     initialCategory?.trim() || "all"
   );
+  const [listingFilter, setListingFilter] = useState<BrowseListingFilter>("all");
   const [sectionSorts, setSectionSorts] = useState<
     Record<SectionKey, BrowseSectionSortOption>
   >({
@@ -84,7 +88,7 @@ export default function BrowseView({
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
-  const filtersActive = isBrowseFilterActive(globalCategory);
+  const filtersActive = isBrowseFilterActive(globalCategory, listingFilter);
 
   const labelMaps = useMemo(() => {
     const bidCounts24h = new Map(
@@ -111,10 +115,11 @@ export default function BrowseView({
       buildSectionItems(
         data.auctions,
         globalCategory,
+        listingFilter,
         sectionSorts.trending,
         SECTION_LIMITS.trending
       ),
-    [data.auctions, globalCategory, sectionSorts.trending]
+    [data.auctions, globalCategory, listingFilter, sectionSorts.trending]
   );
 
   const endingSoon = useMemo(
@@ -122,10 +127,11 @@ export default function BrowseView({
       buildSectionItems(
         data.auctions,
         globalCategory,
+        listingFilter,
         sectionSorts.endingSoon,
         SECTION_LIMITS.endingSoon
       ).map((item) => item.auction),
-    [data.auctions, globalCategory, sectionSorts.endingSoon]
+    [data.auctions, globalCategory, listingFilter, sectionSorts.endingSoon]
   );
 
   const recentlyListed = useMemo(
@@ -133,10 +139,11 @@ export default function BrowseView({
       buildSectionItems(
         data.auctions,
         globalCategory,
+        listingFilter,
         sectionSorts.recentlyListed,
         SECTION_LIMITS.recentlyListed
       ).map((item) => item.auction),
-    [data.auctions, globalCategory, sectionSorts.recentlyListed]
+    [data.auctions, globalCategory, listingFilter, sectionSorts.recentlyListed]
   );
 
   const updateSectionSort = (
@@ -213,6 +220,21 @@ export default function BrowseView({
                         label={category.label}
                         selected={globalCategory === category.label}
                         onSelect={() => setGlobalCategory(category.label)}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="border-t border-border p-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                    Listing type
+                  </p>
+                  <div className="space-y-0.5">
+                    {BROWSE_LISTING_FILTER_OPTIONS.map((option) => (
+                      <FilterOption
+                        key={option.id}
+                        label={option.label}
+                        selected={listingFilter === option.id}
+                        onSelect={() => setListingFilter(option.id)}
                       />
                     ))}
                   </div>

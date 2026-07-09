@@ -66,6 +66,7 @@ export default function TrendingAuctionCard({
                 item_details: auction.item_details,
                 status: auction.status,
                 is_featured: auction.is_featured,
+                listing_type: auction.listing_type,
               }}
               bidCount={bidCount}
               bidCount24h={bidCount24h}
@@ -77,6 +78,7 @@ export default function TrendingAuctionCard({
         }
         footer={
           <AuctionCardPricingFooter
+            auction={auction}
             amount={displayBid}
             shipping={auctionCardShippingPropsFromAuction(auction)}
             endTime={auction.end_time}

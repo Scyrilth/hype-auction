@@ -15,7 +15,7 @@ import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
 import { useSolPrice } from "@/hooks/useSolPrice";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
-import type { Auction } from "@/lib/database.types";
+import type { Auction, ListingType } from "@/lib/database.types";
 import {
   FREE_SHIPPING_WARNING,
   isDummySellerWallet,
@@ -53,9 +53,39 @@ type FieldErrors = {
   domesticShippingUsd?: string;
   internationalShippingUsd?: string;
   startPrice?: string;
+  buyNowPrice?: string;
 };
 
+const LISTING_TYPE_OPTIONS: {
+  id: ListingType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "auction",
+    label: "🔨 Auction",
+    description:
+      "Standard auction. Set a starting bid and duration. Highest bidder wins when the timer ends.",
+  },
+  {
+    id: "auction_buy_now",
+    label: "🔨 + 🏷️ Auction + Buy Now",
+    description:
+      "Auction with a fixed Buy Now price. Buyers can bid normally or purchase instantly at the Buy Now price.",
+  },
+  {
+    id: "fixed_price",
+    label: "🏷️ Fixed Price",
+    description:
+      "No bidding. Set a fixed price. First buyer to click Buy Now purchases the item.",
+  },
+];
+
 const initialForm: ListingFormState = {
+  listingType: "auction",
+  buyNowPrice: "",
+  goodTillCancelled: false,
+  durationMode: "set_duration",
   title: "",
   description: "",
   category: AUCTION_CATEGORIES[0],
@@ -140,6 +170,14 @@ export default function CreateListingForm() {
       ? parsedStartPrice * solPrice
       : null;
 
+  const parsedBuyNowPrice = parseFloat(form.buyNowPrice);
+  const buyNowPriceUsd =
+    solPrice != null &&
+    !Number.isNaN(parsedBuyNowPrice) &&
+    parsedBuyNowPrice > 0
+      ? parsedBuyNowPrice * solPrice
+      : null;
+
   const validateForm = (): FieldErrors => {
     const errors: FieldErrors = {};
 
@@ -171,8 +209,24 @@ export default function CreateListingForm() {
     }
 
     const price = parseFloat(form.startPrice);
-    if (!form.startPrice.trim() || isNaN(price) || price <= 0) {
-      errors.startPrice = "Enter a valid starting bid.";
+    const isFixedPrice = form.listingType === "fixed_price";
+    const isAuctionBuyNow = form.listingType === "auction_buy_now";
+
+    if (!isFixedPrice) {
+      if (!form.startPrice.trim() || isNaN(price) || price <= 0) {
+        errors.startPrice = "Enter a valid starting bid.";
+      }
+    }
+
+    if (isAuctionBuyNow || isFixedPrice) {
+      const buyNow = parseFloat(form.buyNowPrice);
+      if (!form.buyNowPrice.trim() || isNaN(buyNow) || buyNow <= 0) {
+        errors.buyNowPrice = isFixedPrice
+          ? "Enter a valid fixed price."
+          : "Enter a valid Buy Now price.";
+      } else if (isAuctionBuyNow && buyNow <= price) {
+        errors.buyNowPrice = "Buy Now price must be higher than the starting bid.";
+      }
     }
 
     return errors;
@@ -192,6 +246,8 @@ export default function CreateListingForm() {
     setIsSubmitting(true);
 
     const price = parseFloat(form.startPrice);
+    const buyNow = parseFloat(form.buyNowPrice);
+    const isFixedPrice = form.listingType === "fixed_price";
     const domesticShipping = form.freeDomesticShipping
       ? 0
       : parseFloat(form.domesticShippingUsd);
@@ -229,13 +285,16 @@ export default function CreateListingForm() {
         description: form.description,
         category: form.category,
         condition: form.condition,
-        startPrice: price,
+        startPrice: isFixedPrice ? buyNow : price,
         durationHours: parseInt(form.durationHours, 10),
         imageUrl: form.imageUrl,
         additionalImages: form.additionalImages,
         itemDetails,
         domesticShippingUsd: domesticShipping,
         internationalShippingUsd: internationalShipping,
+        listingType: form.listingType,
+        buyNowPrice: isFixedPrice || form.listingType === "auction_buy_now" ? buyNow : null,
+        goodTillCancelled: isFixedPrice && form.goodTillCancelled,
       });
 
       setPublishedAuction(auction);
@@ -319,6 +378,44 @@ export default function CreateListingForm() {
           noValidate
           className="rounded-2xl border border-border bg-surface p-6"
         >
+          <div className="mb-6 space-y-3">
+            <p className={labelClass}>Listing type</p>
+            <div className="grid gap-3">
+              {LISTING_TYPE_OPTIONS.map((option) => (
+                <label
+                  key={option.id}
+                  className={`flex cursor-pointer gap-3 rounded-xl border px-4 py-3 transition-colors ${
+                    form.listingType === option.id
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-background/60 hover:border-accent/40"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="listingType"
+                    value={option.id}
+                    checked={form.listingType === option.id}
+                    onChange={() => {
+                      updateForm("listingType", option.id);
+                      if (option.id !== "fixed_price") {
+                        updateForm("goodTillCancelled", false);
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 accent-accent"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-white">
+                      {option.label}
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">
+                      {option.description}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label htmlFor="title" className={labelClass}>
@@ -558,45 +655,132 @@ export default function CreateListingForm() {
               </div>
             )}
 
-            <div>
-              <label htmlFor="startPrice" className={labelClass}>
-                Starting bid (SOL) <span className="text-live-red">*</span>
-              </label>
-              <input
-                id="startPrice"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={form.startPrice}
-                onChange={(e) => updateForm("startPrice", e.target.value)}
-                placeholder="1.00"
-                className={fieldErrors.startPrice ? inputErrorClass : inputClass}
-              />
-              {startPriceUsd != null && (
-                <p className="mt-1 text-xs text-muted">
-                  ~${startPriceUsd.toFixed(2)} USD
-                </p>
-              )}
-              <FieldError message={fieldErrors.startPrice} />
-            </div>
+            {form.listingType !== "fixed_price" && (
+              <div>
+                <label htmlFor="startPrice" className={labelClass}>
+                  Starting bid (SOL) <span className="text-live-red">*</span>
+                </label>
+                <input
+                  id="startPrice"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.startPrice}
+                  onChange={(e) => updateForm("startPrice", e.target.value)}
+                  placeholder="1.00"
+                  className={fieldErrors.startPrice ? inputErrorClass : inputClass}
+                />
+                {startPriceUsd != null && (
+                  <p className="mt-1 text-xs text-muted">
+                    ~${startPriceUsd.toFixed(2)} USD
+                  </p>
+                )}
+                <FieldError message={fieldErrors.startPrice} />
+              </div>
+            )}
 
-            <div>
-              <label htmlFor="duration" className={labelClass}>
-                Duration
-              </label>
-              <select
-                id="duration"
-                value={form.durationHours}
-                onChange={(e) => updateForm("durationHours", e.target.value)}
-                className={inputClass}
-              >
-                {AUCTION_DURATIONS.map(({ label, hours }) => (
-                  <option key={hours} value={hours}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {(form.listingType === "auction_buy_now" ||
+              form.listingType === "fixed_price") && (
+              <div>
+                <label htmlFor="buyNowPrice" className={labelClass}>
+                  {form.listingType === "fixed_price"
+                    ? "Fixed Price (SOL)"
+                    : "Buy Now price (SOL)"}{" "}
+                  <span className="text-live-red">*</span>
+                </label>
+                <input
+                  id="buyNowPrice"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={form.buyNowPrice}
+                  onChange={(e) => updateForm("buyNowPrice", e.target.value)}
+                  placeholder="5.00"
+                  className={fieldErrors.buyNowPrice ? inputErrorClass : inputClass}
+                />
+                {buyNowPriceUsd != null && (
+                  <p className="mt-1 text-xs text-muted">
+                    ~${buyNowPriceUsd.toFixed(2)} USD
+                  </p>
+                )}
+                {form.listingType === "auction_buy_now" && (
+                  <p className="mt-1 text-xs text-muted">
+                    Buyers can purchase instantly at this price, ending the
+                    auction early
+                  </p>
+                )}
+                <FieldError message={fieldErrors.buyNowPrice} />
+              </div>
+            )}
+
+            {form.listingType === "fixed_price" ? (
+              <div className="sm:col-span-2 space-y-3">
+                <p className={labelClass}>Duration</p>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                  <input
+                    type="radio"
+                    name="durationMode"
+                    checked={!form.goodTillCancelled}
+                    onChange={() => updateForm("goodTillCancelled", false)}
+                    className="mt-1 h-4 w-4 accent-accent"
+                  />
+                  <span>
+                    <span className="block text-sm text-zinc-300">Set duration</span>
+                    <span className="mt-2 block">
+                      <select
+                        id="duration"
+                        value={form.durationHours}
+                        onChange={(e) => updateForm("durationHours", e.target.value)}
+                        disabled={form.goodTillCancelled}
+                        className={inputClass}
+                      >
+                        {AUCTION_DURATIONS.map(({ label, hours }) => (
+                          <option key={hours} value={hours}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </span>
+                  </span>
+                </label>
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-background/60 px-4 py-3">
+                  <input
+                    type="radio"
+                    name="durationMode"
+                    checked={form.goodTillCancelled}
+                    onChange={() => updateForm("goodTillCancelled", true)}
+                    className="mt-1 h-4 w-4 accent-accent"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-white">
+                      Good Till Cancelled
+                    </span>
+                    <span className="mt-1 block text-xs leading-relaxed text-muted">
+                      Your listing stays active until someone buys it or you
+                      remove it. No need to relist. Recommended for shop items.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="duration" className={labelClass}>
+                  Duration
+                </label>
+                <select
+                  id="duration"
+                  value={form.durationHours}
+                  onChange={(e) => updateForm("durationHours", e.target.value)}
+                  className={inputClass}
+                >
+                  {AUCTION_DURATIONS.map(({ label, hours }) => (
+                    <option key={hours} value={hours}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="sm:col-span-2">
               <ImageUpload

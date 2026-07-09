@@ -192,6 +192,7 @@ export default function ThreadShippingAddressModal({
   initialAddressId,
   onConfirmed,
   onDismiss,
+  mode = "thread",
 }: {
   open: boolean;
   threadId: string;
@@ -207,8 +208,10 @@ export default function ThreadShippingAddressModal({
     shippingUsd: number;
     shippingCountry: string;
     addressId: string;
+    threadId?: string;
   }) => void;
   onDismiss: () => void;
+  mode?: "thread" | "buy_now";
 }) {
   const { client } = useSupabaseClient();
   const { showToast } = useToast();
@@ -283,25 +286,38 @@ export default function ThreadShippingAddressModal({
 
     setConfirming(true);
     try {
-      const response = await fetch("/api/messages/shipping-address", {
+      const endpoint =
+        mode === "buy_now" ? "/api/auctions/buy-now" : "/api/messages/shipping-address";
+      const body =
+        mode === "buy_now"
+          ? {
+              action: "confirm-shipping",
+              auctionId,
+              buyerWallet,
+              addressId: selectedId,
+            }
+          : {
+              action: "confirm",
+              threadId,
+              auctionId,
+              buyerWallet,
+              addressId: selectedId,
+            };
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": buyerWallet,
         },
-        body: JSON.stringify({
-          action: "confirm",
-          threadId,
-          auctionId,
-          buyerWallet,
-          addressId: selectedId,
-        }),
+        body: JSON.stringify(body),
       });
       const payload = (await response.json()) as {
         error?: string;
         shippingUsd?: number;
         shippingCountry?: string;
         address?: ShippingAddress;
+        threadId?: string;
       };
 
       if (!response.ok) {
@@ -312,6 +328,7 @@ export default function ThreadShippingAddressModal({
         shippingUsd: payload.shippingUsd ?? 0,
         shippingCountry: payload.shippingCountry ?? "",
         addressId: selectedId,
+        threadId: payload.threadId,
       });
     } catch (error) {
       showToast(getErrorMessage(error), "error");

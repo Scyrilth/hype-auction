@@ -8,9 +8,11 @@ export type AuctionLabelId =
   | "RARE"
   | "COLLECTOR"
   | "VINTAGE"
-  | "NEW";
+  | "NEW"
+  | "FIXED_PRICE";
 
 const LABEL_PRIORITY: AuctionLabelId[] = [
+  "FIXED_PRICE",
   "ENDING_SOON",
   "FEATURED",
   "HIGH_VALUE",
@@ -73,6 +75,7 @@ export interface AuctionLabelInput {
     | "status"
   > & {
     is_featured?: boolean;
+    listing_type?: string;
   };
   bidCount?: number;
   bidCount24h?: number;
@@ -210,6 +213,7 @@ export function createAuctionLabelInput(
       item_details: auction.item_details ?? {},
       status: auction.status,
       is_featured: Boolean(auction.is_featured),
+      listing_type: (auction as { listing_type?: string }).listing_type,
     },
     bidCount: options.bidCount,
     bidCount24h: options.bidCount24h,
@@ -241,6 +245,10 @@ export function getAuctionLabels(input: AuctionLabelInput): AuctionLabelId[] {
   const details = auction.item_details ?? {};
   const matched = new Set<AuctionLabelId>();
   const resolvedBidCount = resolveBidCount(bidCount, bidCount24h);
+
+  if (auction.listing_type === "fixed_price") {
+    matched.add("FIXED_PRICE");
+  }
 
   if (isEndingSoon(auction.end_time, now, auction.status)) {
     matched.add("ENDING_SOON");
@@ -332,5 +340,9 @@ export const AUCTION_LABEL_DISPLAY: Record<
   NEW: {
     text: "🆕 New",
     className: "bg-blue-500 text-white",
+  },
+  FIXED_PRICE: {
+    text: "🏷️ Fixed Price",
+    className: "bg-teal-600 text-white",
   },
 };

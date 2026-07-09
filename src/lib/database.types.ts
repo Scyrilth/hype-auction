@@ -19,6 +19,10 @@ export type EscrowState =
   | "cancelled"
   | "expired";
 
+export type ListingType = "auction" | "auction_buy_now" | "fixed_price";
+
+export type PurchaseType = "auction" | "buy_now";
+
 export interface User {
   wallet_address: string;
   username: string | null;
@@ -94,6 +98,10 @@ export interface Auction {
   early_end_at: string | null;
   early_end_by: string | null;
   winner_wallet: string | null;
+  buy_now_price: number | null;
+  purchase_type: PurchaseType;
+  listing_type: ListingType;
+  good_till_cancelled: boolean;
 }
 
 export interface Bid {

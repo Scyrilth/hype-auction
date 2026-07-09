@@ -444,6 +444,94 @@ export async function notifyEarlyEndSeller({
   );
 }
 
+export async function notifyBuyNowBuyer({
+  buyerWallet,
+  auctionTitle,
+  priceSol,
+  threadId,
+}: {
+  buyerWallet: string;
+  auctionTitle: string;
+  priceSol: number;
+  threadId: string;
+}, client: SupabaseClient = supabase): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(
+    buyerWallet,
+    "auction_won",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    buyerWallet,
+    "auction_won",
+    "You bought it! 🎉",
+    `You purchased ${auctionTitle} for ${formatSol(priceSol)}. The seller has been notified to ship.`,
+    link,
+    client
+  );
+}
+
+export async function notifyBuyNowSeller({
+  sellerWallet,
+  auctionTitle,
+  priceSol,
+  threadId,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  priceSol: number;
+  threadId: string;
+}, client: SupabaseClient = supabase): Promise<void> {
+  const link = `/messages/${threadId}`;
+  const alreadySent = await hasNotification(
+    sellerWallet,
+    "auction_ended",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    sellerWallet,
+    "auction_ended",
+    "Instant sale! 💰",
+    `Your item ${auctionTitle} was bought instantly for ${formatSol(priceSol)}. Payment is secured in escrow. Please ship promptly.`,
+    link,
+    client
+  );
+}
+
+export async function notifyBuyNowOutbidBidder({
+  bidderWallet,
+  auctionTitle,
+  auctionId,
+}: {
+  bidderWallet: string;
+  auctionTitle: string;
+  auctionId: string;
+}, client: SupabaseClient = supabase): Promise<void> {
+  const link = `/auction/${auctionId}`;
+  const alreadySent = await hasNotification(
+    bidderWallet,
+    "outbid",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
+  await createNotification(
+    bidderWallet,
+    "outbid",
+    "Auction ended — item sold 😔",
+    `Another buyer purchased ${auctionTitle} instantly via Buy Now. Your bid was not charged.`,
+    link,
+    client
+  );
+}
+
 export async function notifySellerAuctionEnded({
   sellerWallet,
   auctionTitle,
@@ -511,7 +599,7 @@ export async function notifyPaymentConfirmed({
     await createNotification(
       buyerWallet,
       "payment_confirmed",
-      "Payment secured! 🔒",
+      "Payment secured 🔒",
       `Your payment of ${total} for ${auctionTitle} is locked in escrow. The seller will ship soon.`,
       link,
       client

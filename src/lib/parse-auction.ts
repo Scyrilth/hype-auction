@@ -2,8 +2,14 @@ import type {
   Auction,
   AuctionStatus,
   EscrowState,
+  ListingType,
+  PurchaseType,
   ShippingStatus,
 } from "@/lib/database.types";
+import {
+  normalizeListingType,
+  normalizePurchaseType,
+} from "@/lib/listing-types";
 
 function safeNumber(value: unknown, fallback = 0): number {
   const parsed = Number(value);
@@ -119,5 +125,10 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     early_end_at: (row.early_end_at as string | null) ?? null,
     early_end_by: (row.early_end_by as string | null) ?? null,
     winner_wallet: (row.winner_wallet as string | null) ?? null,
+    buy_now_price:
+      row.buy_now_price != null ? safeNumber(row.buy_now_price) : null,
+    purchase_type: normalizePurchaseType(row.purchase_type) as PurchaseType,
+    listing_type: normalizeListingType(row.listing_type) as ListingType,
+    good_till_cancelled: Boolean(row.good_till_cancelled),
   };
 }

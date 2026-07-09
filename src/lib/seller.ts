@@ -1,7 +1,8 @@
 import { getCategoryLabels } from "@/lib/categories";
-import type { Auction } from "@/lib/database.types";
+import type { Auction, ListingType } from "@/lib/database.types";
 import { AUCTION_CONDITIONS } from "@/lib/grading";
 import { logSupabaseError, getErrorMessage } from "@/lib/errors";
+import { GTC_END_TIME } from "@/lib/listing-types";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { generateReferenceNumber } from "@/lib/reference-number";
 import { supabase } from "@/lib/supabase";
@@ -50,6 +51,9 @@ export async function createAuction({
   itemDetails = {},
   domesticShippingUsd = 0,
   internationalShippingUsd = 0,
+  listingType = "auction",
+  buyNowPrice,
+  goodTillCancelled = false,
 }: {
   sellerWallet: string;
   title: string;
@@ -63,12 +67,25 @@ export async function createAuction({
   itemDetails?: Record<string, string>;
   domesticShippingUsd?: number;
   internationalShippingUsd?: number;
+  listingType?: ListingType;
+  buyNowPrice?: number | null;
+  goodTillCancelled?: boolean;
 }) {
   await upsertUser(sellerWallet);
 
-  const endTime = new Date(
-    Date.now() + durationHours * 60 * 60 * 1000
-  ).toISOString();
+  const isFixedPrice = listingType === "fixed_price";
+  const isAuctionBuyNow = listingType === "auction_buy_now";
+  const gtc = isFixedPrice && goodTillCancelled;
+
+  const endTime = gtc
+    ? GTC_END_TIME
+    : new Date(Date.now() + durationHours * 60 * 60 * 1000).toISOString();
+
+  const resolvedBuyNowPrice =
+    isFixedPrice || isAuctionBuyNow ? (buyNowPrice ?? null) : null;
+  const resolvedStartPrice = isFixedPrice
+    ? (resolvedBuyNowPrice ?? startPrice)
+    : startPrice;
 
   const cleanedDetails = Object.fromEntries(
     Object.entries(itemDetails).filter(
@@ -89,7 +106,7 @@ export async function createAuction({
       description: description.trim() || null,
       category,
       condition,
-      start_price: startPrice,
+      start_price: resolvedStartPrice,
       current_bid: 0,
       image_url: imageUrl?.trim() || null,
       seller_wallet: sellerWallet,
@@ -101,6 +118,10 @@ export async function createAuction({
       shipping_status: "pending",
       domestic_shipping_usd: domesticShippingUsd,
       international_shipping_usd: internationalShippingUsd,
+      listing_type: listingType,
+      purchase_type: "auction",
+      buy_now_price: resolvedBuyNowPrice,
+      good_till_cancelled: gtc,
     };
 
     const { data, error } = await supabase
@@ -146,6 +167,9 @@ export async function createListingViaApi(
       itemDetails: params.itemDetails,
       domesticShippingUsd: params.domesticShippingUsd,
       internationalShippingUsd: params.internationalShippingUsd,
+      listingType: params.listingType,
+      buyNowPrice: params.buyNowPrice,
+      goodTillCancelled: params.goodTillCancelled,
     }),
   });
 

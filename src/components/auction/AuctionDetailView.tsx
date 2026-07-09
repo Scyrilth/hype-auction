@@ -4,6 +4,7 @@ import AuctionDetailSuggestions from "@/components/auction/AuctionDetailSuggesti
 import AuctionImageGallery from "@/components/auction/AuctionImageGallery";
 import { GradingBadge } from "@/components/dashboard/GradeSelect";
 import type { AuctionDetailData } from "@/lib/auctions";
+import { isFixedPriceListing } from "@/lib/listing-types";
 import {
   formatItemDetailValue,
   getItemDetailLabel,
@@ -88,7 +89,9 @@ export default function AuctionDetailView({ data }: { data: AuctionDetailData })
             </section>
           )}
 
-          <AuctionBidHistory bids={bids} topBidder={data.topBidder} />
+          {!isFixedPriceListing(auction) ? (
+            <AuctionBidHistory bids={bids} topBidder={data.topBidder} />
+          ) : null}
         </div>
 
         <div className="lg:col-span-1">

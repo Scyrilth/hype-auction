@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { corsHeaders } from "@/lib/cors";
+import type { ListingType } from "@/lib/database.types";
 import { logSupabaseError } from "@/lib/errors";
 import { notifyListingLive } from "@/lib/notifications";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
@@ -20,12 +21,26 @@ type ListingRequestBody = {
   itemDetails?: unknown;
   domesticShippingUsd?: unknown;
   internationalShippingUsd?: unknown;
+  listingType?: unknown;
+  buyNowPrice?: unknown;
+  goodTillCancelled?: unknown;
 };
 
 function parseNumber(value: unknown): number {
   if (typeof value === "number") return value;
   if (typeof value === "string") return Number(value);
   return NaN;
+}
+
+function parseListingType(value: unknown): ListingType {
+  if (
+    value === "auction" ||
+    value === "auction_buy_now" ||
+    value === "fixed_price"
+  ) {
+    return value;
+  }
+  return "auction";
 }
 
 export async function OPTIONS(request: Request) {
@@ -74,6 +89,9 @@ export async function POST(request: Request) {
   const condition = typeof body.condition === "string" ? body.condition : "";
   const startPrice = parseNumber(body.startPrice);
   const durationHours = parseNumber(body.durationHours);
+  const listingType = parseListingType(body.listingType);
+  const buyNowPrice = parseNumber(body.buyNowPrice);
+  const goodTillCancelled = Boolean(body.goodTillCancelled);
   const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl : undefined;
   const additionalImages = Array.isArray(body.additionalImages)
     ? body.additionalImages.filter((item): item is string => typeof item === "string")
@@ -106,16 +124,43 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!Number.isFinite(startPrice) || startPrice <= 0) {
-    return NextResponse.json(
-      { error: "Start price must be a positive number." },
-      { status: 400, headers }
-    );
+  const isFixedPrice = listingType === "fixed_price";
+  const isAuctionBuyNow = listingType === "auction_buy_now";
+
+  if (!isFixedPrice) {
+    if (!Number.isFinite(startPrice) || startPrice <= 0) {
+      return NextResponse.json(
+        { error: "Start price must be a positive number." },
+        { status: 400, headers }
+      );
+    }
   }
 
-  if (!Number.isFinite(durationHours) || durationHours <= 0) {
+  if (isAuctionBuyNow || isFixedPrice) {
+    if (!Number.isFinite(buyNowPrice) || buyNowPrice <= 0) {
+      return NextResponse.json(
+        { error: "Buy Now price must be a positive number." },
+        { status: 400, headers }
+      );
+    }
+    if (isAuctionBuyNow && buyNowPrice <= startPrice) {
+      return NextResponse.json(
+        { error: "Buy Now price must be higher than the starting bid." },
+        { status: 400, headers }
+      );
+    }
+  }
+
+  if (!goodTillCancelled) {
+    if (!Number.isFinite(durationHours) || durationHours <= 0) {
+      return NextResponse.json(
+        { error: "Duration must be a positive number." },
+        { status: 400, headers }
+      );
+    }
+  } else if (!isFixedPrice) {
     return NextResponse.json(
-      { error: "Duration must be a positive number." },
+      { error: "Good Till Cancelled is only available for fixed price listings." },
       { status: 400, headers }
     );
   }
@@ -127,13 +172,16 @@ export async function POST(request: Request) {
       description,
       category,
       condition,
-      startPrice,
-      durationHours,
+      startPrice: isFixedPrice ? buyNowPrice : startPrice,
+      durationHours: goodTillCancelled ? 168 : durationHours,
       imageUrl,
       additionalImages,
       itemDetails,
       domesticShippingUsd: parseNumber(body.domesticShippingUsd) || 0,
       internationalShippingUsd: parseNumber(body.internationalShippingUsd) || 0,
+      listingType,
+      buyNowPrice: isAuctionBuyNow || isFixedPrice ? buyNowPrice : null,
+      goodTillCancelled,
     });
 
     try {

@@ -463,6 +463,7 @@ export async function checkAndEndExpiredAuctions(): Promise<number> {
     .from("auctions")
     .select("*")
     .eq("status", "live")
+    .eq("good_till_cancelled", false)
     .lt("end_time", now);
 
   if (fetchError) {
