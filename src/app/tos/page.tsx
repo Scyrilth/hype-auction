@@ -13,7 +13,7 @@ export default function TermsPage() {
     <AppShell contentClassName="flex-1 p-3 sm:p-4">
       <LegalPageLayout
         title="Terms of Service"
-        subtitle="Last updated: June 2026"
+        subtitle="Last updated: July 2026"
         current="tos"
       >
         <p className="mb-6 rounded-xl border border-border bg-surface-elevated px-4 py-3 text-sm text-muted">
@@ -26,6 +26,7 @@ export default function TermsPage() {
             key={section.title}
             title={section.title}
             bullets={section.bullets}
+            paragraphs={section.paragraphs}
           >
             {section.body}
           </LegalSection>

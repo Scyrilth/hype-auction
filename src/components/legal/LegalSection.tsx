@@ -1,10 +1,12 @@
 export default function LegalSection({
   title,
   children,
+  paragraphs,
   bullets,
 }: {
   title: string;
   children?: React.ReactNode;
+  paragraphs?: string[];
   bullets?: string[];
 }) {
   return (
@@ -17,6 +19,11 @@ export default function LegalSection({
           {children}
         </div>
       )}
+      {paragraphs?.map((paragraph) => (
+        <p key={paragraph} className="mt-3 text-sm leading-relaxed text-zinc-300">
+          {paragraph}
+        </p>
+      ))}
       {bullets && bullets.length > 0 && (
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-relaxed text-zinc-300">
           {bullets.map((bullet) => (

@@ -38,6 +38,11 @@ export const faqCategories: FaqCategory[] = [
         answer:
           "Install the Phantom wallet extension from phantom.app, fund it with SOL, connect your wallet on Hype Auction and start browsing. No email or signup required.",
       },
+      {
+        question: "What is Buy Now?",
+        answer:
+          "Buy Now is a fixed price option sellers can set alongside their auction starting bid. If a Buy Now price is set, any buyer can purchase the item instantly at that price without waiting for the auction to end. Normal payment and escrow flow applies. Coming soon.",
+      },
     ],
   },
   {
@@ -86,20 +91,20 @@ export const faqCategories: FaqCategory[] = [
             body: "Click Pay Now in your message thread. Phantom opens — approve the transaction. SOL (item price plus shipping) locks into smart contract escrow. If you miss this window you get a 2nd attempt with a 2 hour window, then a 3rd with a 4 hour window. Miss all three and a strike is issued. The seller is then notified and can choose to offer the item to the next highest bidder or relist it.",
           },
           {
-            title: "Step 3 — Seller ships (within 5 days)",
-            body: "Seller receives payment confirmation and must ship within 5 days. They upload the tracking number to the platform. You will see shipping status update on your profile.",
+            title: "Step 3 — Seller ships (within 7 days)",
+            body: "Seller receives payment confirmation and must ship within 7 days. They upload the tracking number and carrier to the platform. Both buyer and seller can see tracking status in their message thread.",
           },
           {
             title: "Step 4 — Day 5 warning",
-            body: "If no tracking is uploaded by day 5, the seller receives an automatic warning.",
+            body: "If no tracking is uploaded by day 5, the seller receives an automatic warning notification.",
           },
           {
-            title: "Step 5 — Day 7 review",
-            body: "If still no tracking by day 7, the order is flagged for admin review. Admin checks estimated delivery date plus grace period (domestic +5 days, international +14 days) before deciding on a refund.",
+            title: "Step 5 — Day 7 auto-refund",
+            body: "If no tracking is uploaded by day 7, the smart contract's auto_refund instruction triggers. The full SOL amount is returned to the buyer's wallet automatically. No admin action required.",
           },
           {
             title: "Step 6 — Delivery and confirmation",
-            body: "Once tracking shows Delivered, you have 3 days to click Confirm Receipt. If you do not confirm within 3 days, SOL auto-releases to the seller. If there is an issue with the item, open a dispute within those 3 days.",
+            body: "Once your item arrives, click Confirm Receipt in your message thread. If you do not confirm within 3 days of delivery, SOL auto-releases to the seller. If there is an issue with the item, open a dispute within those 3 days before confirming.",
           },
           {
             title: "Step 7 — Completion",
@@ -147,6 +152,11 @@ export const faqCategories: FaqCategory[] = [
         answer:
           "After all payment windows expire, you will receive a notification in your dashboard. You can view the top next highest bidders and their bid amounts, then choose to offer the item to the next highest bidder or relist it as a new auction. If you relist, all previous bidders are automatically notified.",
       },
+      {
+        question: "Can I end my auction early?",
+        answer:
+          "Yes. From your seller dashboard, click End Auction on any active listing. If no bids have been placed, the listing closes immediately with no further action. If bids exist, you will be asked to confirm and provide a reason — the current highest bidder is immediately declared the winner and normal payment flow begins. Ending early with bids is permanent and cannot be undone.",
+      },
     ],
   },
   {
@@ -160,7 +170,7 @@ export const faqCategories: FaqCategory[] = [
       {
         question: "What if the seller does not ship?",
         answer:
-          "If no tracking is uploaded by day 7, the order is flagged. Admin reviews and can trigger a full refund to your wallet. The refund executes instantly on-chain.",
+          "If no tracking is uploaded by day 7, the smart contract's auto_refund instruction triggers automatically. The full SOL amount is returned directly to your wallet on-chain. No admin action is required — this is handled entirely by the smart contract.",
       },
       {
         question: "What if the item is not as described?",

@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <AppShell contentClassName="flex-1 p-3 sm:p-4">
       <LegalPageLayout
         title="Privacy Policy"
-        subtitle="Last updated: June 2026"
+        subtitle="Last updated: July 2026"
         current="privacy"
       >
         {privacySections.map((section) => (
@@ -21,6 +21,7 @@ export default function PrivacyPage() {
             key={section.title}
             title={section.title}
             bullets={section.bullets}
+            paragraphs={section.paragraphs}
           >
             {section.body}
           </LegalSection>
