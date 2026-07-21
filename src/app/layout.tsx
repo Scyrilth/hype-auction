@@ -8,6 +8,7 @@ import CookieConsent, {
 import { WatchlistProvider } from "@/components/auction/WatchlistProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { WelcomeOnboardingGate } from "@/components/onboarding/WelcomeOnboardingModal";
+import AgeAndTermsGate from "@/components/legal/AgeAndTermsGate";
 import UserSync from "@/components/UserSync";
 import MobilePhantomTipLoader from "@/components/wallet/MobilePhantomTipLoader";
 import WalletContextProvider from "@/components/WalletContextProvider";
@@ -64,6 +65,7 @@ export default function RootLayout({
             <ToastProvider>
               <WatchlistProvider>
                 <UserSync />
+                <AgeAndTermsGate />
                 <WelcomeOnboardingGate />
                 <MobilePhantomTipLoader />
                 {children}

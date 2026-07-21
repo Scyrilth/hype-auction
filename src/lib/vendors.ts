@@ -40,6 +40,9 @@ export function parseUser(row: Record<string, unknown>): User {
     show_won_auctions: Boolean(row.show_won_auctions),
     country: (row.country as string | null) ?? null,
     ships_internationally: Boolean(row.ships_internationally),
+    age_confirmed_at: (row.age_confirmed_at as string | null) ?? null,
+    tos_accepted_at: (row.tos_accepted_at as string | null) ?? null,
+    tos_version: (row.tos_version as string | null) ?? null,
   };
 }
 

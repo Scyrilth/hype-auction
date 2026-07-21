@@ -185,6 +185,9 @@ export async function getAuctionDetailData(
       show_won_auctions: false,
       country: null,
       ships_internationally: false,
+      age_confirmed_at: null,
+      tos_accepted_at: null,
+      tos_version: null,
     } satisfies User;
 
     let seller: User = sellerPlaceholder;

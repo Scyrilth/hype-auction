@@ -45,6 +45,9 @@ export interface User {
   show_won_auctions: boolean;
   country: string | null;
   ships_internationally: boolean;
+  age_confirmed_at: string | null;
+  tos_accepted_at: string | null;
+  tos_version: string | null;
 }
 
 export interface WatchlistEntry {
