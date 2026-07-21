@@ -145,6 +145,7 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
     purchase_type: "auction" as const,
     listing_type: form.listingType,
     good_till_cancelled: form.goodTillCancelled,
+    ship_reminder_sent: false,
   };
 
   const imageSrc = resolveAuctionImageUrl(form.imageUrl || null, {

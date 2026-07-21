@@ -25,7 +25,8 @@ export type NotificationType =
   | "transaction_complete"
   | "dispute_resolved"
   | "tracking_uploaded"
-  | "listing_live";
+  | "listing_live"
+  | "ship_reminder";
 
 export interface Notification {
   id: string;
@@ -693,6 +694,27 @@ export async function notifyTrackingUploaded({
     "Tracking uploaded",
     "Shipment recorded on-chain. The buyer has been notified.",
     link
+  );
+}
+
+export async function notifyShipReminder({
+  sellerWallet,
+  auctionTitle,
+  link,
+  client = supabase,
+}: {
+  sellerWallet: string;
+  auctionTitle: string;
+  link: string;
+  client?: SupabaseClient;
+}): Promise<void> {
+  await createNotification(
+    sellerWallet,
+    "ship_reminder",
+    "Reminder: ship your order",
+    `Reminder: please ship ${auctionTitle} soon. Upload tracking to keep your buyer updated.`,
+    link,
+    client
   );
 }
 

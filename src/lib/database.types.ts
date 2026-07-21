@@ -105,6 +105,7 @@ export interface Auction {
   purchase_type: PurchaseType;
   listing_type: ListingType;
   good_till_cancelled: boolean;
+  ship_reminder_sent: boolean;
 }
 
 export interface Bid {
