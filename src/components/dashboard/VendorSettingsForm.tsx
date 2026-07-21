@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import ImageUpload from "@/components/ui/ImageUpload";
 import SellerProfileSetupBanner from "@/components/dashboard/SellerProfileSetupBanner";
+import ShippingProfilesSection from "@/components/dashboard/ShippingProfilesSection";
 import { useToast } from "@/components/ui/Toast";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
@@ -398,6 +399,10 @@ export default function VendorSettingsForm() {
         {isSaving ? "Saving..." : "Save settings"}
       </button>
     </form>
+
+    {publicKey && (
+      <ShippingProfilesSection sellerWallet={publicKey.toBase58()} />
+    )}
     </>
   );
 }

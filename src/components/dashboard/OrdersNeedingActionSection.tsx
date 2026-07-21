@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
+import { formatOpenedAgo, formatPaidAgo } from "@/lib/format";
 import {
   fetchSellerOrdersNeedingAction,
   getOrderThumbnail,
@@ -52,6 +53,10 @@ export default function OrdersNeedingActionSection({
       <div className="space-y-3">
         {orders.map((order) => {
           const thumb = getOrderThumbnail(order.title, order.imageUrl, null);
+          const waitingLabel =
+            order.actionType === "ship"
+              ? formatPaidAgo(order.urgencyAt)
+              : formatOpenedAgo(order.urgencyAt);
 
           return (
             <article
@@ -81,6 +86,9 @@ export default function OrdersNeedingActionSection({
                     </div>
                   )}
                   <p className="mt-1.5 text-sm text-zinc-300">{order.actionLabel}</p>
+                  {waitingLabel && (
+                    <p className="mt-1 text-xs text-muted">{waitingLabel}</p>
+                  )}
                 </div>
               </div>
 

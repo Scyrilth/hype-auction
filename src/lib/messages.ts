@@ -813,7 +813,7 @@ export async function markThreadMessagesRead(
   if (error) throw error;
 }
 
-/** Marks messages from others as read across all user threads. */
+/** Marks non-system messages from others as read across all user threads. */
 export async function markAllThreadMessagesRead(
   wallet: string,
   client: SupabaseClient = supabase
@@ -832,7 +832,8 @@ export async function markAllThreadMessagesRead(
     .update({ is_read: true })
     .in("thread_id", threadIds)
     .neq("sender_wallet", wallet)
-    .eq("is_read", false);
+    .eq("is_read", false)
+    .eq("is_system", false);
 
   if (error) throw error;
 }

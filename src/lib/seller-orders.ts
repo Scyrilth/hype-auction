@@ -31,6 +31,7 @@ export interface SellerOrderNeedingAction {
   actionLabel: string;
   buttonLabel: string;
   buttonHref: string;
+  urgencyAt: string | null;
 }
 
 function parseThreadRow(row: Record<string, unknown>): MessageThread {
@@ -93,7 +94,7 @@ export async function fetchSellerOrdersNeedingAction(
   const { data: auctionRows, error: auctionError } = await client
     .from("auctions")
     .select(
-      "id, title, image_url, category, reference_number, escrow_state, tracking_number"
+      "id, title, image_url, category, reference_number, escrow_state, tracking_number, escrow_funded_at"
     )
     .in("id", auctionIds);
 
@@ -106,7 +107,8 @@ export async function fetchSellerOrdersNeedingAction(
     ])
   );
 
-  const orders: SellerOrderNeedingAction[] = [];
+  const shipOrders: SellerOrderNeedingAction[] = [];
+  const disputeOrders: SellerOrderNeedingAction[] = [];
 
   for (const row of threadRows) {
     const thread = parseThreadRow(row as Record<string, unknown>);
@@ -119,7 +121,7 @@ export async function fetchSellerOrdersNeedingAction(
     const trackingUploaded = hasTracking(thread, auction);
 
     if (escrowStatus === "funded" && !trackingUploaded) {
-      orders.push({
+      shipOrders.push({
         threadId: thread.id,
         auctionId: thread.auction_id,
         title: auction.title,
@@ -129,12 +131,13 @@ export async function fetchSellerOrdersNeedingAction(
         actionLabel: "Ship item — payment secured in escrow",
         buttonLabel: "Upload Tracking",
         buttonHref: `/messages/${thread.id}`,
+        urgencyAt: auction.escrow_funded_at,
       });
       continue;
     }
 
     if (escrowStatus === "disputed") {
-      orders.push({
+      disputeOrders.push({
         threadId: thread.id,
         auctionId: thread.auction_id,
         title: auction.title,
@@ -144,11 +147,24 @@ export async function fetchSellerOrdersNeedingAction(
         actionLabel: "Dispute opened — review and respond",
         buttonLabel: "View Thread",
         buttonHref: `/messages/${thread.id}`,
+        urgencyAt: thread.created_at,
       });
     }
   }
 
-  return orders.sort((a, b) => a.title.localeCompare(b.title));
+  const compareByUrgency = (
+    a: SellerOrderNeedingAction,
+    b: SellerOrderNeedingAction
+  ) => {
+    const aTime = a.urgencyAt ? new Date(a.urgencyAt).getTime() : Number.MAX_SAFE_INTEGER;
+    const bTime = b.urgencyAt ? new Date(b.urgencyAt).getTime() : Number.MAX_SAFE_INTEGER;
+    return aTime - bTime;
+  };
+
+  shipOrders.sort(compareByUrgency);
+  disputeOrders.sort(compareByUrgency);
+
+  return [...shipOrders, ...disputeOrders];
 }
 
 export async function submitThreadShippingTracking({

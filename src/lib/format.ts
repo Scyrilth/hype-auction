@@ -71,3 +71,57 @@ export function formatTimeAgo(isoDate: string) {
   if (days < 7) return `${days}d ago`;
   return new Date(isoDate).toLocaleDateString();
 }
+
+export function formatPaidAgo(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null;
+
+  const timestamp = new Date(isoDate).getTime();
+  if (Number.isNaN(timestamp)) return null;
+
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "Paid just now";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return minutes === 1 ? "Paid 1 minute ago" : `Paid ${minutes} minutes ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return hours === 1 ? "Paid 1 hour ago" : `Paid ${hours} hours ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return days === 1 ? "Paid 1 day ago" : `Paid ${days} days ago`;
+  }
+
+  return `Paid on ${new Date(isoDate).toLocaleDateString()}`;
+}
+
+export function formatOpenedAgo(isoDate: string | null | undefined): string | null {
+  if (!isoDate) return null;
+
+  const timestamp = new Date(isoDate).getTime();
+  if (Number.isNaN(timestamp)) return null;
+
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return "Opened just now";
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return minutes === 1 ? "Opened 1 minute ago" : `Opened ${minutes} minutes ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return hours === 1 ? "Opened 1 hour ago" : `Opened ${hours} hours ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) {
+    return days === 1 ? "Opened 1 day ago" : `Opened ${days} days ago`;
+  }
+
+  return `Opened on ${new Date(isoDate).toLocaleDateString()}`;
+}

@@ -175,6 +175,25 @@ export interface ShippingAddressInput {
   is_default?: boolean;
 }
 
+export interface ShippingProfile {
+  id: string;
+  seller_wallet: string;
+  name: string;
+  category: string;
+  domestic_shipping_usd: number;
+  international_shipping_usd: number;
+  ships_internationally: boolean;
+  created_at: string;
+}
+
+export interface ShippingProfileInput {
+  name: string;
+  category: string;
+  domestic_shipping_usd: number;
+  international_shipping_usd: number;
+  ships_internationally: boolean;
+}
+
 export type VendorProfile = User;
 
 export interface VendorShopStats {
@@ -250,6 +269,15 @@ export interface Database {
           used_for_auction_id?: string | null;
         };
         Update: Partial<Omit<ShippingAddress, "id" | "created_at">>;
+        Relationships: [];
+      };
+      shipping_profiles: {
+        Row: ShippingProfile;
+        Insert: Omit<ShippingProfile, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<ShippingProfile, "id" | "created_at" | "seller_wallet">>;
         Relationships: [];
       };
     };

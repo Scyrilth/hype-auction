@@ -15,7 +15,7 @@ import ReferenceNumber from "@/components/ui/ReferenceNumber";
 import { useToast } from "@/components/ui/Toast";
 import { useSolPrice } from "@/hooks/useSolPrice";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
-import type { Auction, ListingType } from "@/lib/database.types";
+import type { Auction, ListingType, ShippingProfile } from "@/lib/database.types";
 import {
   FREE_SHIPPING_WARNING,
   isDummySellerWallet,
@@ -34,6 +34,7 @@ import {
   AUCTION_DURATIONS,
   createListingViaApi,
 } from "@/lib/seller";
+import { getShippingProfiles } from "@/lib/shipping-profiles";
 import { getVendorSettings } from "@/lib/vendors";
 
 const inputClass =
@@ -124,6 +125,32 @@ export default function CreateListingForm() {
   const [sellerCountry, setSellerCountry] = useState<string | null>(null);
   const [shipsInternationally, setShipsInternationally] = useState(false);
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [shippingProfiles, setShippingProfiles] = useState<ShippingProfile[]>([]);
+  const [selectedShippingProfileId, setSelectedShippingProfileId] = useState("");
+  const [profilesLoading, setProfilesLoading] = useState(true);
+
+  const applyShippingProfile = (profile: ShippingProfile) => {
+    const domesticFree = profile.domestic_shipping_usd <= 0;
+    const internationalFree = profile.international_shipping_usd <= 0;
+
+    setForm((current) => ({
+      ...current,
+      freeDomesticShipping: domesticFree,
+      domesticShippingUsd: domesticFree
+        ? "0"
+        : String(profile.domestic_shipping_usd),
+      freeInternationalShipping: profile.ships_internationally && internationalFree,
+      internationalShippingUsd:
+        profile.ships_internationally && !internationalFree
+          ? String(profile.international_shipping_usd)
+          : "",
+    }));
+    setFieldErrors((current) => ({
+      ...current,
+      domesticShippingUsd: undefined,
+      internationalShippingUsd: undefined,
+    }));
+  };
 
   useEffect(() => {
     if (!publicKey) return;
@@ -139,6 +166,25 @@ export default function CreateListingForm() {
       })
       .finally(() => {
         if (!cancelled) setSettingsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [client, publicKey]);
+
+  useEffect(() => {
+    if (!publicKey) return;
+
+    let cancelled = false;
+    setProfilesLoading(true);
+
+    void getShippingProfiles(publicKey.toBase58(), client)
+      .then((profiles) => {
+        if (!cancelled) setShippingProfiles(profiles);
+      })
+      .finally(() => {
+        if (!cancelled) setProfilesLoading(false);
       });
 
     return () => {
@@ -541,6 +587,40 @@ export default function CreateListingForm() {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label htmlFor="shippingProfile" className={labelClass}>
+                Use a shipping profile
+              </label>
+              <select
+                id="shippingProfile"
+                value={selectedShippingProfileId}
+                disabled={settingsLoading || profilesLoading}
+                onChange={(event) => {
+                  const profileId = event.target.value;
+                  setSelectedShippingProfileId(profileId);
+
+                  if (!profileId) return;
+
+                  const profile = shippingProfiles.find(
+                    (item) => item.id === profileId
+                  );
+                  if (profile) applyShippingProfile(profile);
+                }}
+                className={inputClass}
+              >
+                <option value="">Custom / none</option>
+                {shippingProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-muted">
+                Optional preset. Shipping fields below stay editable after you
+                select a profile.
+              </p>
             </div>
 
             <div className="sm:col-span-2">
