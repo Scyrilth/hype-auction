@@ -238,10 +238,11 @@ export default function ImageCropModal({
               alt="Crop preview"
               src={imageSrc}
               onLoad={onImageLoad}
-              className="block max-h-[min(60vh,480px)] w-full max-w-full object-contain"
+              className="block max-h-[min(60vh,480px)] object-contain"
               style={{
-                transform: `scale(${scale})`,
-                transformOrigin: "center center",
+                width: `${scale * 100}%`,
+                height: "auto",
+                maxWidth: scale > 1 ? "none" : "100%",
               }}
             />
           </ReactCrop>
