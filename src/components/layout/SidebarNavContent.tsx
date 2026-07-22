@@ -123,6 +123,12 @@ export default function SidebarNavContent({
       { href: "/dashboard", label: "Dashboard", icon: DashboardLayoutIcon },
       { href: shopSettingsHref, label: "Shop Settings", icon: SettingsIcon },
       { href: "/dashboard/create", label: "Create Listing", icon: StoreIcon },
+      {
+        href: "/seller-guide",
+        label: "Seller Guide",
+        icon: null as null,
+        iconTi: "book",
+      },
       { href: "/transactions", label: "Transactions", icon: null as null },
     ],
     [shopSettingsHref]
@@ -229,7 +235,7 @@ export default function SidebarNavContent({
 
             {shopOpen && (
               <div className="mt-0.5 space-y-0.5">
-                {shopSubItems.map(({ href, label, icon: Icon }) => (
+                {shopSubItems.map(({ href, label, icon: Icon, iconTi }) => (
                   <Link
                     key={href}
                     href={href}
@@ -238,6 +244,10 @@ export default function SidebarNavContent({
                   >
                     {Icon ? (
                       <Icon className="h-3 w-3 shrink-0" />
+                    ) : iconTi ? (
+                      <i
+                        className={`ti ti-${iconTi} h-3 w-3 shrink-0 text-sm leading-none`}
+                      />
                     ) : (
                       <i className="ti ti-receipt-2 h-3 w-3 shrink-0 text-sm leading-none" />
                     )}

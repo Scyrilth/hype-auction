@@ -9,7 +9,7 @@ export default function LegalPageLayout({
 }: {
   title: string;
   subtitle: string;
-  current: "tos" | "privacy" | "faq";
+  current: "tos" | "privacy" | "faq" | "seller-guide";
   children: React.ReactNode;
 }) {
   return (

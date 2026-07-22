@@ -95,12 +95,12 @@ export const faqCategories: FaqCategory[] = [
             body: "Seller receives payment confirmation and must ship within 7 days. They upload the tracking number and carrier to the platform. Both buyer and seller can see tracking status in their message thread.",
           },
           {
-            title: "Step 4 — Day 5 warning",
-            body: "If no tracking is uploaded by day 5, the seller receives an automatic warning notification.",
+            title: "Step 4 — Seller reminder",
+            body: "If no tracking is uploaded within a few days of payment, the seller receives a one-time reminder notification to ship the order.",
           },
           {
-            title: "Step 5 — Day 7 auto-refund",
-            body: "If no tracking is uploaded by day 7, the smart contract's auto_refund instruction triggers. The full SOL amount is returned to the buyer's wallet automatically. No admin action required.",
+            title: "Step 5 — Day 7 admin review",
+            body: "If tracking still isn't uploaded by day 7, the order is flagged for admin review, who can trigger a refund to your wallet. This is currently a manual admin-reviewed process, not fully automatic.",
           },
           {
             title: "Step 6 — Delivery and confirmation",
@@ -138,6 +138,11 @@ export const faqCategories: FaqCategory[] = [
           "In your shop settings, set whether you ship internationally. On each listing, set your domestic and international flat-rate shipping prices in USD. These are converted to SOL at payment time using the live Binance rate.",
       },
       {
+        question: "Do I need to pay for shipping out of pocket?",
+        answer:
+          "Yes, for now. Because your SOL is held in a trustless smart contract rather than a centralized payment system, Hype Auction can't front a prepaid shipping label the way some marketplaces do. You'll cover the shipping cost yourself when you ship, and receive the full item + shipping amount once the buyer confirms receipt (or automatically after 3 days). Many sellers use a crypto debit card to spend SOL directly on postage without cashing out to a bank first — see our Seller Guide for details. Note: crypto debit cards typically require identity verification (KYC) and may charge a small one-time card issuance fee — check the provider's terms before signing up.",
+      },
+      {
         question: "When do I receive my SOL?",
         answer:
           "After the buyer confirms receipt, or automatically after 3 days if they do not confirm. SOL goes directly to your wallet — Hype Auction never holds your funds beyond the escrow period.",
@@ -170,7 +175,7 @@ export const faqCategories: FaqCategory[] = [
       {
         question: "What if the seller does not ship?",
         answer:
-          "If no tracking is uploaded by day 7, the smart contract's auto_refund instruction triggers automatically. The full SOL amount is returned directly to your wallet on-chain. No admin action is required — this is handled entirely by the smart contract.",
+          "If tracking isn't uploaded within a few days, the seller gets a reminder. If it still isn't shipped by day 7, the order is flagged for admin review, who can trigger a refund to your wallet. This is currently a manual admin-reviewed process, not fully automatic. We're planning to add automated tracking verification and in-platform shipping label creation in a future update, to make fulfillment faster and more reliable for both buyers and sellers.",
       },
       {
         question: "What if the item is not as described?",

@@ -4,6 +4,7 @@ const links = [
   { href: "/tos", label: "Terms of Service", key: "tos" },
   { href: "/privacy", label: "Privacy Policy", key: "privacy" },
   { href: "/faq", label: "FAQ", key: "faq" },
+  { href: "/seller-guide", label: "Seller Guide", key: "seller-guide" },
 ] as const;
 
 export default function LegalCrossLinks({

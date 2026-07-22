@@ -8,6 +8,7 @@ const STATIC_ROUTES = [
   "/live",
   "/vendors",
   "/categories",
+  "/seller-guide",
 ] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

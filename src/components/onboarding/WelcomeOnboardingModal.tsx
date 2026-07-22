@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -157,6 +158,17 @@ export default function WelcomeOnboardingModal({
             onClick={() => void handleChoice("sell")}
           />
         </div>
+
+        <p className="mt-3 text-center text-sm text-muted">
+          New to selling?{" "}
+          <Link
+            href="/seller-guide"
+            className="font-medium text-accent transition-colors hover:text-purple-300"
+            onClick={(event) => event.stopPropagation()}
+          >
+            Check out our Seller Guide
+          </Link>
+        </p>
 
         <button
           type="button"
