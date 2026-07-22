@@ -30,8 +30,8 @@ function BrandText({ variant = "default" }: { variant?: "default" | "sidebar" })
 
   return (
     <div
-      className={`flex min-w-0 flex-col overflow-hidden ${
-        isSidebar ? "flex-1" : ""
+      className={`flex min-w-0 flex-col ${
+        isSidebar ? "flex-1" : "overflow-hidden"
       }`.trim()}
     >
       <span
@@ -45,7 +45,9 @@ function BrandText({ variant = "default" }: { variant?: "default" | "sidebar" })
       </span>
       <span
         className={`mt-px leading-tight ${
-          isSidebar ? "glow-pulse whitespace-nowrap text-[8px]" : "text-[9px]"
+          isSidebar
+            ? "glow-pulse text-[7px] leading-snug"
+            : "text-[9px]"
         }`.trim()}
         style={{ color: isSidebar ? "#4ade80" : "#6b5fa0" }}
       >
