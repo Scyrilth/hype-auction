@@ -5,11 +5,18 @@ import { corsHeaders } from "@/lib/cors";
 import { checkEndingSoonNotifications } from "@/lib/notifications";
 
 /**
- * Vercel Cron — runs every minute via vercel.json.
+ * Authorized HTTP entry point for ending expired auctions, recovering gaps,
+ * and sending ending-soon notifications.
+ *
+ * Not registered in vercel.json — there is no Vercel Cron schedule for this route.
+ * In normal operation, expired auctions are ended by checkAndEndExpiredAuctions()
+ * during server renders of the homepage, auction detail page, and seller dashboard.
+ * Use this route for manual or external scheduled invocation (GET with CRON_SECRET).
+ * For per-auction winner recovery, use POST /api/auctions/finalize instead.
  *
  * Set CRON_SECRET in Vercel Environment Variables (and .env.local for manual
  * testing). Use any random string, e.g. hype-auction-cron-secret-2026.
- * Vercel sends: Authorization: Bearer <CRON_SECRET>
+ * Authorized requests send: Authorization: Bearer <CRON_SECRET>
  */
 export async function OPTIONS(request: Request) {
   return new Response(null, {
