@@ -143,6 +143,11 @@ export const faqCategories: FaqCategory[] = [
           "Yes, for now. Because your SOL is held in a trustless smart contract rather than a centralized payment system, Hype Auction can't front a prepaid shipping label the way some marketplaces do. You'll cover the shipping cost yourself when you ship, and receive the full item + shipping amount once the buyer confirms receipt (or automatically after 3 days). Many sellers use a crypto debit card to spend SOL directly on postage without cashing out to a bank first — see our Seller Guide for details. Note: crypto debit cards typically require identity verification (KYC) and may charge a small one-time card issuance fee — check the provider's terms before signing up.",
       },
       {
+        question: "Can I ship multiple items together if the same buyer wins more than one of my listings?",
+        answer:
+          "Yes. If a buyer wins multiple items from you, you can bundle those orders in your fulfillment queue and ship them together with one tracking number. Each order is still tracked and paid out separately behind the scenes. Once every bundled order is complete, you'll have the option to voluntarily send your buyer a partial shipping refund from your own wallet, reflecting the savings from shipping once instead of separately — this is entirely optional.",
+      },
+      {
         question: "When do I receive my SOL?",
         answer:
           "After the buyer confirms receipt, or automatically after 3 days if they do not confirm. SOL goes directly to your wallet — Hype Auction never holds your funds beyond the escrow period.",

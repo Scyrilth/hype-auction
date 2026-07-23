@@ -59,8 +59,10 @@ export const sellerGuideSections: SellerGuideSection[] = [
       "Fulfillment queue — your seller dashboard shows paid orders that still need tracking, sorted by how long they've been waiting.",
       "Shipping profiles — save reusable presets (name, category, domestic/international rates) in Shop Settings and apply them when creating a listing. Fields stay editable after you apply a profile.",
       "Uploading tracking — add carrier and tracking number in the message thread for that order. The buyer is notified automatically.",
+      "Bundling multiple orders — if the same buyer wins more than one item from you, you can group those orders together in your fulfillment queue and ship them in one box with a single tracking number. Each order still settles independently, but buyers will see they were shipped together.",
       "Ship reminder — if tracking isn't uploaded within a few days of payment, you'll receive a one-time reminder notification to ship soon.",
       "After day 7 — orders without tracking may be flagged for admin review. This is separate from the early reminder and does not automatically refund the buyer.",
+      "Optional shipping refund — once every order in a bundle has been fully paid out to you, you may see a prompt showing your estimated shipping savings from combining the shipment. Sending a refund to your buyer is entirely optional and comes directly from your own wallet — Hype Auction doesn't require or fund it.",
     ],
   },
   {
