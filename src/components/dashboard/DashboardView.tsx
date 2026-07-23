@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import DashboardProfileSummary from "@/components/dashboard/DashboardProfileSummary";
 import ActionRequiredSection from "@/components/dashboard/ActionRequiredSection";
 import OrdersNeedingActionSection from "@/components/dashboard/OrdersNeedingActionSection";
+import BundleRefundNudgeSection from "@/components/dashboard/BundleRefundNudgeSection";
 import SellerSetupBanner from "@/components/dashboard/SellerSetupBanner";
 import DashboardTabs, {
   DashboardActivityFeed,
@@ -90,6 +91,8 @@ export default function DashboardView() {
       />
 
       <OrdersNeedingActionSection sellerWallet={publicKey.toBase58()} />
+
+      <BundleRefundNudgeSection sellerWallet={publicKey.toBase58()} />
 
       <DashboardTabs
         activeAuctions={data.activeAuctions}

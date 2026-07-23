@@ -27,7 +27,8 @@ export type NotificationType =
   | "tracking_uploaded"
   | "listing_live"
   | "ship_reminder"
-  | "bundle_shipped";
+  | "bundle_shipped"
+  | "bundle_refund_sent";
 
 export interface Notification {
   id: string;
@@ -675,8 +676,46 @@ export async function notifyItemShipped({
 }
 
 // Stage 5: add notifyBundleRefundSent() for buyers when a seller sends a voluntary
-// shipping refund, and a seller-facing notification when the refund nudge is shown
-// or completed so it is not missed off the fulfillment queue.
+// shipping refund.
+
+export async function notifyBundleRefundSent({
+  buyerWallet,
+  bundleReference,
+  solAmount,
+  threadId,
+  groupId,
+  txSignature,
+  client = supabase,
+}: {
+  buyerWallet: string;
+  bundleReference: string;
+  solAmount: number;
+  threadId: string;
+  groupId: string;
+  txSignature: string;
+  client?: SupabaseClient;
+}): Promise<void> {
+  const link = `/messages/${threadId}?shipment_group=${groupId}`;
+  const alreadySent = await hasNotification(
+    buyerWallet,
+    "bundle_refund_sent",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
+  const solLabel = formatSol(solAmount);
+  const txLabel = shortenAddress(txSignature, 6);
+
+  await createNotification(
+    buyerWallet,
+    "bundle_refund_sent",
+    "Shipping refund received",
+    `You received a ${solLabel} shipping refund for bundle ${bundleReference} (${txLabel}).`,
+    link,
+    client
+  );
+}
 
 export async function notifyBundleShipped({
   buyerWallet,

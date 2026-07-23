@@ -5,7 +5,9 @@ import { isSafeUserFacingMessage, logSupabaseError } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 import {
   createShipmentGroup,
+  dismissBundleRefundNudge,
   finalizeShipmentGroupTracking,
+  recordBundleRefundSent,
 } from "@/lib/shipment-groups";
 import { getAuthenticatedClient } from "@/lib/supabase";
 
@@ -16,9 +18,16 @@ type ShipmentGroupRequestBody = {
   groupId?: unknown;
   carrier?: unknown;
   trackingNumber?: unknown;
+  txSignature?: unknown;
+  solAmount?: unknown;
 };
 
-const VALID_ACTIONS = new Set(["create", "finalize-tracking"]);
+const VALID_ACTIONS = new Set([
+  "create",
+  "finalize-tracking",
+  "record-refund",
+  "dismiss-refund-nudge",
+]);
 
 function parseAction(value: unknown): string {
   if (value === undefined || value === null || value === "") {
@@ -123,6 +132,111 @@ export async function POST(request: Request) {
 
       return NextResponse.json(
         { error: "Unable to save bundle tracking. Please try again." },
+        { status: 500, headers }
+      );
+    }
+  }
+
+  if (action === "record-refund") {
+    const groupId =
+      typeof body.groupId === "string" ? body.groupId.trim() : "";
+    const txSignature =
+      typeof body.txSignature === "string" ? body.txSignature.trim() : "";
+    const solAmount =
+      typeof body.solAmount === "number"
+        ? body.solAmount
+        : typeof body.solAmount === "string"
+          ? Number(body.solAmount)
+          : NaN;
+
+    if (!groupId) {
+      return NextResponse.json(
+        { error: "Bundle is required." },
+        { status: 400, headers }
+      );
+    }
+
+    if (!txSignature) {
+      return NextResponse.json(
+        { error: "Transaction signature is required." },
+        { status: 400, headers }
+      );
+    }
+
+    try {
+      const client = getAuthenticatedClient(sellerWallet);
+      const group = await recordBundleRefundSent({
+        groupId,
+        sellerWallet,
+        txSignature,
+        solAmount,
+        client,
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          groupId: group.id,
+          bundleReference: group.bundle_reference,
+        },
+        { headers }
+      );
+    } catch (error) {
+      logSupabaseError("api/seller/shipment-groups record-refund", error);
+
+      if (error instanceof Error && isSafeUserFacingMessage(error.message)) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400, headers }
+        );
+      }
+
+      return NextResponse.json(
+        { error: "Unable to record refund. Please try again." },
+        { status: 500, headers }
+      );
+    }
+  }
+
+  if (action === "dismiss-refund-nudge") {
+    const groupId =
+      typeof body.groupId === "string" ? body.groupId.trim() : "";
+
+    if (!groupId) {
+      return NextResponse.json(
+        { error: "Bundle is required." },
+        { status: 400, headers }
+      );
+    }
+
+    try {
+      const client = getAuthenticatedClient(sellerWallet);
+      const group = await dismissBundleRefundNudge({
+        groupId,
+        sellerWallet,
+        client,
+      });
+
+      return NextResponse.json(
+        {
+          success: true,
+          groupId: group.id,
+          bundleReference: group.bundle_reference,
+        },
+        { headers }
+      );
+    } catch (error) {
+      logSupabaseError("api/seller/shipment-groups dismiss-refund-nudge", error);
+
+      if (error instanceof Error && isSafeUserFacingMessage(error.message)) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 400, headers }
+        );
+      }
+
+      return NextResponse.json(
+        { error: "Unable to dismiss refund nudge. Please try again." },
         { status: 500, headers }
       );
     }

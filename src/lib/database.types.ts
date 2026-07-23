@@ -117,6 +117,9 @@ export interface ShipmentGroup {
   tracking_courier: string | null;
   tracking_number: string | null;
   created_at: string;
+  refund_sent_at: string | null;
+  refund_nudge_dismissed_at: string | null;
+  refund_tx_signature: string | null;
 }
 
 export interface Bid {

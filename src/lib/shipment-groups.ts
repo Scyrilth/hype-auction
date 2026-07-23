@@ -1,9 +1,12 @@
 import type { ShipmentGroup } from "@/lib/database.types";
+import { resolveShippingUsd } from "@/lib/auction-shipping";
 import { logSupabaseError } from "@/lib/errors";
-import { notifyBundleShipped } from "@/lib/notifications";
+import { notifyBundleRefundSent, notifyBundleShipped } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { generateBundleReferenceNumber } from "@/lib/reference-number";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
+
+export const MIN_REFUND_NUDGE_SAVINGS_USD = 1;
 
 export interface ShipmentGroupOrderItem {
   auctionId: string;
@@ -24,6 +27,22 @@ export interface PendingShipmentGroup {
   urgencyAt: string | null;
 }
 
+export interface BundleRefundNudge {
+  groupId: string;
+  bundleReference: string;
+  buyerWallet: string;
+  itemCount: number;
+  estimatedSavingsUsd: number;
+  threadId: string | null;
+}
+
+export interface BundleShippingSavingsEstimate {
+  estimatedSavingsUsd: number;
+  totalChargedUsd: number;
+  shippedOnceUsd: number;
+  perOrderShippingUsd: number[];
+}
+
 function parseShipmentGroup(row: Record<string, unknown>): ShipmentGroup {
   return {
     id: row.id as string,
@@ -33,6 +52,10 @@ function parseShipmentGroup(row: Record<string, unknown>): ShipmentGroup {
     tracking_courier: (row.tracking_courier as string | null) ?? null,
     tracking_number: (row.tracking_number as string | null) ?? null,
     created_at: row.created_at as string,
+    refund_sent_at: (row.refund_sent_at as string | null) ?? null,
+    refund_nudge_dismissed_at:
+      (row.refund_nudge_dismissed_at as string | null) ?? null,
+    refund_tx_signature: (row.refund_tx_signature as string | null) ?? null,
   };
 }
 
@@ -445,6 +468,301 @@ export async function finalizeShipmentGroupTracking({
       itemCount: auctionRows.length,
       threadId: firstThreadId,
       groupId: group.id,
+      client,
+    });
+  }
+
+  return group;
+}
+
+function resolveOrderShippingUsd({
+  threadShippingUsd,
+  threadShippingCountry,
+  auction,
+  sellerCountry,
+  shipsInternationally,
+}: {
+  threadShippingUsd: number | null;
+  threadShippingCountry: string | null;
+  auction: {
+    domestic_shipping_usd: number;
+    international_shipping_usd: number;
+    is_dummy?: boolean;
+    seller_wallet?: string;
+  };
+  sellerCountry: string | null;
+  shipsInternationally: boolean;
+}): number {
+  if (threadShippingUsd != null && Number.isFinite(threadShippingUsd)) {
+    return Math.max(0, threadShippingUsd);
+  }
+
+  const resolved = resolveShippingUsd({
+    domesticShippingUsd: auction.domestic_shipping_usd,
+    internationalShippingUsd: auction.international_shipping_usd,
+    sellerCountry,
+    buyerCountry: threadShippingCountry,
+    shipsInternationally,
+    isExempt: Boolean(auction.is_dummy),
+  });
+
+  return Math.max(0, resolved ?? 0);
+}
+
+export function estimateBundleShippingSavings(
+  perOrderShippingUsd: number[]
+): BundleShippingSavingsEstimate {
+  const normalized = perOrderShippingUsd.map((value) => Math.max(0, value));
+  const totalChargedUsd = normalized.reduce((sum, value) => sum + value, 0);
+  const shippedOnceUsd =
+    normalized.length > 0 ? Math.max(...normalized) : 0;
+  const estimatedSavingsUsd = Math.max(0, totalChargedUsd - shippedOnceUsd);
+
+  return {
+    estimatedSavingsUsd,
+    totalChargedUsd,
+    shippedOnceUsd,
+    perOrderShippingUsd: normalized,
+  };
+}
+
+function isBundleRefundNudgeEligible({
+  group,
+  auctionsComplete,
+  estimatedSavingsUsd,
+}: {
+  group: ShipmentGroup;
+  auctionsComplete: boolean;
+  estimatedSavingsUsd: number;
+}): boolean {
+  return (
+    hasTrackingValue(group.tracking_number) &&
+    !group.refund_sent_at &&
+    !group.refund_nudge_dismissed_at &&
+    auctionsComplete &&
+    estimatedSavingsUsd >= MIN_REFUND_NUDGE_SAVINGS_USD
+  );
+}
+
+export async function fetchBundleRefundNudges(
+  sellerWallet: string,
+  client: SupabaseClient = supabase
+): Promise<BundleRefundNudge[]> {
+  const { data: groupRows, error } = await client
+    .from("shipment_groups")
+    .select(
+      "id, bundle_reference, buyer_wallet, tracking_number, refund_sent_at, refund_nudge_dismissed_at"
+    )
+    .eq("seller_wallet", sellerWallet)
+    .not("tracking_number", "is", null)
+    .is("refund_sent_at", null)
+    .is("refund_nudge_dismissed_at", null);
+
+  if (error) throw error;
+  if (!groupRows?.length) return [];
+
+  const groupIds = groupRows.map((row) => row.id as string);
+
+  const { data: auctionRows, error: auctionError } = await client
+    .from("auctions")
+    .select(
+      "id, shipment_group_id, escrow_state, domestic_shipping_usd, international_shipping_usd, is_dummy, seller_wallet"
+    )
+    .in("shipment_group_id", groupIds);
+
+  if (auctionError) throw auctionError;
+  if (!auctionRows?.length) return [];
+
+  const auctionIds = auctionRows.map((row) => row.id as string);
+
+  const [{ data: threadRows, error: threadError }, { data: sellerRow, error: sellerError }] =
+    await Promise.all([
+      client
+        .from("message_threads")
+        .select("id, auction_id, shipping_usd, shipping_country")
+        .in("auction_id", auctionIds)
+        .eq("seller_wallet", sellerWallet)
+        .eq("status", "active"),
+      client
+        .from("users")
+        .select("country, ships_internationally")
+        .eq("wallet_address", sellerWallet)
+        .maybeSingle(),
+    ]);
+
+  if (threadError) throw threadError;
+  if (sellerError) throw sellerError;
+
+  const sellerCountry = (sellerRow?.country as string | null) ?? null;
+  const shipsInternationally = Boolean(sellerRow?.ships_internationally);
+
+  const threadsByAuction = new Map(
+    (threadRows ?? []).map((row) => [row.auction_id as string, row])
+  );
+
+  const auctionsByGroup = new Map<string, typeof auctionRows>();
+  for (const row of auctionRows) {
+    const groupId = row.shipment_group_id as string;
+    const existing = auctionsByGroup.get(groupId) ?? [];
+    existing.push(row);
+    auctionsByGroup.set(groupId, existing);
+  }
+
+  const nudges: BundleRefundNudge[] = [];
+
+  for (const row of groupRows) {
+    const group = parseShipmentGroup(row as Record<string, unknown>);
+    const groupAuctions = auctionsByGroup.get(group.id) ?? [];
+    if (!groupAuctions.length) continue;
+
+    const allComplete = groupAuctions.every(
+      (auctionRow) => auctionRow.escrow_state === "complete"
+    );
+    if (!allComplete) continue;
+
+    const perOrderShippingUsd = groupAuctions.map((auctionRow) => {
+      const auction = parseAuctionRow(auctionRow as Record<string, unknown>);
+      const thread = threadsByAuction.get(auction.id);
+
+      return resolveOrderShippingUsd({
+        threadShippingUsd:
+          thread?.shipping_usd != null ? Number(thread.shipping_usd) : null,
+        threadShippingCountry: (thread?.shipping_country as string | null) ?? null,
+        auction,
+        sellerCountry,
+        shipsInternationally,
+      });
+    });
+
+    const savings = estimateBundleShippingSavings(perOrderShippingUsd);
+    if (
+      !isBundleRefundNudgeEligible({
+        group,
+        auctionsComplete: true,
+        estimatedSavingsUsd: savings.estimatedSavingsUsd,
+      })
+    ) {
+      continue;
+    }
+
+    const firstThread = (threadRows ?? []).find((threadRow) =>
+      groupAuctions.some(
+        (auctionRow) => auctionRow.id === threadRow.auction_id
+      )
+    );
+
+    nudges.push({
+      groupId: group.id,
+      bundleReference: group.bundle_reference,
+      buyerWallet: group.buyer_wallet,
+      itemCount: groupAuctions.length,
+      estimatedSavingsUsd: savings.estimatedSavingsUsd,
+      threadId: (firstThread?.id as string | undefined) ?? null,
+    });
+  }
+
+  return nudges;
+}
+
+export async function dismissBundleRefundNudge({
+  groupId,
+  sellerWallet,
+  client = supabase,
+}: {
+  groupId: string;
+  sellerWallet: string;
+  client?: SupabaseClient;
+}): Promise<ShipmentGroup> {
+  const { data: groupRow, error: groupError } = await client
+    .from("shipment_groups")
+    .select("*")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (groupError) throw groupError;
+  if (!groupRow) throw new Error("Bundle not found.");
+  if (groupRow.seller_wallet !== sellerWallet) {
+    throw new Error("Only the seller can dismiss this refund nudge.");
+  }
+  if (groupRow.refund_sent_at) {
+    throw new Error("A refund has already been sent for this bundle.");
+  }
+  if (groupRow.refund_nudge_dismissed_at) {
+    return parseShipmentGroup(groupRow as Record<string, unknown>);
+  }
+
+  const now = new Date().toISOString();
+  const { data: updatedGroup, error: updateError } = await client
+    .from("shipment_groups")
+    .update({ refund_nudge_dismissed_at: now })
+    .eq("id", groupId)
+    .is("refund_sent_at", null)
+    .is("refund_nudge_dismissed_at", null)
+    .select("*")
+    .single();
+
+  if (updateError) {
+    logSupabaseError("dismissBundleRefundNudge", updateError);
+    throw new Error("Unable to dismiss refund nudge. Please try again.");
+  }
+
+  return parseShipmentGroup(updatedGroup as Record<string, unknown>);
+}
+
+export async function recordBundleRefundSent({
+  groupId,
+  sellerWallet,
+  txSignature,
+  solAmount,
+  client = supabase,
+}: {
+  groupId: string;
+  sellerWallet: string;
+  txSignature: string;
+  solAmount: number;
+  client?: SupabaseClient;
+}): Promise<ShipmentGroup> {
+  const trimmedSignature = txSignature.trim();
+  if (!trimmedSignature) {
+    throw new Error("Transaction signature is required.");
+  }
+  if (!Number.isFinite(solAmount) || solAmount <= 0) {
+    throw new Error("Refund amount is invalid.");
+  }
+
+  const nudges = await fetchBundleRefundNudges(sellerWallet, client);
+  const nudge = nudges.find((entry) => entry.groupId === groupId);
+  if (!nudge) {
+    throw new Error("This bundle is not eligible for a refund right now.");
+  }
+
+  const now = new Date().toISOString();
+  const { data: updatedGroup, error: updateError } = await client
+    .from("shipment_groups")
+    .update({
+      refund_sent_at: now,
+      refund_tx_signature: trimmedSignature,
+    })
+    .eq("id", groupId)
+    .is("refund_sent_at", null)
+    .select("*")
+    .single();
+
+  if (updateError) {
+    logSupabaseError("recordBundleRefundSent", updateError);
+    throw new Error("Unable to record refund. Please try again.");
+  }
+
+  const group = parseShipmentGroup(updatedGroup as Record<string, unknown>);
+
+  if (nudge.threadId) {
+    await notifyBundleRefundSent({
+      buyerWallet: group.buyer_wallet,
+      bundleReference: group.bundle_reference,
+      solAmount,
+      threadId: nudge.threadId,
+      groupId: group.id,
+      txSignature: trimmedSignature,
       client,
     });
   }
