@@ -18,7 +18,13 @@ import {
   getAuctionThreadId,
 } from "@/lib/messages";
 
-export default function WonAuctionShipping({ auction }: { auction: Auction }) {
+export default function WonAuctionShipping({
+  auction,
+  bundleReference = null,
+}: {
+  auction: Auction;
+  bundleReference?: string | null;
+}) {
   const router = useRouter();
   const { publicKey } = useWallet();
   const anchorWallet = useAnchorWallet();
@@ -100,6 +106,12 @@ export default function WonAuctionShipping({ auction }: { auction: Auction }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         {auction.reference_number && (
           <ReferenceNumber referenceNumber={auction.reference_number} />
+        )}
+        {bundleReference && (
+          <ReferenceNumber
+            referenceNumber={bundleReference}
+            className="text-amber-200/90"
+          />
         )}
 
         {status === "pending" && (

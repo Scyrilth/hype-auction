@@ -23,6 +23,7 @@ export interface BuyerBidActivity {
   isWinner: boolean;
   outbidBy: number;
   latestBidAt: string;
+  bundle_reference: string | null;
 }
 
 export interface ReviewWithVendor extends Review {
@@ -208,7 +209,7 @@ export async function getBuyerProfileData(
         supabase
           .from("auctions")
           .select(
-            "id, title, description, image_url, seller_wallet, current_bid, start_price, end_time, status, category, condition, additional_images, item_details, created_at, is_featured, reference_number, tracking_courier, tracking_number, tracking_uploaded_at, shipping_status"
+            "id, title, description, image_url, seller_wallet, current_bid, start_price, end_time, status, category, condition, additional_images, item_details, created_at, is_featured, reference_number, tracking_courier, tracking_number, tracking_uploaded_at, shipping_status, shipment_group_id"
           )
           .in("id", auctionIds),
         supabase
@@ -236,8 +237,35 @@ export async function getBuyerProfileData(
       }
     }
 
-    bidActivity = (auctions ?? []).map((row) => {
-      const auction = parseAuctionRow(row as Record<string, unknown>);
+    const parsedAuctions = (auctions ?? []).map((row) =>
+      parseAuctionRow(row as Record<string, unknown>)
+    );
+    const groupIds = [
+      ...new Set(
+        parsedAuctions
+          .map((auction) => auction.shipment_group_id)
+          .filter((id): id is string => Boolean(id))
+      ),
+    ];
+    const bundleReferenceByGroupId = new Map<string, string>();
+
+    if (groupIds.length > 0) {
+      const { data: groupRows, error: groupError } = await supabase
+        .from("shipment_groups")
+        .select("id, bundle_reference")
+        .in("id", groupIds);
+
+      if (groupError) throw groupError;
+
+      for (const row of groupRows ?? []) {
+        bundleReferenceByGroupId.set(
+          row.id as string,
+          row.bundle_reference as string
+        );
+      }
+    }
+
+    bidActivity = parsedAuctions.map((auction) => {
       const userBid = userBidByAuction.get(auction.id)!;
       const topBid = topBidderByAuction.get(auction.id);
       const isWinner =
@@ -260,6 +288,10 @@ export async function getBuyerProfileData(
         topBid?.wallet
       );
 
+      const bundleReference = auction.shipment_group_id
+        ? bundleReferenceByGroupId.get(auction.shipment_group_id) ?? null
+        : null;
+
       return {
         auction,
         userHighestBid: userBid.highest,
@@ -268,6 +300,7 @@ export async function getBuyerProfileData(
         isWinner,
         outbidBy: Math.max(0, currentBid - userBid.highest),
         latestBidAt: userBid.latestBidAt,
+        bundle_reference: bundleReference,
       };
     });
 

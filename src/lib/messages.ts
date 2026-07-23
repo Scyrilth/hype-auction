@@ -91,6 +91,8 @@ export interface ThreadDetail extends MessageThread {
   buyer: ThreadParticipant;
   seller: ThreadParticipant;
   messages: EnrichedDirectMessage[];
+  bundle_reference: string | null;
+  bundle_tracking_pending: boolean;
 }
 
 export interface EnrichedDirectMessage extends DirectMessage {
@@ -509,6 +511,9 @@ export async function getThreadDetail(
 
   let auction: Auction | null = null;
   let topBidderWallet: string | null = null;
+  let bundleReference: string | null = null;
+  let bundleTrackingPending = false;
+
   if (thread.auction_id) {
     const [{ data: auctionRow, error: auctionError }, { data: topBid, error: topBidError }] =
       await Promise.all([
@@ -533,6 +538,19 @@ export async function getThreadDetail(
       ? parseAuctionRow(auctionRow as Record<string, unknown>)
       : null;
     topBidderWallet = (topBid?.bidder_wallet as string | undefined) ?? null;
+
+    if (auction?.shipment_group_id) {
+      const { data: groupRow, error: groupError } = await client
+        .from("shipment_groups")
+        .select("bundle_reference, tracking_number")
+        .eq("id", auction.shipment_group_id)
+        .maybeSingle();
+
+      if (groupError) throw groupError;
+
+      bundleReference = (groupRow?.bundle_reference as string | null) ?? null;
+      bundleTrackingPending = !groupRow?.tracking_number?.trim();
+    }
   }
 
   const messages: EnrichedDirectMessage[] = (messageRows ?? []).map((row) => {
@@ -560,6 +578,8 @@ export async function getThreadDetail(
       avatar_url: null,
     },
     messages,
+    bundle_reference: bundleReference,
+    bundle_tracking_pending: bundleTrackingPending,
   };
 }
 

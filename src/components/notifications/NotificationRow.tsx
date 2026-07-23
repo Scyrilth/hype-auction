@@ -26,6 +26,7 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   tracking_uploaded: "ti-truck",
   listing_live: "ti-rocket",
   ship_reminder: "ti-package",
+  bundle_shipped: "ti-packages",
 };
 
 export default function NotificationRow({

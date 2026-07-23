@@ -1,5 +1,6 @@
 import type { ShipmentGroup } from "@/lib/database.types";
 import { logSupabaseError } from "@/lib/errors";
+import { notifyBundleShipped } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { generateBundleReferenceNumber } from "@/lib/reference-number";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
@@ -10,6 +11,9 @@ export interface ShipmentGroupOrderItem {
   title: string;
   imageUrl: string | null;
   referenceNumber: string | null;
+  escrowPda: string | null;
+  amountLamports: number;
+  hasTracking: boolean;
 }
 
 export interface PendingShipmentGroup {
@@ -69,7 +73,7 @@ export async function fetchPendingShipmentGroups(
   const { data: auctionRows, error: auctionError } = await client
     .from("auctions")
     .select(
-      "id, title, image_url, reference_number, shipment_group_id, escrow_funded_at"
+      "id, title, image_url, reference_number, shipment_group_id, escrow_funded_at, escrow_pda, escrow_amount_lamports, tracking_number"
     )
     .in("shipment_group_id", groupIds);
 
@@ -84,12 +88,15 @@ export async function fetchPendingShipmentGroups(
   }
 
   const auctionIds = (auctionRows ?? []).map((row) => row.id as string);
-  const threadMap = new Map<string, string>();
+  const threadMap = new Map<
+    string,
+    { id: string; tracking_number: string | null }
+  >();
 
   if (auctionIds.length) {
     const { data: threadRows, error: threadError } = await client
       .from("message_threads")
-      .select("id, auction_id")
+      .select("id, auction_id, tracking_number")
       .in("auction_id", auctionIds)
       .eq("seller_wallet", sellerWallet)
       .eq("status", "active");
@@ -98,7 +105,10 @@ export async function fetchPendingShipmentGroups(
 
     for (const row of threadRows ?? []) {
       if (row.auction_id) {
-        threadMap.set(row.auction_id as string, row.id as string);
+        threadMap.set(row.auction_id as string, {
+          id: row.id as string,
+          tracking_number: (row.tracking_number as string | null) ?? null,
+        });
       }
     }
   }
@@ -110,13 +120,22 @@ export async function fetchPendingShipmentGroups(
     const groupAuctions = auctionsByGroup.get(groupId) ?? [];
     if (!groupAuctions.length) continue;
 
-    const orders: ShipmentGroupOrderItem[] = groupAuctions.map((auctionRow) => ({
-      auctionId: auctionRow.id as string,
-      threadId: threadMap.get(auctionRow.id as string) ?? "",
-      title: String(auctionRow.title ?? "").trim() || "Untitled Auction",
-      imageUrl: (auctionRow.image_url as string | null) ?? null,
-      referenceNumber: (auctionRow.reference_number as string | null) ?? null,
-    }));
+    const orders: ShipmentGroupOrderItem[] = groupAuctions.map((auctionRow) => {
+      const auctionId = auctionRow.id as string;
+      const thread = threadMap.get(auctionId);
+      const auctionTracking = (auctionRow.tracking_number as string | null) ?? null;
+
+      return {
+        auctionId,
+        threadId: thread?.id ?? "",
+        title: String(auctionRow.title ?? "").trim() || "Untitled Auction",
+        imageUrl: (auctionRow.image_url as string | null) ?? null,
+        referenceNumber: (auctionRow.reference_number as string | null) ?? null,
+        escrowPda: (auctionRow.escrow_pda as string | null) ?? null,
+        amountLamports: Number(auctionRow.escrow_amount_lamports ?? 0),
+        hasTracking: hasOrderTracking(thread?.tracking_number, auctionTracking),
+      };
+    });
 
     const urgencyAt = groupAuctions.reduce<string | null>((earliest, auctionRow) => {
       const fundedAt = (auctionRow.escrow_funded_at as string | null) ?? null;
@@ -288,4 +307,147 @@ export async function createShipmentGroup({
 
   logSupabaseError("createShipmentGroup", lastError);
   throw new Error("Unable to create bundle. Please try again.");
+}
+
+export async function getBundleReferenceForAuction(
+  auctionId: string,
+  client: SupabaseClient = supabase
+): Promise<string | null> {
+  const { data: auctionRow, error: auctionError } = await client
+    .from("auctions")
+    .select("shipment_group_id")
+    .eq("id", auctionId)
+    .maybeSingle();
+
+  if (auctionError) throw auctionError;
+
+  const groupId = (auctionRow?.shipment_group_id as string | null) ?? null;
+  if (!groupId) return null;
+
+  const { data: groupRow, error: groupError } = await client
+    .from("shipment_groups")
+    .select("bundle_reference")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (groupError) throw groupError;
+  return (groupRow?.bundle_reference as string | null) ?? null;
+}
+
+export async function finalizeShipmentGroupTracking({
+  groupId,
+  sellerWallet,
+  carrier,
+  trackingNumber,
+  client = supabase,
+}: {
+  groupId: string;
+  sellerWallet: string;
+  carrier: string;
+  trackingNumber: string;
+  client?: SupabaseClient;
+}): Promise<ShipmentGroup> {
+  const trimmedCarrier = carrier.trim();
+  const trimmedTracking = trackingNumber.trim();
+
+  if (!trimmedCarrier) throw new Error("Select a carrier.");
+  if (!trimmedTracking) throw new Error("Enter a tracking number.");
+
+  const { data: groupRow, error: groupError } = await client
+    .from("shipment_groups")
+    .select("*")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (groupError) throw groupError;
+  if (!groupRow) throw new Error("Bundle not found.");
+  if (groupRow.seller_wallet !== sellerWallet) {
+    throw new Error("Only the seller can finalize tracking for this bundle.");
+  }
+  if (hasTrackingValue(groupRow.tracking_number as string | null)) {
+    throw new Error("Tracking has already been recorded for this bundle.");
+  }
+
+  const { data: auctionRows, error: auctionError } = await client
+    .from("auctions")
+    .select("id, title, tracking_number")
+    .eq("shipment_group_id", groupId);
+
+  if (auctionError) throw auctionError;
+  if (!auctionRows?.length) {
+    throw new Error("This bundle has no linked orders.");
+  }
+
+  const auctionIds = auctionRows.map((row) => row.id as string);
+  const { data: threadRows, error: threadError } = await client
+    .from("message_threads")
+    .select("id, auction_id, tracking_number")
+    .in("auction_id", auctionIds)
+    .eq("seller_wallet", sellerWallet)
+    .eq("status", "active");
+
+  if (threadError) throw threadError;
+
+  const threadByAuction = new Map(
+    (threadRows ?? []).map((row) => [row.auction_id as string, row])
+  );
+
+  const missingTracking: string[] = [];
+
+  for (const auctionRow of auctionRows) {
+    const auctionId = auctionRow.id as string;
+    const threadRow = threadByAuction.get(auctionId);
+    const title = String(auctionRow.title ?? "").trim() || "Untitled Auction";
+
+    if (
+      !hasOrderTracking(
+        threadRow?.tracking_number as string | null,
+        auctionRow.tracking_number as string | null
+      )
+    ) {
+      missingTracking.push(title);
+    }
+  }
+
+  if (missingTracking.length > 0) {
+    throw new Error(
+      `Upload tracking for all bundled items first: ${missingTracking.join(", ")}`
+    );
+  }
+
+  const { data: updatedGroup, error: updateError } = await client
+    .from("shipment_groups")
+    .update({
+      tracking_courier: trimmedCarrier,
+      tracking_number: trimmedTracking,
+    })
+    .eq("id", groupId)
+    .is("tracking_number", null)
+    .select("*")
+    .single();
+
+  if (updateError) {
+    logSupabaseError("finalizeShipmentGroupTracking", updateError);
+    throw new Error("Unable to save bundle tracking. Please try again.");
+  }
+
+  const group = parseShipmentGroup(updatedGroup as Record<string, unknown>);
+  const firstThreadId = (threadRows ?? []).find((row) => row.id)?.id as
+    | string
+    | undefined;
+
+  if (firstThreadId) {
+    await notifyBundleShipped({
+      buyerWallet: group.buyer_wallet,
+      bundleReference: group.bundle_reference,
+      courier: trimmedCarrier,
+      trackingNumber: trimmedTracking,
+      itemCount: auctionRows.length,
+      threadId: firstThreadId,
+      groupId: group.id,
+      client,
+    });
+  }
+
+  return group;
 }

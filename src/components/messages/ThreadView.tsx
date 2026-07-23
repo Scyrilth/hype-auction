@@ -802,7 +802,8 @@ export default function ThreadView({ threadId }: { threadId: string }) {
     isSeller &&
     Boolean(thread.auction_id) &&
     escrowState === "funded" &&
-    !hasUploadedTracking;
+    !hasUploadedTracking &&
+    !thread.bundle_tracking_pending;
 
   const showShippedConfirmation =
     isSeller &&
@@ -871,6 +872,17 @@ export default function ThreadView({ threadId }: { threadId: string }) {
                 <ReferenceNumber referenceNumber={thread.auction.reference_number} />
               </div>
             )}
+            {thread.bundle_reference && (
+              <div className="mt-1 sm:mt-1.5">
+                <ReferenceNumber
+                  referenceNumber={thread.bundle_reference}
+                  className="text-amber-200/90"
+                />
+                <p className="mt-0.5 text-[10px] text-muted">
+                  Shipped together with other items in this bundle
+                </p>
+              </div>
+            )}
             {thread.auction_id && (
               <Link
                 href={`/auction/${thread.auction_id}`}
@@ -937,6 +949,16 @@ export default function ThreadView({ threadId }: { threadId: string }) {
 
       {!isArchived && (
         <div className="mt-2 shrink-0 space-y-2 border-t border-border bg-background pt-2 sm:mt-3 sm:space-y-3 sm:border-t-0 sm:bg-transparent sm:pt-0">
+          {isSeller &&
+            thread.bundle_tracking_pending &&
+            escrowState === "funded" &&
+            !hasUploadedTracking && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+              This order is part of a bundle — upload tracking from your seller
+              dashboard to ship all bundled items together.
+            </div>
+          )}
+
           {showUploadTracking && thread.auction_id && (
             <UploadTrackingCard
               threadId={thread.id}
@@ -956,6 +978,11 @@ export default function ThreadView({ threadId }: { threadId: string }) {
                 <p className="mt-1 text-xs font-normal text-emerald-100/90">
                   {thread.tracking_number ?? thread.auction?.tracking_number} via{" "}
                   {thread.carrier ?? thread.auction?.tracking_courier}
+                </p>
+              )}
+              {thread.bundle_reference && (
+                <p className="mt-1 text-xs font-normal text-emerald-100/80">
+                  Bundle ref: {thread.bundle_reference}
                 </p>
               )}
             </div>

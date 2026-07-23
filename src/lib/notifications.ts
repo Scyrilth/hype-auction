@@ -26,7 +26,8 @@ export type NotificationType =
   | "dispute_resolved"
   | "tracking_uploaded"
   | "listing_live"
-  | "ship_reminder";
+  | "ship_reminder"
+  | "bundle_shipped";
 
 export interface Notification {
   id: string;
@@ -670,6 +671,50 @@ export async function notifyItemShipped({
     "Your item has been shipped!",
     `${auctionTitle} is on its way. Tracking: ${trackingNumber} via ${courier}`,
     `/messages/${threadId}`
+  );
+}
+
+// Stage 5: add notifyBundleRefundSent() for buyers when a seller sends a voluntary
+// shipping refund, and a seller-facing notification when the refund nudge is shown
+// or completed so it is not missed off the fulfillment queue.
+
+export async function notifyBundleShipped({
+  buyerWallet,
+  bundleReference,
+  courier,
+  trackingNumber,
+  itemCount,
+  threadId,
+  groupId,
+  client = supabase,
+}: {
+  buyerWallet: string;
+  bundleReference: string;
+  courier: string;
+  trackingNumber: string;
+  itemCount: number;
+  threadId: string;
+  groupId: string;
+  client?: SupabaseClient;
+}): Promise<void> {
+  const link = `/messages/${threadId}?shipment_group=${groupId}`;
+  const alreadySent = await hasNotification(
+    buyerWallet,
+    "bundle_shipped",
+    link,
+    client
+  );
+  if (alreadySent) return;
+
+  const itemLabel = itemCount === 1 ? "1 item" : `${itemCount} items`;
+
+  await createNotification(
+    buyerWallet,
+    "bundle_shipped",
+    "Your items were shipped together",
+    `Your ${itemLabel} were shipped in one package (${bundleReference}). Tracking: ${trackingNumber} via ${courier}`,
+    link,
+    client
   );
 }
 

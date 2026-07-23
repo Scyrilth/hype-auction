@@ -133,7 +133,12 @@ export default function OrdersNeedingActionSection({
 
       <div className="space-y-4">
         {queue.bundledGroupsPending.map((group) => (
-          <PendingBundleGroupCard key={group.groupId} group={group} />
+          <PendingBundleGroupCard
+            key={group.groupId}
+            group={group}
+            sellerWallet={sellerWallet}
+            onTrackingUploaded={load}
+          />
         ))}
 
         {[...shipGroups.entries()].map(([buyerWallet, orders]) => (

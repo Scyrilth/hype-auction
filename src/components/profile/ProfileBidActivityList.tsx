@@ -192,7 +192,10 @@ function BidActivityCard({
               </div>
 
               {showWonShipping && isWonAuction && (
-                <WonAuctionShipping auction={item.auction} />
+                <WonAuctionShipping
+                  auction={item.auction}
+                  bundleReference={item.bundle_reference}
+                />
               )}
             </div>
           </div>
