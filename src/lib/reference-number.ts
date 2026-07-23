@@ -8,9 +8,18 @@ function randomSuffix(length = 6): string {
   return result;
 }
 
-/** HA-[YEAR][MONTH]-[6 random uppercase alphanumeric chars], e.g. HA-202606-X7K2PQ */
-export function generateReferenceNumber(date = new Date()): string {
+function formatReferenceMonth(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `HA-${year}${month}-${randomSuffix()}`;
+  return `${year}${month}`;
+}
+
+/** HA-[YEAR][MONTH]-[6 random uppercase alphanumeric chars], e.g. HA-202606-X7K2PQ */
+export function generateReferenceNumber(date = new Date()): string {
+  return `HA-${formatReferenceMonth(date)}-${randomSuffix()}`;
+}
+
+/** HA-BUNDLE-[YEAR][MONTH]-[6 random uppercase alphanumeric chars] */
+export function generateBundleReferenceNumber(date = new Date()): string {
+  return `HA-BUNDLE-${formatReferenceMonth(date)}-${randomSuffix()}`;
 }

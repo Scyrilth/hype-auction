@@ -146,6 +146,7 @@ export default function ListingPreview({ form }: { form: ListingFormState }) {
     listing_type: form.listingType,
     good_till_cancelled: form.goodTillCancelled,
     ship_reminder_sent: false,
+    shipment_group_id: null,
   };
 
   const imageSrc = resolveAuctionImageUrl(form.imageUrl || null, {

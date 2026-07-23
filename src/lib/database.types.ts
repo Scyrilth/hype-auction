@@ -106,6 +106,17 @@ export interface Auction {
   listing_type: ListingType;
   good_till_cancelled: boolean;
   ship_reminder_sent: boolean;
+  shipment_group_id: string | null;
+}
+
+export interface ShipmentGroup {
+  id: string;
+  bundle_reference: string;
+  seller_wallet: string;
+  buyer_wallet: string;
+  tracking_courier: string | null;
+  tracking_number: string | null;
+  created_at: string;
 }
 
 export interface Bid {
@@ -279,6 +290,15 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Omit<ShippingProfile, "id" | "created_at" | "seller_wallet">>;
+        Relationships: [];
+      };
+      shipment_groups: {
+        Row: ShipmentGroup;
+        Insert: Omit<ShipmentGroup, "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<ShipmentGroup, "id" | "created_at" | "seller_wallet">>;
         Relationships: [];
       };
     };

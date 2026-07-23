@@ -131,5 +131,6 @@ export function parseAuctionRow(row: Record<string, unknown>): Auction {
     listing_type: normalizeListingType(row.listing_type) as ListingType,
     good_till_cancelled: Boolean(row.good_till_cancelled),
     ship_reminder_sent: Boolean(row.ship_reminder_sent),
+    shipment_group_id: (row.shipment_group_id as string | null) ?? null,
   };
 }

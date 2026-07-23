@@ -6,6 +6,10 @@ import {
   type MessageThread,
 } from "@/lib/messages";
 import { notifyItemShipped, notifyTrackingUploaded } from "@/lib/notifications";
+import {
+  fetchPendingShipmentGroups,
+  type PendingShipmentGroup,
+} from "@/lib/shipment-groups";
 import { supabase, type SupabaseClient } from "@/lib/supabase";
 
 export const THREAD_SHIPPING_CARRIERS = [
@@ -24,14 +28,22 @@ export type SellerOrderActionType = "ship" | "dispute";
 export interface SellerOrderNeedingAction {
   threadId: string;
   auctionId: string;
+  buyerWallet: string;
   title: string;
   imageUrl: string | null;
   referenceNumber: string | null;
+  shipmentGroupId: string | null;
   actionType: SellerOrderActionType;
   actionLabel: string;
   buttonLabel: string;
   buttonHref: string;
   urgencyAt: string | null;
+}
+
+export interface SellerFulfillmentQueue {
+  shipOrders: SellerOrderNeedingAction[];
+  disputeOrders: SellerOrderNeedingAction[];
+  bundledGroupsPending: PendingShipmentGroup[];
 }
 
 function parseThreadRow(row: Record<string, unknown>): MessageThread {
@@ -70,7 +82,7 @@ function hasTracking(
 export async function fetchSellerOrdersNeedingAction(
   sellerWallet: string,
   client: SupabaseClient = supabase
-): Promise<SellerOrderNeedingAction[]> {
+): Promise<SellerFulfillmentQueue> {
   const { data: threadRows, error } = await client
     .from("message_threads")
     .select(
@@ -81,7 +93,13 @@ export async function fetchSellerOrdersNeedingAction(
     .not("auction_id", "is", null);
 
   if (error) throw error;
-  if (!threadRows?.length) return [];
+  if (!threadRows?.length) {
+    return {
+      shipOrders: [],
+      disputeOrders: [],
+      bundledGroupsPending: await fetchPendingShipmentGroups(sellerWallet, client),
+    };
+  }
 
   const auctionIds = [
     ...new Set(
@@ -94,7 +112,7 @@ export async function fetchSellerOrdersNeedingAction(
   const { data: auctionRows, error: auctionError } = await client
     .from("auctions")
     .select(
-      "id, title, image_url, category, reference_number, escrow_state, tracking_number, escrow_funded_at"
+      "id, title, image_url, category, reference_number, escrow_state, tracking_number, escrow_funded_at, shipment_group_id"
     )
     .in("id", auctionIds);
 
@@ -121,12 +139,16 @@ export async function fetchSellerOrdersNeedingAction(
     const trackingUploaded = hasTracking(thread, auction);
 
     if (escrowStatus === "funded" && !trackingUploaded) {
+      if (auction.shipment_group_id) continue;
+
       shipOrders.push({
         threadId: thread.id,
         auctionId: thread.auction_id,
+        buyerWallet: thread.buyer_wallet,
         title: auction.title,
         imageUrl: auction.image_url,
         referenceNumber: auction.reference_number,
+        shipmentGroupId: auction.shipment_group_id,
         actionType: "ship",
         actionLabel: "Ship item — payment secured in escrow",
         buttonLabel: "Upload Tracking",
@@ -140,9 +162,11 @@ export async function fetchSellerOrdersNeedingAction(
       disputeOrders.push({
         threadId: thread.id,
         auctionId: thread.auction_id,
+        buyerWallet: thread.buyer_wallet,
         title: auction.title,
         imageUrl: auction.image_url,
         referenceNumber: auction.reference_number,
+        shipmentGroupId: auction.shipment_group_id,
         actionType: "dispute",
         actionLabel: "Dispute opened — review and respond",
         buttonLabel: "View Thread",
@@ -164,7 +188,16 @@ export async function fetchSellerOrdersNeedingAction(
   shipOrders.sort(compareByUrgency);
   disputeOrders.sort(compareByUrgency);
 
-  return [...shipOrders, ...disputeOrders];
+  const bundledGroupsPending = await fetchPendingShipmentGroups(
+    sellerWallet,
+    client
+  );
+
+  return {
+    shipOrders,
+    disputeOrders,
+    bundledGroupsPending,
+  };
 }
 
 export async function submitThreadShippingTracking({
