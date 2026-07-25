@@ -15,6 +15,7 @@ import {
 import { supabase, type SupabaseClient } from "@/lib/supabase";
 import { incrementVendorSaleStats } from "@/lib/vendors";
 import { upsertUser } from "@/lib/users";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 export type ThreadStatus = "active" | "archived";
 export type MessagesTab = "buying" | "selling" | "archived";
@@ -796,7 +797,10 @@ export async function sendDirectMessage(
 ): Promise<DirectMessage> {
   const response = await fetch("/api/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...getWalletAuthHeaders(),
+    },
     body: JSON.stringify({ threadId, senderWallet, content }),
   });
 

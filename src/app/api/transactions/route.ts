@@ -4,6 +4,7 @@ import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
 import { getNotificationClient } from "@/lib/supabase";
 import { fetchTransactionsData } from "@/lib/transactions/data";
+import { requireWalletSession } from "@/lib/wallet-auth";
 
 export async function OPTIONS(request: Request) {
   return new Response(null, {
@@ -15,17 +16,14 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const origin = request.headers.get("origin");
   const headers = corsHeaders(origin);
-  const wallet =
-    request.headers.get("x-wallet-address")?.trim() ??
-    new URL(request.url).searchParams.get("wallet")?.trim() ??
-    "";
-
-  if (!wallet) {
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
     return NextResponse.json(
-      { error: "Wallet address is required." },
-      { status: 400, headers }
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
     );
   }
+  const wallet = sessionResult.session.wallet;
 
   const rateParam = new URL(request.url).searchParams.get("rate");
   const rate =

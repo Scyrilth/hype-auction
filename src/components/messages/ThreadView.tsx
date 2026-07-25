@@ -50,6 +50,7 @@ import {
   type NextBidderOfferPayload,
 } from "@/lib/non-payment-resolution";
 import { formatBuyerShippingCountryLabel } from "@/lib/thread-shipping";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 function canBuyerPayThread(thread: ThreadDetail, wallet: string): boolean {
   const escrowState =
@@ -89,6 +90,7 @@ async function verifyThreadPaymentShipping({
     headers: {
       "Content-Type": "application/json",
       "x-wallet-address": buyerWallet,
+      ...getWalletAuthHeaders(),
     },
     body: JSON.stringify({
       action: "verify-payment",

@@ -29,6 +29,7 @@ import {
   isListingLive,
 } from "@/lib/listing-types";
 import { createSolanaConnection } from "@/lib/solana-config";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 async function verifyBuyNowOnServer(
   auctionId: string,
@@ -36,7 +37,10 @@ async function verifyBuyNowOnServer(
 ): Promise<void> {
   const response = await fetch("/api/auctions/buy-now/verify", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...getWalletAuthHeaders(),
+    },
     body: JSON.stringify({ auctionId, buyerWallet }),
   });
   const payload = (await response.json()) as { error?: string };
@@ -52,7 +56,10 @@ async function completeBuyNowOnServer(
 ): Promise<void> {
   const response = await fetch("/api/auctions/buy-now", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...getWalletAuthHeaders(),
+    },
     body: JSON.stringify({
       action: "complete",
       auctionId,

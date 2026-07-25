@@ -13,6 +13,7 @@ import {
   getOrderThumbnail,
   type SellerOrderNeedingAction,
 } from "@/lib/seller-orders";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 function OrderCard({
   order,
@@ -145,6 +146,7 @@ export default function BundleableOrderGroup({
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": sellerWallet,
+          ...getWalletAuthHeaders(),
         },
         body: JSON.stringify({
           sellerWallet,

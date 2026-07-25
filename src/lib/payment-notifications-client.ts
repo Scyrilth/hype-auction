@@ -1,3 +1,5 @@
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
+
 export async function postPaymentSecuredNotifications({
   auctionId,
   buyerWallet,
@@ -14,6 +16,7 @@ export async function postPaymentSecuredNotifications({
     headers: {
       "Content-Type": "application/json",
       "x-wallet-address": buyerWallet,
+      ...getWalletAuthHeaders(),
     },
     body: JSON.stringify({
       auctionId,

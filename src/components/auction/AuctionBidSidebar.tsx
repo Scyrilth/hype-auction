@@ -19,6 +19,7 @@ import { usePhantomConnect } from "@/hooks/usePhantomConnect";
 import { useSidebarUser } from "@/hooks/useSidebarUser";
 import { getProfileSlug } from "@/lib/profile-links";
 import { placeBid } from "@/lib/bids";
+import { useWalletAuth } from "@/contexts/WalletAuthProvider";
 import {
   fetchActiveBuyerStrikes,
   summarizeBuyerStrikes,
@@ -63,6 +64,7 @@ export default function AuctionBidSidebar({
   const { showToast } = useToast();
   const connectPhantom = usePhantomConnect();
   const { publicKey, connected, connecting } = useWallet();
+  const { isAuthenticating, isAuthenticated } = useWalletAuth();
   const { username } = useSidebarUser();
   const { client } = useSupabaseClient();
   const wallet = publicKey?.toBase58() ?? null;
@@ -223,6 +225,11 @@ export default function AuctionBidSidebar({
 
   const executePlaceBid = async (amount: number) => {
     if (!publicKey) return;
+
+    if (!isAuthenticated) {
+      showToast("Complete wallet sign-in to place a bid.", "error");
+      return;
+    }
 
     const floor = Math.max(currentBid, getEffectiveBid(auction));
     const minBid = getMinimumBidAmount(floor);
@@ -398,16 +405,20 @@ export default function AuctionBidSidebar({
                     isPlacingBid ||
                     loadingAddresses ||
                     shippingBlocked ||
-                    biddingBlocked
+                    biddingBlocked ||
+                    isAuthenticating ||
+                    !isAuthenticated
                   }
                   onClick={() => handlePlaceBid(parseFloat(bidInput))}
                   className="w-full rounded-full bg-accent py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isPlacingBid || loadingAddresses
-                    ? "Placing bid..."
-                    : isHighestBidder
-                      ? "Increase Bid"
-                      : "Place Bid"}
+                  {isAuthenticating
+                    ? "Signing in..."
+                    : isPlacingBid || loadingAddresses
+                      ? "Placing bid..."
+                      : isHighestBidder
+                        ? "Increase Bid"
+                        : "Place Bid"}
                 </button>
 
                 {strikeSummary?.status === "banned" && (
@@ -440,7 +451,9 @@ export default function AuctionBidSidebar({
                         isPlacingBid ||
                         loadingAddresses ||
                         shippingBlocked ||
-                        biddingBlocked
+                        biddingBlocked ||
+                        isAuthenticating ||
+                        !isAuthenticated
                       }
                       onClick={() => {
                         setBidInput(quick.amount.toFixed(2));

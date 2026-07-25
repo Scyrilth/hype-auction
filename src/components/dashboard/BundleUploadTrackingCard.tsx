@@ -9,6 +9,7 @@ import { confirmShippingOnChain, createEscrowProvider } from "@/lib/escrow";
 import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { THREAD_SHIPPING_CARRIERS } from "@/lib/seller-orders";
 import type { PendingShipmentGroup } from "@/lib/shipment-groups";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 export default function BundleUploadTrackingCard({
   group,
@@ -71,7 +72,10 @@ export default function BundleUploadTrackingCard({
 
           const response = await fetch("/api/messages/tracking", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...getWalletAuthHeaders(),
+            },
             body: JSON.stringify({
               threadId: order.threadId,
               sellerWallet,
@@ -117,6 +121,7 @@ export default function BundleUploadTrackingCard({
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": sellerWallet,
+          ...getWalletAuthHeaders(),
         },
         body: JSON.stringify({
           action: "finalize-tracking",

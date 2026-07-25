@@ -8,6 +8,7 @@ import { TX_FAILED_OR_CANCELLED_MESSAGE, getErrorMessage } from "@/lib/errors";
 import { confirmShippingOnChain, createEscrowProvider } from "@/lib/escrow";
 import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { THREAD_SHIPPING_CARRIERS } from "@/lib/seller-orders";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 export default function UploadTrackingCard({
   threadId,
@@ -59,7 +60,10 @@ export default function UploadTrackingCard({
 
       const response = await fetch("/api/messages/tracking", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...getWalletAuthHeaders(),
+        },
         body: JSON.stringify({
           threadId: resolvedThreadId,
           sellerWallet,

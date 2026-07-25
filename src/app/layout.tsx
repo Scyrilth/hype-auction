@@ -10,6 +10,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { WelcomeOnboardingGate } from "@/components/onboarding/WelcomeOnboardingModal";
 import AgeAndTermsGate from "@/components/legal/AgeAndTermsGate";
 import UserSync from "@/components/UserSync";
+import { WalletAuthProvider } from "@/contexts/WalletAuthProvider";
 import MobilePhantomTipLoader from "@/components/wallet/MobilePhantomTipLoader";
 import WalletContextProvider from "@/components/WalletContextProvider";
 import { SidebarUserProvider } from "@/hooks/useSidebarUser";
@@ -61,17 +62,19 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <WalletContextProvider>
-          <SidebarUserProvider>
-            <ToastProvider>
-              <WatchlistProvider>
-                <UserSync />
-                <AgeAndTermsGate />
-                <WelcomeOnboardingGate />
-                <MobilePhantomTipLoader />
-                {children}
-              </WatchlistProvider>
-            </ToastProvider>
-          </SidebarUserProvider>
+          <WalletAuthProvider>
+            <SidebarUserProvider>
+              <ToastProvider>
+                <WatchlistProvider>
+                  <UserSync />
+                  <AgeAndTermsGate />
+                  <WelcomeOnboardingGate />
+                  <MobilePhantomTipLoader />
+                  {children}
+                </WatchlistProvider>
+              </ToastProvider>
+            </SidebarUserProvider>
+          </WalletAuthProvider>
         </WalletContextProvider>
         <CookieConsent />
         <ConsentAwareVercelAnalytics />

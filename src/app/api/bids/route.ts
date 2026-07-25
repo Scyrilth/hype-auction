@@ -7,6 +7,10 @@ import {
 import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
+import {
+  assertWalletMatchesSession,
+  requireWalletSession,
+} from "@/lib/wallet-auth";
 
 type BidRequestBody = {
   auctionId?: unknown;
@@ -57,6 +61,25 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Wallet address is required." },
       { status: 400, headers }
+    );
+  }
+
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
+    return NextResponse.json(
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
+    );
+  }
+
+  const walletMatch = assertWalletMatchesSession({
+    session: sessionResult.session,
+    claimedWallet: bidderWallet,
+  });
+  if (!walletMatch.ok) {
+    return NextResponse.json(
+      { error: walletMatch.error },
+      { status: walletMatch.status, headers }
     );
   }
 

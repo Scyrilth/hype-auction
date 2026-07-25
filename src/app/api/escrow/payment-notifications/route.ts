@@ -7,6 +7,10 @@ import { getAuctionThreadId, insertThreadSystemMessage } from "@/lib/messages";
 import { notifyPaymentConfirmed } from "@/lib/notifications";
 import { formatSol } from "@/lib/format";
 import { getNotificationClient } from "@/lib/supabase";
+import {
+  assertWalletMatchesSession,
+  requireWalletSession,
+} from "@/lib/wallet-auth";
 
 type PaymentNotificationRequestBody = {
   auctionId?: unknown;
@@ -53,6 +57,24 @@ export async function POST(request: Request) {
 
   if (!callerWallet) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
+  }
+
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
+    return NextResponse.json(
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
+    );
+  }
+  const walletMatch = assertWalletMatchesSession({
+    session: sessionResult.session,
+    claimedWallet: callerWallet,
+  });
+  if (!walletMatch.ok) {
+    return NextResponse.json(
+      { error: walletMatch.error },
+      { status: walletMatch.status, headers }
+    );
   }
 
   if (!auctionId) {

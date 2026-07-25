@@ -32,6 +32,7 @@ import {
   SHIPPED_EVENT_SUBTITLE,
   type DateRange,
 } from "@/lib/transactions";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 import { useAdminContext } from "./AdminContext";
 
@@ -224,6 +225,7 @@ export default function AdminEscrowMonitor() {
         {
           headers: {
             "x-wallet-address": wallet,
+            ...getWalletAuthHeaders(),
           },
         }
       );

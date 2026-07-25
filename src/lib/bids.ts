@@ -1,5 +1,6 @@
 /** Client helper — places a bid via the server-validated API route. */
 import { getErrorMessage } from "@/lib/errors";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 export async function placeBid({
   auctionId,
@@ -10,9 +11,17 @@ export async function placeBid({
   bidderWallet: string;
   amount: number;
 }) {
+  const authHeaders = getWalletAuthHeaders();
+  if (!authHeaders.Authorization) {
+    throw new Error("Complete wallet sign-in to place a bid.");
+  }
+
   const response = await fetch("/api/bids", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
     body: JSON.stringify({ auctionId, bidderWallet, amount }),
   });
 

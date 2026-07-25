@@ -4,6 +4,7 @@ import { fetchEscrowMonitor } from "@/lib/admin/data";
 import { isAdminWallet } from "@/lib/admin/config";
 import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
+import { requireWalletSession } from "@/lib/wallet-auth";
 
 export async function OPTIONS(request: Request) {
   return new Response(null, {
@@ -15,12 +16,15 @@ export async function OPTIONS(request: Request) {
 export async function GET(request: Request) {
   const origin = request.headers.get("origin");
   const headers = corsHeaders(origin);
-  const wallet =
-    request.headers.get("x-wallet-address")?.trim() ??
-    new URL(request.url).searchParams.get("wallet")?.trim() ??
-    "";
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
+    return NextResponse.json(
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
+    );
+  }
 
-  if (!isAdminWallet(wallet)) {
+  if (!isAdminWallet(sessionResult.session.wallet)) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });
   }
 

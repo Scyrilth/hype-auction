@@ -1,3 +1,5 @@
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
+
 type EscrowLedgerApiPayload = {
   type: string;
   auctionId: string;
@@ -29,6 +31,7 @@ export async function postEscrowLedgerEvent(
     headers: {
       "Content-Type": "application/json",
       "x-wallet-address": wallet,
+      ...getWalletAuthHeaders(),
     },
     body: JSON.stringify(payload),
   });

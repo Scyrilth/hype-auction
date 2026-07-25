@@ -42,6 +42,7 @@ import {
   type TransactionRole,
   type TransactionsData,
 } from "@/lib/transactions";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 const EMPTY_SELLER_SUMMARY: SellerSummary = {
   totalEarned: { current: 0, previous: 0, percentChange: null, direction: "flat" },
@@ -90,6 +91,7 @@ export default function TransactionsView() {
         {
           headers: {
             "x-wallet-address": wallet,
+            ...getWalletAuthHeaders(),
           },
         }
       );

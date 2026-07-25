@@ -7,6 +7,7 @@ import { parseAuctionRow } from "@/lib/parse-auction";
 import { generateReferenceNumber } from "@/lib/reference-number";
 import { supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 export { AUCTION_CONDITIONS };
 
@@ -153,7 +154,10 @@ export async function createListingViaApi(
 ): Promise<Auction> {
   const response = await fetch("/api/listings", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...getWalletAuthHeaders(),
+    },
     body: JSON.stringify({
       sellerWallet: params.sellerWallet,
       title: params.title,

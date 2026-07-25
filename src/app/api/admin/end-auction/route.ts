@@ -4,6 +4,10 @@ import { endAuctionEarlyAsAdmin, type EarlyEndReason, EARLY_END_REASONS } from "
 import { isAdminWallet } from "@/lib/admin/config";
 import { corsHeaders } from "@/lib/cors";
 import { getErrorMessage } from "@/lib/errors";
+import {
+  assertWalletMatchesSession,
+  requireWalletSession,
+} from "@/lib/wallet-auth";
 
 type EndAuctionBody = {
   auctionId?: unknown;
@@ -21,6 +25,24 @@ export async function POST(request: Request) {
   const origin = request.headers.get("origin");
   const headers = corsHeaders(origin);
   const wallet = request.headers.get("x-wallet-address")?.trim() ?? "";
+
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
+    return NextResponse.json(
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
+    );
+  }
+  const walletMatch = assertWalletMatchesSession({
+    session: sessionResult.session,
+    claimedWallet: wallet,
+  });
+  if (!walletMatch.ok) {
+    return NextResponse.json(
+      { error: walletMatch.error },
+      { status: walletMatch.status, headers }
+    );
+  }
 
   if (!isAdminWallet(wallet)) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403, headers });

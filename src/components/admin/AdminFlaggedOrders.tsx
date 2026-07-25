@@ -21,6 +21,7 @@ import type {
   FlaggedOrder,
 } from "@/lib/admin/types";
 import { formatSol, shortenAddress } from "@/lib/format";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 import { useAdminContext } from "./AdminContext";
 
@@ -120,6 +121,7 @@ export default function AdminFlaggedOrders() {
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": wallet,
+          ...getWalletAuthHeaders(),
         },
         body: JSON.stringify({ auctionId }),
       });

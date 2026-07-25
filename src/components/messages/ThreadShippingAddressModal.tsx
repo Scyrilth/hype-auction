@@ -9,6 +9,7 @@ import type { ShippingAddress, ShippingAddressInput } from "@/lib/database.types
 import { getErrorMessage } from "@/lib/errors";
 import { createShippingAddress, getShippingAddresses } from "@/lib/shipping";
 import { formatThreadShippingRateLabel } from "@/lib/thread-shipping";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 const inputClass =
   "mt-1.5 w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-white outline-none focus:border-accent focus:ring-1 focus:ring-accent";
@@ -309,6 +310,7 @@ export default function ThreadShippingAddressModal({
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": buyerWallet,
+          ...getWalletAuthHeaders(),
         },
         body: JSON.stringify(body),
       });

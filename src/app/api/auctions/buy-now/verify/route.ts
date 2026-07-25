@@ -7,6 +7,10 @@ import {
 import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
+import {
+  assertWalletMatchesSession,
+  requireWalletSession,
+} from "@/lib/wallet-auth";
 
 export async function OPTIONS(request: Request) {
   return new Response(null, {
@@ -38,6 +42,24 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Auction and wallet are required." },
       { status: 400, headers }
+    );
+  }
+
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
+    return NextResponse.json(
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
+    );
+  }
+  const walletMatch = assertWalletMatchesSession({
+    session: sessionResult.session,
+    claimedWallet: buyerWallet,
+  });
+  if (!walletMatch.ok) {
+    return NextResponse.json(
+      { error: walletMatch.error },
+      { status: walletMatch.status, headers }
     );
   }
 

@@ -11,6 +11,10 @@ import {
   logEscrowShipped,
 } from "@/lib/escrow-ledger";
 import { getNotificationClient } from "@/lib/supabase";
+import {
+  assertWalletMatchesSession,
+  requireWalletSession,
+} from "@/lib/wallet-auth";
 
 type LedgerRequestBody = {
   type?: unknown;
@@ -118,6 +122,24 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Wallet address is required." },
       { status: 400, headers }
+    );
+  }
+
+  const sessionResult = await requireWalletSession(request);
+  if (!sessionResult.ok) {
+    return NextResponse.json(
+      { error: sessionResult.error },
+      { status: sessionResult.status, headers }
+    );
+  }
+  const walletMatch = assertWalletMatchesSession({
+    session: sessionResult.session,
+    claimedWallet: callerWallet,
+  });
+  if (!walletMatch.ok) {
+    return NextResponse.json(
+      { error: walletMatch.error },
+      { status: walletMatch.status, headers }
     );
   }
 

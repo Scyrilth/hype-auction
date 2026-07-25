@@ -16,6 +16,7 @@ import {
   type BundleRefundNudge,
 } from "@/lib/shipment-groups";
 import { sendWalletSolTransfer } from "@/lib/wallet-sol-transfer";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 const REFUND_TRANSFER_FEE_BUFFER_SOL = 0.001;
 
@@ -73,6 +74,7 @@ export default function BundleRefundNudgeSection({
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": sellerWallet,
+          ...getWalletAuthHeaders(),
         },
         body: JSON.stringify({
           action: "dismiss-refund-nudge",
@@ -142,6 +144,7 @@ export default function BundleRefundNudgeSection({
         headers: {
           "Content-Type": "application/json",
           "x-wallet-address": sellerWallet,
+          ...getWalletAuthHeaders(),
         },
         body: JSON.stringify({
           action: "record-refund",
