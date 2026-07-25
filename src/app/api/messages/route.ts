@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (isRateLimited(senderWallet, "messages")) {
+  if (await isRateLimited(senderWallet, "messages")) {
     return NextResponse.json(
       { error: RATE_LIMIT_MESSAGE },
       { status: 429, headers }

@@ -1,9 +1,9 @@
-type RateLimitEntry = {
-  count: number;
-  resetAt: number;
-};
+import { Redis } from "@upstash/redis";
 
-const store = new Map<string, RateLimitEntry>();
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+});
 
 export type RateLimitConfig = {
   limit: number;
@@ -19,35 +19,40 @@ export const RATE_LIMITS = {
 } as const;
 
 export function rateLimitKey(wallet: string, route: string): string {
-  return `${wallet}:${route}`;
+  return `ratelimit:${route}:${wallet}`;
 }
 
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   config: RateLimitConfig
-): { allowed: true } | { allowed: false; retryAfterMs: number } {
-  const now = Date.now();
-  const entry = store.get(key);
+): Promise<{ allowed: true } | { allowed: false; retryAfterMs: number }> {
+  const windowSeconds = Math.ceil(config.windowMs / 1000);
 
-  if (!entry || now >= entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + config.windowMs });
+  try {
+    const count = await redis.incr(key);
+
+    if (count === 1) {
+      await redis.expire(key, windowSeconds);
+    }
+
+    if (count > config.limit) {
+      const ttl = await redis.ttl(key);
+      const retryAfterMs = ttl > 0 ? ttl * 1000 : config.windowMs;
+      return { allowed: false, retryAfterMs };
+    }
+
+    return { allowed: true };
+  } catch (error) {
+    console.error("[rate-limiter] Redis error, failing open:", error);
     return { allowed: true };
   }
-
-  if (entry.count >= config.limit) {
-    return { allowed: false, retryAfterMs: entry.resetAt - now };
-  }
-
-  entry.count += 1;
-  store.set(key, entry);
-  return { allowed: true };
 }
 
-export function isRateLimited(
+export async function isRateLimited(
   wallet: string,
   route: keyof typeof RATE_LIMITS
-): boolean {
-  const result = checkRateLimit(
+): Promise<boolean> {
+  const result = await checkRateLimit(
     rateLimitKey(wallet, route),
     RATE_LIMITS[route]
   );
