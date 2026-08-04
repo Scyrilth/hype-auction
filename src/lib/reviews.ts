@@ -1,5 +1,6 @@
 import type { Auction, Review, ReviewWithReviewer } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 
 export function parseReviewRow(row: Record<string, unknown>): Review {
   return {
@@ -24,11 +25,12 @@ export function isReviewEligible(auction: Auction): boolean {
 
 export async function getReviewedAuctionIds(
   reviewerWallet: string,
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient = supabase
 ): Promise<Set<string>> {
   if (!auctionIds.length) return new Set();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("reviews")
     .select("auction_id")
     .eq("reviewer_wallet", reviewerWallet)
@@ -44,9 +46,10 @@ export async function getReviewedAuctionIds(
 }
 
 export async function getVendorReviews(
-  vendorWallet: string
+  vendorWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<ReviewWithReviewer[]> {
-  const { data: reviews, error } = await supabase
+  const { data: reviews, error } = await client
     .from("reviews")
     .select("*")
     .eq("vendor_wallet", vendorWallet)
@@ -67,7 +70,7 @@ export async function getVendorReviews(
     ...new Set(reviews.map((row) => row.reviewer_wallet as string)),
   ];
 
-  const { data: reviewers, error: reviewersError } = await supabase
+  const { data: reviewers, error: reviewersError } = await client
     .from("users")
     .select("wallet_address, username, avatar_url")
     .in("wallet_address", reviewerWallets);
@@ -90,8 +93,11 @@ export async function getVendorReviews(
   });
 }
 
-export async function getVendorReviewCount(vendorWallet: string): Promise<number> {
-  const { count, error } = await supabase
+export async function getVendorReviewCount(
+  vendorWallet: string,
+  client: SupabaseClient = supabase
+): Promise<number> {
+  const { count, error } = await client
     .from("reviews")
     .select("*", { count: "exact", head: true })
     .eq("vendor_wallet", vendorWallet)
@@ -101,8 +107,11 @@ export async function getVendorReviewCount(vendorWallet: string): Promise<number
   return count ?? 0;
 }
 
-export async function refreshVendorRating(vendorWallet: string): Promise<void> {
-  const { error } = await supabase.rpc("refresh_vendor_stats", {
+export async function refreshVendorRating(
+  vendorWallet: string,
+  client: SupabaseClient = supabase
+): Promise<void> {
+  const { error } = await client.rpc("refresh_vendor_stats", {
     p_wallet: vendorWallet,
   });
 
@@ -118,7 +127,10 @@ export interface SubmitReviewInput {
   tags: string[];
 }
 
-export async function submitReview(input: SubmitReviewInput): Promise<Review> {
+export async function submitReview(
+  input: SubmitReviewInput,
+  client: SupabaseClient = supabase
+): Promise<Review> {
   const comment = input.comment?.trim() || null;
 
   if (comment && comment.length > 500) {
@@ -129,7 +141,7 @@ export async function submitReview(input: SubmitReviewInput): Promise<Review> {
     throw new Error("Rating must be between 1 and 5.");
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("reviews")
     .insert({
       reviewer_wallet: input.reviewerWallet,
@@ -149,20 +161,21 @@ export async function submitReview(input: SubmitReviewInput): Promise<Review> {
     throw error;
   }
 
-  await refreshVendorRating(input.vendorWallet);
+  await refreshVendorRating(input.vendorWallet, client);
   return parseReviewRow(data as Record<string, unknown>);
 }
 
 export async function replyToReview(
   reviewId: string,
   vendorWallet: string,
-  reply: string
+  reply: string,
+  client: SupabaseClient = supabase
 ): Promise<Review> {
   const trimmed = reply.trim();
   if (!trimmed) throw new Error("Reply cannot be empty.");
   if (trimmed.length > 500) throw new Error("Reply must be 500 characters or less.");
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("reviews")
     .update({
       seller_reply: trimmed,
@@ -177,8 +190,11 @@ export async function replyToReview(
   return parseReviewRow(data as Record<string, unknown>);
 }
 
-export async function flagReview(reviewId: string): Promise<Review> {
-  const { data: existing, error: fetchError } = await supabase
+export async function flagReview(
+  reviewId: string,
+  client: SupabaseClient = supabase
+): Promise<Review> {
+  const { data: existing, error: fetchError } = await client
     .from("reviews")
     .select("*")
     .eq("id", reviewId)
@@ -189,7 +205,7 @@ export async function flagReview(reviewId: string): Promise<Review> {
   const existingReview = parseReviewRow(existing as Record<string, unknown>);
   if (existingReview.is_flagged) return existingReview;
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("reviews")
     .update({ is_flagged: true })
     .eq("id", reviewId)
@@ -198,7 +214,7 @@ export async function flagReview(reviewId: string): Promise<Review> {
 
   if (error) throw error;
 
-  await refreshVendorRating(existingReview.vendor_wallet);
+  await refreshVendorRating(existingReview.vendor_wallet, client);
   return parseReviewRow(data as Record<string, unknown>);
 }
 
