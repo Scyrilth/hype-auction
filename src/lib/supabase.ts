@@ -34,11 +34,15 @@ export function getNotificationClient(): SupabaseClient {
   return supabase;
 }
 
-export function getAuthenticatedClient(walletAddress: string) {
+export function getAuthenticatedClient(
+  walletAddress: string,
+  extraHeaders: Record<string, string> = {}
+) {
   return createClient(supabaseConfig.url, supabaseConfig.anonKey, {
     global: {
       headers: {
         "x-wallet-address": walletAddress,
+        ...extraHeaders,
       },
     },
   });
