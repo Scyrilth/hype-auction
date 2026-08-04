@@ -8,6 +8,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import EditCollectionModal from "@/components/collections/EditCollectionModal";
 import BackButton from "@/components/ui/BackButton";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Collection, CollectionWithOwner } from "@/lib/collections";
 import {
   deleteCollection,
@@ -17,6 +18,7 @@ import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 
 export default function ManageCollectionsView() {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const wallet = publicKey?.toBase58();
 
@@ -63,10 +65,9 @@ export default function ManageCollectionsView() {
 
   const loadCollections = useCallback(async () => {
     if (!wallet) return;
-
     setLoading(true);
     try {
-      const data = await getCollectionsByWallet(wallet, wallet);
+      const data = await getCollectionsByWallet(wallet, wallet, client);
       setCollections(data);
     } catch (error) {
       logSupabaseError("ManageCollectionsView.load", error);
@@ -74,7 +75,7 @@ export default function ManageCollectionsView() {
     } finally {
       setLoading(false);
     }
-  }, [showToast, wallet]);
+  }, [client, showToast, wallet]);
 
   useEffect(() => {
     loadCollections();
@@ -92,10 +93,9 @@ export default function ManageCollectionsView() {
 
   const handleDelete = async (id: string) => {
     if (!wallet) return;
-
     setDeletingId(id);
     try {
-      await deleteCollection(id, wallet);
+      await deleteCollection(id, wallet, client);
       setCollections((current) => current.filter((c) => c.id !== id));
       showToast("Collection deleted.");
       setConfirmId(null);

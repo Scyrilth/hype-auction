@@ -6,6 +6,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 
 import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getCategoryLabels } from "@/lib/categories";
 import { createCollection } from "@/lib/collections";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
@@ -22,6 +23,7 @@ const CATEGORY_OPTIONS = getCategoryLabels();
 export default function CreateCollectionForm() {
   const router = useRouter();
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
 
   const [name, setName] = useState("");
@@ -61,7 +63,7 @@ export default function CreateCollectionForm() {
         categories,
         is_public: isPublic,
         allow_comments: isPublic ? allowComments : false,
-      });
+      }, client);
 
       showToast("Collection created!");
       router.push(`/collections/${collection.id}`);

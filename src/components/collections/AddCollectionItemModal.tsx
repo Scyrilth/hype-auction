@@ -7,6 +7,7 @@ import ItemDetailsSection from "@/components/dashboard/ItemDetailsSection";
 import type { ItemDetailRow } from "@/components/dashboard/ListingPreview";
 import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getCategoryLabels } from "@/lib/categories";
 import { getCategoryFields } from "@/lib/category-fields";
 import {
@@ -173,6 +174,7 @@ export default function AddCollectionItemModal({
   onItemAdded?: (item: CollectionItem) => void;
   onItemUpdated?: (item: CollectionItem) => void;
 }) {
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const isEditMode = mode === "edit" && Boolean(initialData);
   const [form, setForm] = useState<AddItemFormState>(createInitialForm);
@@ -288,11 +290,11 @@ export default function AddCollectionItemModal({
       };
 
       if (isEditMode && initialData) {
-        const item = await updateCollectionItem(initialData.id, wallet, payload);
+        const item = await updateCollectionItem(initialData.id, wallet, payload, client);
         showToast("Item updated!");
         onItemUpdated?.(item);
       } else {
-        const item = await addCollectionItem(collectionId, wallet, payload);
+        const item = await addCollectionItem(collectionId, wallet, payload, client);
         showToast("Item added to collection!");
         onItemAdded?.(item);
       }

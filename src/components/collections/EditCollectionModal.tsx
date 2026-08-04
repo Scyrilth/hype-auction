@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import ImageUpload from "@/components/ui/ImageUpload";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getCategoryLabels } from "@/lib/categories";
 import {
   updateCollection,
@@ -34,6 +35,7 @@ export default function EditCollectionModal({
   wallet: string;
   onUpdated: (updated: Collection) => void;
 }) {
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [name, setName] = useState(collection.name);
   const [description, setDescription] = useState(collection.description ?? "");
@@ -96,7 +98,7 @@ export default function EditCollectionModal({
         categories,
         is_public: isPublic,
         allow_comments: isPublic ? allowComments : false,
-      });
+      }, client);
 
       showToast("Collection updated!");
       onUpdated(updated);

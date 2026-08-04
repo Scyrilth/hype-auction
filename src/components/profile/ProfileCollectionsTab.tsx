@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import CollectionCard from "@/components/collections/CollectionCard";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   getCollectionsByWallet,
   type CollectionWithOwner,
@@ -19,6 +20,7 @@ export default function ProfileCollectionsTab({
   isOwner: boolean;
 }) {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const viewerWallet = publicKey?.toBase58();
 
   const [collections, setCollections] = useState<CollectionWithOwner[]>([]);
@@ -27,7 +29,7 @@ export default function ProfileCollectionsTab({
   const loadCollections = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getCollectionsByWallet(profileWallet, viewerWallet);
+      const data = await getCollectionsByWallet(profileWallet, viewerWallet, client);
       setCollections(data);
     } catch (error) {
       logSupabaseError("ProfileCollectionsTab", error);
@@ -35,7 +37,7 @@ export default function ProfileCollectionsTab({
     } finally {
       setLoading(false);
     }
-  }, [profileWallet, viewerWallet]);
+  }, [client, profileWallet, viewerWallet]);
 
   useEffect(() => {
     loadCollections();

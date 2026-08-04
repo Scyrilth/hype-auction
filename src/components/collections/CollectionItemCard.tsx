@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import PortalInfoTooltip from "@/components/ui/PortalInfoTooltip";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import {
   removeCollectionItem,
@@ -34,6 +35,7 @@ export default function CollectionItemCard({
   onEdit?: (item: CollectionItem) => void;
   onDeleted?: (itemId: string) => void;
 }) {
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -55,10 +57,9 @@ export default function CollectionItemCard({
 
   const handleDelete = async () => {
     if (!wallet || !collectionId) return;
-
     setDeleting(true);
     try {
-      await removeCollectionItem(item.id, collectionId, wallet);
+      await removeCollectionItem(item.id, collectionId, wallet, client);
       onDeleted?.(item.id);
       setConfirmDelete(false);
       showToast("Item removed from collection.");

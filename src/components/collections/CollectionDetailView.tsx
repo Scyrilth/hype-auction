@@ -103,7 +103,8 @@ export default function CollectionDetailView({
     try {
       const privateToViewer = await isCollectionPrivateToViewer(
         collectionId,
-        wallet
+        wallet,
+        client
       );
       if (privateToViewer) {
         setIsPrivate(true);
@@ -112,7 +113,7 @@ export default function CollectionDetailView({
         return;
       }
 
-      const detail = await getCollectionById(collectionId, wallet);
+      const detail = await getCollectionById(collectionId, wallet, client);
       if (!detail) {
         setNotFound(true);
         setCollection(null);
@@ -125,7 +126,7 @@ export default function CollectionDetailView({
       setCollection(detail);
 
       if (detail.is_public && detail.allow_comments) {
-        const loadedComments = await getCollectionComments(collectionId);
+        const loadedComments = await getCollectionComments(collectionId, client);
         setComments(loadedComments);
       } else {
         setComments([]);
@@ -136,7 +137,7 @@ export default function CollectionDetailView({
     } finally {
       setLoading(false);
     }
-  }, [collectionId, showToast, wallet]);
+  }, [client, collectionId, showToast, wallet]);
 
   useEffect(() => {
     loadCollection();
@@ -184,7 +185,7 @@ export default function CollectionDetailView({
   useEffect(() => {
     if (!collection || viewsIncremented) return;
 
-    incrementCollectionViews(collection.id)
+    incrementCollectionViews(collection.id, client)
       .then(() => {
         setViewsIncremented(true);
         setCollection((current) =>
@@ -196,7 +197,7 @@ export default function CollectionDetailView({
       .catch((error) => {
         logSupabaseError("CollectionDetailView.views", error);
       });
-  }, [collection, viewsIncremented]);
+  }, [client, collection, viewsIncremented]);
 
   const handleLike = async () => {
     if (!connected || !wallet) {
@@ -213,7 +214,7 @@ export default function CollectionDetailView({
 
     setLikeLoading(true);
     try {
-      const result = await toggleCollectionLike(collectionId, wallet);
+      const result = await toggleCollectionLike(collectionId, wallet, client);
       setCollection((current) =>
         current
           ? {
@@ -328,7 +329,8 @@ export default function CollectionDetailView({
         await updateItemOrder(
           collectionId,
           reordered.map((item) => item.id),
-          wallet
+          wallet,
+          client
         );
       } catch (error) {
         logSupabaseError("CollectionDetailView.reorder", error);
@@ -336,7 +338,7 @@ export default function CollectionDetailView({
         loadCollection();
       }
     },
-    [collection, collectionId, loadCollection, showToast, wallet]
+    [client, collection, collectionId, loadCollection, showToast, wallet]
   );
 
   const handleComment = async (event: React.FormEvent) => {
@@ -355,7 +357,7 @@ export default function CollectionDetailView({
 
     setCommentLoading(true);
     try {
-      const comment = await addCollectionComment(collectionId, wallet, trimmed);
+      const comment = await addCollectionComment(collectionId, wallet, trimmed, client);
       setComments((current) => [comment, ...current]);
       setCommentText("");
     } catch (error) {
