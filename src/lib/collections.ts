@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
 export interface CollectionOwner {
@@ -156,11 +157,12 @@ function parseOwner(row: Record<string, unknown>): CollectionOwner {
 }
 
 async function fetchOwners(
-  wallets: string[]
+  wallets: string[],
+  client: SupabaseClient = supabase
 ): Promise<Map<string, CollectionOwner>> {
   if (!wallets.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("users")
     .select("wallet_address, username, avatar_url, shop_name")
     .in("wallet_address", wallets);
@@ -188,11 +190,14 @@ function attachOwner(
   return { ...collection, owner };
 }
 
-export async function getPublicCollections(filters?: {
-  category?: string;
-  search?: string;
-}): Promise<CollectionWithOwner[]> {
-  let query = supabase
+export async function getPublicCollections(
+  filters?: {
+    category?: string;
+    search?: string;
+  },
+  client: SupabaseClient = supabase
+): Promise<CollectionWithOwner[]> {
+  let query = client
     .from("collections")
     .select("*")
     .eq("is_public", true)
@@ -213,18 +218,20 @@ export async function getPublicCollections(filters?: {
   const collections = (data ?? []).map((row) =>
     parseCollection(row as Record<string, unknown>)
   );
-  const owners = await fetchOwners([
-    ...new Set(collections.map((c) => c.owner_wallet)),
-  ]);
+  const owners = await fetchOwners(
+    [...new Set(collections.map((c) => c.owner_wallet))],
+    client
+  );
 
   return collections.map((collection) => attachOwner(collection, owners));
 }
 
 export async function getCollectionsByWallet(
   wallet: string,
-  viewerWallet?: string
+  viewerWallet?: string,
+  client: SupabaseClient = supabase
 ): Promise<CollectionWithOwner[]> {
-  let query = supabase
+  let query = client
     .from("collections")
     .select("*")
     .eq("owner_wallet", wallet)
@@ -240,16 +247,17 @@ export async function getCollectionsByWallet(
   const collections = (data ?? []).map((row) =>
     parseCollection(row as Record<string, unknown>)
   );
-  const owners = await fetchOwners([wallet]);
+  const owners = await fetchOwners([wallet], client);
 
   return collections.map((collection) => attachOwner(collection, owners));
 }
 
 export async function getCollectionById(
   id: string,
-  viewerWallet?: string
+  viewerWallet?: string,
+  client: SupabaseClient = supabase
 ): Promise<CollectionDetail | null> {
-  const { data: row, error } = await supabase
+  const { data: row, error } = await client
     .from("collections")
     .select("*")
     .eq("id", id)
@@ -266,15 +274,15 @@ export async function getCollectionById(
 
   const [{ data: itemRows, error: itemsError }, owners, liked] =
     await Promise.all([
-      supabase
+      client
         .from("collection_items")
         .select("*")
         .eq("collection_id", id)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: true }),
-      fetchOwners([collection.owner_wallet]),
+      fetchOwners([collection.owner_wallet], client),
       viewerWallet
-        ? supabase
+        ? client
             .from("collection_likes")
             .select("id")
             .eq("collection_id", id)
@@ -296,8 +304,11 @@ export async function getCollectionById(
   };
 }
 
-export async function incrementCollectionViews(id: string): Promise<void> {
-  const { data, error: fetchError } = await supabase
+export async function incrementCollectionViews(
+  id: string,
+  client: SupabaseClient = supabase
+): Promise<void> {
+  const { data, error: fetchError } = await client
     .from("collections")
     .select("view_count")
     .eq("id", id)
@@ -306,7 +317,7 @@ export async function incrementCollectionViews(id: string): Promise<void> {
   if (fetchError) throw fetchError;
   if (!data) return;
 
-  const { error } = await supabase
+  const { error } = await client
     .from("collections")
     .update({ view_count: Number(data.view_count ?? 0) + 1 })
     .eq("id", id);
@@ -316,11 +327,12 @@ export async function incrementCollectionViews(id: string): Promise<void> {
 
 export async function createCollection(
   wallet: string,
-  data: CreateCollectionInput
+  data: CreateCollectionInput,
+  client: SupabaseClient = supabase
 ): Promise<Collection> {
   await upsertUser(wallet);
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await client
     .from("collections")
     .insert({
       owner_wallet: wallet,
@@ -341,7 +353,8 @@ export async function createCollection(
 export async function updateCollection(
   id: string,
   wallet: string,
-  data: UpdateCollectionInput
+  data: UpdateCollectionInput,
+  client: SupabaseClient = supabase
 ): Promise<Collection> {
   const payload: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -359,7 +372,7 @@ export async function updateCollection(
   }
   if (data.allow_comments !== undefined) payload.allow_comments = data.allow_comments;
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await client
     .from("collections")
     .update(payload)
     .eq("id", id)
@@ -373,9 +386,10 @@ export async function updateCollection(
 
 export async function deleteCollection(
   id: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await client
     .from("collections")
     .delete()
     .eq("id", id)
@@ -387,9 +401,10 @@ export async function deleteCollection(
 export async function addCollectionItem(
   collectionId: string,
   wallet: string,
-  itemData: CollectionItemInput
+  itemData: CollectionItemInput,
+  client: SupabaseClient = supabase
 ): Promise<CollectionItem> {
-  const { data: collection, error: collectionError } = await supabase
+  const { data: collection, error: collectionError } = await client
     .from("collections")
     .select("owner_wallet, item_count")
     .eq("id", collectionId)
@@ -400,7 +415,7 @@ export async function addCollectionItem(
     throw new Error("Collection not found.");
   }
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await client
     .from("collection_items")
     .insert({
       collection_id: collectionId,
@@ -426,7 +441,7 @@ export async function addCollectionItem(
 
   if (error) throw error;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("collections")
     .update({
       item_count: Number(collection.item_count ?? 0) + 1,
@@ -442,9 +457,10 @@ export async function addCollectionItem(
 export async function updateCollectionItem(
   itemId: string,
   wallet: string,
-  itemData: CollectionItemInput
+  itemData: CollectionItemInput,
+  client: SupabaseClient = supabase
 ): Promise<CollectionItem> {
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await client
     .from("collection_items")
     .select("id, owner_wallet")
     .eq("id", itemId)
@@ -483,7 +499,7 @@ export async function updateCollectionItem(
     payload.display_order = itemData.display_order;
   }
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await client
     .from("collection_items")
     .update(payload)
     .eq("id", itemId)
@@ -493,7 +509,7 @@ export async function updateCollectionItem(
 
   if (error) throw error;
 
-  const { error: collectionUpdateError } = await supabase
+  const { error: collectionUpdateError } = await client
     .from("collections")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", row.collection_id as string);
@@ -506,9 +522,10 @@ export async function updateCollectionItem(
 export async function removeCollectionItem(
   itemId: string,
   collectionId: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { data: collection, error: collectionError } = await supabase
+  const { data: collection, error: collectionError } = await client
     .from("collections")
     .select("owner_wallet, item_count")
     .eq("id", collectionId)
@@ -519,7 +536,7 @@ export async function removeCollectionItem(
     throw new Error("Collection not found.");
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from("collection_items")
     .delete()
     .eq("id", itemId)
@@ -527,7 +544,7 @@ export async function removeCollectionItem(
 
   if (error) throw error;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("collections")
     .update({
       item_count: Math.max(Number(collection.item_count ?? 0) - 1, 0),
@@ -541,9 +558,10 @@ export async function removeCollectionItem(
 export async function updateItemOrder(
   collectionId: string,
   orderedItemIds: string[],
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { data: collection, error: collectionError } = await supabase
+  const { data: collection, error: collectionError } = await client
     .from("collections")
     .select("owner_wallet")
     .eq("id", collectionId)
@@ -555,7 +573,7 @@ export async function updateItemOrder(
   }
 
   const updates = orderedItemIds.map((itemId, index) =>
-    supabase
+    client
       .from("collection_items")
       .update({ display_order: index })
       .eq("id", itemId)
@@ -567,7 +585,7 @@ export async function updateItemOrder(
   const failed = results.find((result) => result.error);
   if (failed?.error) throw failed.error;
 
-  const { error: collectionUpdateError } = await supabase
+  const { error: collectionUpdateError } = await client
     .from("collections")
     .update({ updated_at: new Date().toISOString() })
     .eq("id", collectionId);
@@ -577,11 +595,12 @@ export async function updateItemOrder(
 
 export async function toggleCollectionLike(
   collectionId: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<{ liked: boolean; likeCount: number }> {
   await upsertUser(wallet);
 
-  const { data: collection, error: collectionError } = await supabase
+  const { data: collection, error: collectionError } = await client
     .from("collections")
     .select("like_count")
     .eq("id", collectionId)
@@ -590,7 +609,7 @@ export async function toggleCollectionLike(
   if (collectionError) throw collectionError;
   if (!collection) throw new Error("Collection not found.");
 
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await client
     .from("collection_likes")
     .select("id")
     .eq("collection_id", collectionId)
@@ -603,7 +622,7 @@ export async function toggleCollectionLike(
   let likeCount = Number(collection.like_count ?? 0);
 
   if (existing) {
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await client
       .from("collection_likes")
       .delete()
       .eq("id", existing.id as string);
@@ -612,7 +631,7 @@ export async function toggleCollectionLike(
     liked = false;
     likeCount = Math.max(likeCount - 1, 0);
   } else {
-    const { error: insertError } = await supabase
+    const { error: insertError } = await client
       .from("collection_likes")
       .insert({ collection_id: collectionId, wallet_address: wallet });
 
@@ -621,7 +640,7 @@ export async function toggleCollectionLike(
     likeCount += 1;
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("collections")
     .update({ like_count: likeCount })
     .eq("id", collectionId);
@@ -634,14 +653,15 @@ export async function toggleCollectionLike(
 export async function addCollectionComment(
   collectionId: string,
   wallet: string,
-  content: string
+  content: string,
+  client: SupabaseClient = supabase
 ): Promise<CollectionComment> {
   await upsertUser(wallet);
 
   const trimmed = content.trim();
   if (!trimmed) throw new Error("Comment cannot be empty.");
 
-  const { data: collection, error: collectionError } = await supabase
+  const { data: collection, error: collectionError } = await client
     .from("collections")
     .select("is_public, allow_comments")
     .eq("id", collectionId)
@@ -652,7 +672,7 @@ export async function addCollectionComment(
     throw new Error("Comments are not allowed on this collection.");
   }
 
-  const { data: row, error } = await supabase
+  const { data: row, error } = await client
     .from("collection_comments")
     .insert({
       collection_id: collectionId,
@@ -664,7 +684,7 @@ export async function addCollectionComment(
 
   if (error) throw error;
 
-  const { data: user } = await supabase
+  const { data: user } = await client
     .from("users")
     .select("username, avatar_url")
     .eq("wallet_address", wallet)
@@ -682,9 +702,10 @@ export async function addCollectionComment(
 }
 
 export async function getCollectionComments(
-  collectionId: string
+  collectionId: string,
+  client: SupabaseClient = supabase
 ): Promise<CollectionComment[]> {
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await client
     .from("collection_comments")
     .select("*")
     .eq("collection_id", collectionId)
@@ -694,7 +715,7 @@ export async function getCollectionComments(
   if (!rows?.length) return [];
 
   const wallets = [...new Set(rows.map((row) => row.wallet_address as string))];
-  const owners = await fetchOwners(wallets);
+  const owners = await fetchOwners(wallets, client);
 
   return rows.map((row) => {
     const owner = owners.get(row.wallet_address as string);
@@ -712,9 +733,10 @@ export async function getCollectionComments(
 
 export async function isCollectionPrivateToViewer(
   id: string,
-  viewerWallet?: string
+  viewerWallet?: string,
+  client: SupabaseClient = supabase
 ): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("collections")
     .select("is_public, owner_wallet")
     .eq("id", id)
