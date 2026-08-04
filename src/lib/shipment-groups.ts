@@ -1,5 +1,6 @@
 import type { ShipmentGroup } from "@/lib/database.types";
 import { resolveShippingUsd } from "@/lib/auction-shipping";
+import { getEscrowConnection } from "@/lib/escrow";
 import { logSupabaseError } from "@/lib/errors";
 import { notifyBundleRefundSent, notifyBundleShipped } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
@@ -709,6 +710,61 @@ export async function dismissBundleRefundNudge({
   return parseShipmentGroup(updatedGroup as Record<string, unknown>);
 }
 
+async function verifyRefundTransaction({
+  txSignature,
+  sellerWallet,
+  buyerWallet,
+  solAmount,
+}: {
+  txSignature: string;
+  sellerWallet: string;
+  buyerWallet: string;
+  solAmount: number;
+}): Promise<boolean> {
+  try {
+    const connection = getEscrowConnection();
+    const tx = await connection.getParsedTransaction(txSignature, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    if (!tx || tx.meta?.err) {
+      return false;
+    }
+
+    const accountKeys = tx.transaction.message.accountKeys.map((key) =>
+      key.pubkey.toBase58()
+    );
+    const senderIndex = accountKeys.indexOf(sellerWallet);
+    const receiverIndex = accountKeys.indexOf(buyerWallet);
+
+    if (senderIndex === -1 || receiverIndex === -1) {
+      return false;
+    }
+
+    const preBalances = tx.meta?.preBalances ?? [];
+    const postBalances = tx.meta?.postBalances ?? [];
+
+    const senderDelta =
+      (preBalances[senderIndex] ?? 0) - (postBalances[senderIndex] ?? 0);
+    const receiverDelta =
+      (postBalances[receiverIndex] ?? 0) - (preBalances[receiverIndex] ?? 0);
+
+    const claimedLamports = Math.round(solAmount * 1_000_000_000);
+    const toleranceLamports = 5_000_000; // ~0.005 SOL slack for fees/rounding
+
+    const senderPaidRoughlyRight =
+      Math.abs(senderDelta - claimedLamports) <= toleranceLamports;
+    const receiverGotRoughlyRight =
+      Math.abs(receiverDelta - claimedLamports) <= toleranceLamports;
+
+    return senderPaidRoughlyRight && receiverGotRoughlyRight;
+  } catch (error) {
+    console.error("[verifyRefundTransaction] verification failed:", error);
+    return false;
+  }
+}
+
 export async function recordBundleRefundSent({
   groupId,
   sellerWallet,
@@ -734,6 +790,19 @@ export async function recordBundleRefundSent({
   const nudge = nudges.find((entry) => entry.groupId === groupId);
   if (!nudge) {
     throw new Error("This bundle is not eligible for a refund right now.");
+  }
+
+  const verified = await verifyRefundTransaction({
+    txSignature: trimmedSignature,
+    sellerWallet,
+    buyerWallet: nudge.buyerWallet,
+    solAmount,
+  });
+
+  if (!verified) {
+    throw new Error(
+      "We couldn't verify that transaction on-chain. Please check the signature and try again."
+    );
   }
 
   const now = new Date().toISOString();
