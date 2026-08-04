@@ -1,5 +1,6 @@
 import { shortenAddress } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
 export interface ChatMessage {
@@ -17,11 +18,12 @@ export function walletUsername(walletAddress: string) {
 }
 
 export async function enrichChatMessage(
-  row: Record<string, unknown>
+  row: Record<string, unknown>,
+  client: SupabaseClient = supabase
 ): Promise<ChatMessage> {
   const walletAddress = row.wallet_address as string;
 
-  const { data: user } = await supabase
+  const { data: user } = await client
     .from("users")
     .select("username")
     .eq("wallet_address", walletAddress)
@@ -39,9 +41,10 @@ export async function enrichChatMessage(
 }
 
 export async function fetchAuctionMessages(
-  auctionId: string
+  auctionId: string,
+  client: SupabaseClient = supabase
 ): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("messages")
     .select("*")
     .eq("auction_id", auctionId)
@@ -54,7 +57,7 @@ export async function fetchAuctionMessages(
     ...new Set(data.map((row) => row.wallet_address as string)),
   ];
 
-  const { data: users, error: usersError } = await supabase
+  const { data: users, error: usersError } = await client
     .from("users")
     .select("wallet_address, username")
     .in("wallet_address", wallets);
@@ -87,7 +90,7 @@ export async function sendAuctionMessage({
   auctionId: string;
   walletAddress: string;
   content: string;
-}) {
+}, client: SupabaseClient = supabase) {
   const trimmed = content.trim();
   if (!trimmed) {
     throw new Error("Message cannot be empty.");
@@ -95,7 +98,7 @@ export async function sendAuctionMessage({
 
   await upsertUser(walletAddress);
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("messages")
     .insert({
       auction_id: auctionId,
@@ -108,7 +111,7 @@ export async function sendAuctionMessage({
 
   if (error) throw error;
 
-  const { data: user } = await supabase
+  const { data: user } = await client
     .from("users")
     .select("username")
     .eq("wallet_address", walletAddress)

@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { SendIcon, SmileIcon } from "@/components/icons";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { logSupabaseError } from "@/lib/errors";
 import { getProfileHref } from "@/lib/profile-links";
@@ -20,6 +21,7 @@ import { supabase } from "@/lib/supabase";
 
 export default function LiveChat({ auctionId }: { auctionId?: string }) {
   const { publicKey, connected } = useWallet();
+  const { client } = useSupabaseClient();
   const connectPhantom = usePhantomConnect();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -53,7 +55,7 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await fetchAuctionMessages(auctionId);
+        const data = await fetchAuctionMessages(auctionId, client);
         if (!cancelled) {
           setMessages(data);
           requestAnimationFrame(() => scrollToBottom("instant"));
@@ -78,7 +80,7 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
           filter: `auction_id=eq.${auctionId}`,
         },
         (payload) => {
-          void enrichChatMessage(payload.new as Record<string, unknown>).then(
+          void enrichChatMessage(payload.new as Record<string, unknown>, client).then(
             addMessage
           );
         }
@@ -89,7 +91,7 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, [auctionId, addMessage, scrollToBottom]);
+  }, [auctionId, addMessage, scrollToBottom, client]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -109,7 +111,7 @@ export default function LiveChat({ auctionId }: { auctionId?: string }) {
         auctionId,
         walletAddress: publicKey.toBase58(),
         content: input,
-      });
+      }, client);
       addMessage(message);
       setInput("");
     } catch (error) {
