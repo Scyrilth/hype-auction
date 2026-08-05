@@ -117,6 +117,7 @@ export default function CreateCollectionForm() {
           buildPath={(file) =>
             `collections/${wallet}/${Date.now()}.${getImageExtension(file)}`
           }
+          client={client}
         />
       )}
 

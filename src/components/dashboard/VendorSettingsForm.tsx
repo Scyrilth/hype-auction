@@ -266,6 +266,7 @@ export default function VendorSettingsForm() {
             showToast("Avatar uploaded!");
           }}
           disabled={!publicKey}
+          client={client}
         />
 
         <ImageUpload
@@ -298,6 +299,7 @@ export default function VendorSettingsForm() {
             showToast("Banner uploaded!");
           }}
           disabled={!publicKey}
+          client={client}
         />
       </div>
 

@@ -109,6 +109,7 @@ export default function ProfileAccountSettingsTab({
             }
           }}
           disabled={!publicKey}
+          client={client}
         />
 
         <label className="block">

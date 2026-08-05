@@ -528,6 +528,7 @@ export default function AddCollectionItemModal({
                   buildPath={(file) =>
                     `collections/${wallet}/${collectionId}/${Date.now()}-${index + 1}.${getImageExtension(file)}`
                   }
+                  client={client}
                 />
               ))}
             </div>

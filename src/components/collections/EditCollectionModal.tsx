@@ -182,6 +182,7 @@ export default function EditCollectionModal({
             buildPath={(file) =>
               `collections/${wallet}/${Date.now()}.${getImageExtension(file)}`
             }
+            client={client}
           />
 
           <div>

@@ -874,6 +874,7 @@ export default function CreateListingForm() {
                 buildPath={(file) =>
                   `${wallet}/${Date.now()}-main.${getImageExtension(file)}`
                 }
+                client={client}
               />
               <FieldError message={fieldErrors.imageUrl} />
             </div>
@@ -894,6 +895,7 @@ export default function CreateListingForm() {
                     buildPath={(file) =>
                       `${wallet}/${Date.now()}-${index + 1}.${getImageExtension(file)}`
                     }
+                    client={client}
                   />
                 ))}
               </div>

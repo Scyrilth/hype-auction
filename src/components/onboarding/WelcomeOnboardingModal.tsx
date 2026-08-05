@@ -139,6 +139,7 @@ export default function WelcomeOnboardingModal({
               `${publicKey!.toBase58()}/avatar.${getImageExtension(file)}`
             }
             disabled={!publicKey || loading}
+            client={client}
           />
         </div>
 
