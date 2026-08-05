@@ -8,6 +8,7 @@ import { ReviewTagDisplay } from "@/components/reviews/ReviewTagPills";
 import StarRating from "@/components/shop/StarRating";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Review } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
 import { shortenAddress } from "@/lib/format";
@@ -29,6 +30,7 @@ export default function ReviewCard({
   onUpdated?: (review: Review) => void;
 }) {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [review, setReview] = useState(initialReview);
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -49,7 +51,8 @@ export default function ReviewCard({
       const updated = await replyToReview(
         review.id,
         vendorWallet,
-        replyText
+        replyText,
+        client
       );
       setReview((current) => ({ ...current, ...updated }));
       setShowReplyForm(false);
@@ -67,7 +70,7 @@ export default function ReviewCard({
     if (review.is_flagged || flagging) return;
     setFlagging(true);
     try {
-      const updated = await flagReview(review.id);
+      const updated = await flagReview(review.id, client);
       setReview((current) => ({ ...current, ...updated }));
       showToast("Review flagged for moderation.");
       onUpdated?.(updated);

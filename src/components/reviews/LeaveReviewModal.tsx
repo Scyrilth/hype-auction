@@ -5,6 +5,7 @@ import { useState } from "react";
 import StarRatingInput from "@/components/reviews/StarRatingInput";
 import { ReviewTagSelector } from "@/components/reviews/ReviewTagPills";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Auction } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
 import { submitReview } from "@/lib/reviews";
@@ -24,6 +25,7 @@ export default function LeaveReviewModal({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
@@ -47,7 +49,7 @@ export default function LeaveReviewModal({
         rating,
         comment,
         tags,
-      });
+      }, client);
       showToast("Review submitted successfully!");
       onSubmitted();
       onClose();
