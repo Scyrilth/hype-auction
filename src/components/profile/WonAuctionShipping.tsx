@@ -71,7 +71,7 @@ export default function WonAuctionShipping({
 
     setConfirming(true);
     try {
-      const threadId = await getAuctionThreadId(auction.id, wallet);
+      const threadId = await getAuctionThreadId(auction.id, wallet, client);
       if (!threadId) {
         showToast("Open a message thread with the seller first.", "error");
         return;
