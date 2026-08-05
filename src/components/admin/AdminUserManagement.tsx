@@ -6,6 +6,7 @@ import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
   fetchRecentUsers,
@@ -35,6 +36,7 @@ function statusBadge(status: AdminUserProfile["status"]) {
 }
 
 export default function AdminUserManagement() {
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [query, setQuery] = useState("");
   const [user, setUser] = useState<AdminUserProfile | null>(null);
@@ -71,15 +73,16 @@ export default function AdminUserManagement() {
     setActionLoading(true);
     try {
       if (pendingAction === "lift") {
-        await liftBuyerRestrictions(user.wallet_address);
+        await liftBuyerRestrictions(user.wallet_address, client);
         showToast("Restrictions lifted.");
       } else {
-        await issueBuyerStrike(user.wallet_address, pendingAction);
+        await issueBuyerStrike(user.wallet_address, pendingAction, null, client);
         await sendAdminNotification(
           user.wallet_address,
           "Account notice",
           `A platform ${pendingAction.replace(/_/g, " ")} has been applied to your account.`,
-          "/profile"
+          "/profile",
+          client
         );
         showToast("Action applied.");
       }
