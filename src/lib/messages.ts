@@ -246,11 +246,12 @@ export function formatReferenceLabel(referenceNumber: string | null): string | n
 
 export async function getAuctionThreadId(
   auctionId: string,
-  buyerWallet: string
+  buyerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<string | null> {
   const normalizedBuyer = buyerWallet.trim();
 
-  const { data: directThreads, error: directError } = await supabase
+  const { data: directThreads, error: directError } = await client
     .from("message_threads")
     .select("id")
     .eq("auction_id", auctionId)
@@ -262,7 +263,7 @@ export async function getAuctionThreadId(
     return directThreads[0].id as string;
   }
 
-  const { data: auction, error: auctionError } = await supabase
+  const { data: auction, error: auctionError } = await client
     .from("auctions")
     .select("next_bidder_wallet")
     .eq("id", auctionId)
@@ -272,7 +273,7 @@ export async function getAuctionThreadId(
 
   const nextBidderWallet = (auction?.next_bidder_wallet as string | null)?.trim();
   if (nextBidderWallet === normalizedBuyer) {
-    const { data: offerThreads, error: offerThreadError } = await supabase
+    const { data: offerThreads, error: offerThreadError } = await client
       .from("message_threads")
       .select("id")
       .eq("auction_id", auctionId)
@@ -727,12 +728,13 @@ export async function getOrCreateAuctionThread(
 export async function sendDirectMessageRecord(
   threadId: string,
   senderWallet: string,
-  content: string
+  content: string,
+  client: SupabaseClient = supabase
 ): Promise<DirectMessage> {
   const trimmed = content.trim();
   if (!trimmed) throw new Error("Message cannot be empty.");
 
-  const { data: thread, error: threadError } = await supabase
+  const { data: thread, error: threadError } = await client
     .from("message_threads")
     .select("status, buyer_wallet, seller_wallet")
     .eq("id", threadId)
@@ -754,9 +756,9 @@ export async function sendDirectMessageRecord(
     throw new Error("You do not have access to this thread.");
   }
 
-  await upsertUser(senderWallet);
+  await upsertUser(senderWallet, client);
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("direct_messages")
     .insert({
       thread_id: threadId,
