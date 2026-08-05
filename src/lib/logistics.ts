@@ -14,6 +14,7 @@ import {
 } from "@/lib/notifications";
 import { logEscrowShipped } from "@/lib/escrow-ledger";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 
 export const SHIPPING_COURIERS = [
   "DHL",
@@ -44,10 +45,10 @@ async function notifyBuyerShipment({
   sellerWallet: string;
   courier: string;
   trackingNumber: string;
-}): Promise<void> {
+}, client: SupabaseClient = supabase): Promise<void> {
   const content = `📦 Seller has shipped the item. Tracking: ${trackingNumber} via ${courier}`;
 
-  const { data: thread, error } = await supabase
+  const { data: thread, error } = await client
     .from("message_threads")
     .select("id")
     .eq("auction_id", auctionId)
@@ -96,14 +97,14 @@ export async function saveAuctionShippingTracking({
   courier: string;
   trackingNumber: string;
   onChain?: ShippingOnChainParams;
-}): Promise<Auction> {
+}, client: SupabaseClient = supabase): Promise<Auction> {
   const trimmedCourier = courier.trim();
   const trimmedTracking = trackingNumber.trim();
 
   if (!trimmedCourier) throw new Error("Select a courier.");
   if (!trimmedTracking) throw new Error("Enter a tracking number.");
 
-  const { data: existing, error: fetchError } = await supabase
+  const { data: existing, error: fetchError } = await client
     .from("auctions")
     .select("id, seller_wallet, shipping_status, title")
     .eq("id", auctionId)
@@ -113,7 +114,7 @@ export async function saveAuctionShippingTracking({
   if (fetchError) throw fetchError;
   if (!existing) throw new Error("Auction not found.");
 
-  const { data: winnerBid, error: winnerError } = await supabase
+  const { data: winnerBid, error: winnerError } = await client
     .from("bids")
     .select("bidder_wallet")
     .eq("auction_id", auctionId)
@@ -141,7 +142,7 @@ export async function saveAuctionShippingTracking({
   }
 
   const now = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("auctions")
     .update({
       tracking_courier: trimmedCourier,
@@ -162,7 +163,7 @@ export async function saveAuctionShippingTracking({
   const escrowPda = parsedAuction.escrow_pda;
   const totalLamports = parsedAuction.escrow_amount_lamports ?? 0;
   if (escrowPda && totalLamports > 0) {
-    const { data: threadRow } = await supabase
+    const { data: threadRow } = await client
       .from("message_threads")
       .select("id")
       .eq("auction_id", auctionId)
@@ -180,7 +181,7 @@ export async function saveAuctionShippingTracking({
   }
 
   if (winnerBid?.bidder_wallet) {
-    const { data: threadRow } = await supabase
+    const { data: threadRow } = await client
       .from("message_threads")
       .select("id")
       .eq("auction_id", auctionId)
@@ -196,7 +197,7 @@ export async function saveAuctionShippingTracking({
       sellerWallet,
       courier: trimmedCourier,
       trackingNumber: trimmedTracking,
-    });
+    }, client);
 
     if (resolvedThreadId) {
       await notifyTrackingUploaded({
