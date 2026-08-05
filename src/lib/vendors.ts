@@ -50,9 +50,12 @@ function isWalletSlug(slug: string): boolean {
   return slug.length >= 32 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(slug);
 }
 
-export async function getVendorBySlug(slug: string): Promise<User | null> {
+export async function getVendorBySlug(
+  slug: string,
+  client: SupabaseClient = supabase
+): Promise<User | null> {
   if (isWalletSlug(slug)) {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("users")
       .select("*")
       .eq("wallet_address", slug)
@@ -62,7 +65,7 @@ export async function getVendorBySlug(slug: string): Promise<User | null> {
     return data ? parseUser(data) : null;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("users")
     .select("*")
     .ilike("username", slug)
@@ -73,9 +76,10 @@ export async function getVendorBySlug(slug: string): Promise<User | null> {
 }
 
 export async function getVendorLiveAuctions(
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<Auction[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .eq("seller_wallet", sellerWallet)
@@ -87,9 +91,10 @@ export async function getVendorLiveAuctions(
 }
 
 export async function getVendorPastAuctions(
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<Auction[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .eq("seller_wallet", sellerWallet)
@@ -158,22 +163,26 @@ export interface VendorShopData {
   suggestedVendors: VendorDirectoryEntry[];
 }
 
-export async function getVendorShopData(slug: string): Promise<VendorShopData | null> {
-  const vendor = await getVendorBySlug(slug);
+export async function getVendorShopData(
+  slug: string,
+  client: SupabaseClient = supabase
+): Promise<VendorShopData | null> {
+  const vendor = await getVendorBySlug(slug, client);
   if (!vendor) return null;
 
   const vendorWallet = vendor.wallet_address;
 
   const [liveAuctions, pastAuctions, reviews] = await Promise.all([
-    getVendorLiveAuctions(vendorWallet),
-    getVendorPastAuctions(vendorWallet),
-    getVendorReviews(vendorWallet),
+    getVendorLiveAuctions(vendorWallet, client),
+    getVendorPastAuctions(vendorWallet, client),
+    getVendorReviews(vendorWallet, client),
   ]);
 
-  const suggestedVendors = await getSuggestedVendorsForShop(vendorWallet, [
-    ...liveAuctions,
-    ...pastAuctions,
-  ]).catch(() => [] as VendorDirectoryEntry[]);
+  const suggestedVendors = await getSuggestedVendorsForShop(
+    vendorWallet,
+    [...liveAuctions, ...pastAuctions],
+    client
+  ).catch(() => [] as VendorDirectoryEntry[]);
 
   console.log("[getVendorShopData] reviews loaded", {
     slug,
@@ -392,14 +401,15 @@ function topListingCategories(
 
 export async function getSuggestedVendorsForShop(
   vendorWallet: string,
-  listings: Pick<Auction, "category" | "title" | "status" | "end_time">[]
+  listings: Pick<Auction, "category" | "title" | "status" | "end_time">[],
+  client: SupabaseClient = supabase
 ): Promise<VendorDirectoryEntry[]> {
   const topCategories = topListingCategories(listings);
   if (!topCategories.length) return [];
 
   const now = new Date().toISOString();
 
-  const { data: matchingAuctions, error: auctionsError } = await supabase
+  const { data: matchingAuctions, error: auctionsError } = await client
     .from("auctions")
     .select("seller_wallet, category, status, end_time, title")
     .in("category", topCategories)
@@ -422,8 +432,8 @@ export async function getSuggestedVendorsForShop(
 
   const [{ data: vendorRows, error: vendorsError }, { data: reviews, error: reviewsError }] =
     await Promise.all([
-      supabase.from("users").select("*").in("wallet_address", wallets),
-      supabase
+      client.from("users").select("*").in("wallet_address", wallets),
+      client
         .from("reviews")
         .select("vendor_wallet, rating, is_flagged")
         .in("vendor_wallet", wallets)
@@ -506,8 +516,10 @@ export async function getSuggestedVendorsForShop(
     .slice(0, 4);
 }
 
-export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
-  const { data: vendorRows, error } = await supabase
+export async function getVendorDirectory(
+  client: SupabaseClient = supabase
+): Promise<VendorDirectoryEntry[]> {
+  const { data: vendorRows, error } = await client
     .from("users")
     .select("*")
     .eq("is_vendor", true)
@@ -527,12 +539,12 @@ export async function getVendorDirectory(): Promise<VendorDirectoryEntry[]> {
 
   const [{ data: reviews, error: reviewsError }, { data: auctions, error: auctionsError }] =
     await Promise.all([
-      supabase
+      client
         .from("reviews")
         .select("vendor_wallet, rating, is_flagged")
         .in("vendor_wallet", wallets)
         .eq("is_flagged", false),
-      supabase
+      client
         .from("auctions")
         .select("seller_wallet, category, status, end_time, title")
         .in("seller_wallet", wallets),

@@ -7,6 +7,7 @@ import {
 } from "@/lib/categories";
 import { parseAuctionRow, normalizeItemDetails } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 import {
   getVendorDirectory,
   type VendorDirectoryEntry,
@@ -57,7 +58,8 @@ export function matchesVendorEntry(
 
 /** Wallets of sellers with auctions matching the query (title or category). */
 export async function getSellerWalletsWithMatchingAuctionTitles(
-  query: string
+  query: string,
+  client: SupabaseClient = supabase
 ): Promise<Set<string>> {
   const q = normalizeSearchQuery(query);
   if (!q) return new Set();
@@ -66,15 +68,15 @@ export async function getSellerWalletsWithMatchingAuctionTitles(
   const wallets = new Set<string>();
 
   const directRequests = [
-    supabase.from("auctions").select("seller_wallet, title").ilike("title", `%${q}%`),
-    supabase.from("auctions").select("seller_wallet, category").ilike("category", `%${q}%`),
-    supabase.from("auctions").select("seller_wallet, description").ilike("description", `%${q}%`),
-    supabase.from("auctions").select("seller_wallet, condition").ilike("condition", `%${q}%`),
+    client.from("auctions").select("seller_wallet, title").ilike("title", `%${q}%`),
+    client.from("auctions").select("seller_wallet, category").ilike("category", `%${q}%`),
+    client.from("auctions").select("seller_wallet, description").ilike("description", `%${q}%`),
+    client.from("auctions").select("seller_wallet, condition").ilike("condition", `%${q}%`),
   ];
 
   if (resolvedLabels.length) {
     directRequests.push(
-      supabase
+      client
         .from("auctions")
         .select("seller_wallet, category")
         .in("category", resolvedLabels)
@@ -91,7 +93,7 @@ export async function getSellerWalletsWithMatchingAuctionTitles(
     }
   }
 
-  const { data: detailRows, error: detailError } = await supabase
+  const { data: detailRows, error: detailError } = await client
     .from("auctions")
     .select("seller_wallet, item_details")
     .not("item_details", "eq", "{}");
@@ -204,11 +206,12 @@ function toAuctionHit(
 }
 
 async function getBidCountsForAuctions(
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient = supabase
 ): Promise<Map<string, number>> {
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id")
     .in("auction_id", auctionIds);
@@ -232,7 +235,8 @@ const emptyResults = (query: string): GlobalSearchResults => ({
 });
 
 export async function performGlobalSearch(
-  query: string
+  query: string,
+  client: SupabaseClient = supabase
 ): Promise<GlobalSearchResults> {
   const q = normalizeSearchQuery(query);
   if (!q) return emptyResults("");
@@ -241,15 +245,15 @@ export async function performGlobalSearch(
 
   const [vendorDirectory, titleMatchWallets, { data: liveRows }, { data: pastRows }] =
     await Promise.all([
-      getVendorDirectory(),
-      getSellerWalletsWithMatchingAuctionTitles(q),
-      supabase
+      getVendorDirectory(client),
+      getSellerWalletsWithMatchingAuctionTitles(q, client),
+      client
         .from("auctions")
         .select("*")
         .eq("status", "live")
         .gt("end_time", now)
         .order("end_time", { ascending: true }),
-      supabase
+      client
         .from("auctions")
         .select("*")
         .eq("status", "ended")
@@ -263,7 +267,7 @@ export async function performGlobalSearch(
   const liveAuctions = liveRows.map(parseAuctionRow);
   const pastAuctions = pastRows.map(parseAuctionRow);
   const allAuctions = [...liveAuctions, ...pastAuctions];
-  const bidCounts = await getBidCountsForAuctions(allAuctions.map((a) => a.id));
+  const bidCounts = await getBidCountsForAuctions(allAuctions.map((a) => a.id), client);
 
   const sellerSlugs = new Map(
     vendorDirectory.map((entry) => [
