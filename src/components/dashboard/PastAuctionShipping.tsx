@@ -11,6 +11,7 @@ import type { Auction } from "@/lib/database.types";
 import { getErrorMessage } from "@/lib/errors";
 import { createEscrowProvider } from "@/lib/escrow";
 import { saveAuctionShippingTracking, SHIPPING_COURIERS } from "@/lib/logistics";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 
 export default function PastAuctionShipping({
   auction: initialAuction,
@@ -20,6 +21,7 @@ export default function PastAuctionShipping({
   onUpdated?: (auction: Auction) => void;
 }) {
   const { publicKey } = useWallet();
+  const { client } = useSupabaseClient();
   const anchorWallet = useAnchorWallet();
   const { connection } = useConnection();
   const { showToast } = useToast();
@@ -46,7 +48,7 @@ export default function PastAuctionShipping({
         courier,
         trackingNumber,
         onChain: provider ? { provider } : undefined,
-      });
+      }, client);
       setAuction(updated);
       setShowForm(false);
       setTrackingNumber("");
