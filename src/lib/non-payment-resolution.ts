@@ -13,6 +13,7 @@ import {
 } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 
 export const PAYMENT_WINDOW_MS = [
   10 * 60 * 1000,
@@ -172,8 +173,11 @@ export function canRespondToNextBidderOffer({
   return true;
 }
 
-async function getTopBidderWallet(auctionId: string): Promise<string | null> {
-  const { data, error } = await supabase
+async function getTopBidderWallet(
+  auctionId: string,
+  client: SupabaseClient = supabase
+): Promise<string | null> {
+  const { data, error } = await client
     .from("bids")
     .select("bidder_wallet")
     .eq("auction_id", auctionId)
@@ -187,9 +191,10 @@ async function getTopBidderWallet(auctionId: string): Promise<string | null> {
 
 async function getBidAmount(
   auctionId: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<number | null> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("amount")
     .eq("auction_id", auctionId)
@@ -204,11 +209,12 @@ async function getBidAmount(
 
 export async function fetchNextHighestBidders(
   auctionId: string,
-  excludeWallets: string[]
+  excludeWallets: string[],
+  client: SupabaseClient = supabase
 ): Promise<NextBidderRow[]> {
   const excluded = new Set(excludeWallets.map((wallet) => wallet.toLowerCase()));
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("bidder_wallet, amount")
     .eq("auction_id", auctionId)
@@ -233,7 +239,7 @@ export async function fetchNextHighestBidders(
 
   if (!ranked.length) return [];
 
-  const { data: users, error: usersError } = await supabase
+  const { data: users, error: usersError } = await client
     .from("users")
     .select("wallet_address, username")
     .in(
@@ -259,8 +265,11 @@ export async function fetchNextHighestBidders(
   }));
 }
 
-async function countNonPaymentStrikes(wallet: string): Promise<number> {
-  const { count, error } = await supabase
+async function countNonPaymentStrikes(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<number> {
+  const { count, error } = await client
     .from("buyer_strikes")
     .select("id", { count: "exact", head: true })
     .eq("wallet_address", wallet)
@@ -285,9 +294,10 @@ async function issueProgressiveNonPaymentStrike(
 
 async function appendExcludedWallet(
   auctionId: string,
-  wallet: string
+  wallet: string,
+  client: SupabaseClient = supabase
 ): Promise<string[]> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("auctions")
     .select("payment_excluded_wallets")
     .eq("id", auctionId)
@@ -300,7 +310,7 @@ async function appendExcludedWallet(
     : [];
   const next = uniqueWallets([...current, wallet]);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("auctions")
     .update({ payment_excluded_wallets: next })
     .eq("id", auctionId);
@@ -327,7 +337,10 @@ async function notifySellerActionRequired(auction: Auction): Promise<void> {
   );
 }
 
-export async function syncUnpaidAuctionState(auction: Auction): Promise<Auction> {
+export async function syncUnpaidAuctionState(
+  auction: Auction,
+  client: SupabaseClient = supabase
+): Promise<Auction> {
   if (!needsSellerUnpaidAction(auction) && !arePaymentAttemptsExhausted(auction)) {
     return auction;
   }
@@ -346,7 +359,7 @@ export async function syncUnpaidAuctionState(auction: Auction): Promise<Auction>
 
   let synced = auction;
   if (Object.keys(updates).length) {
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("auctions")
       .update(updates)
       .eq("id", auction.id)
@@ -358,10 +371,10 @@ export async function syncUnpaidAuctionState(auction: Auction): Promise<Auction>
   }
 
   if (needsSellerUnpaidAction(synced) && auction.escrow_attempt_number < 3) {
-    const winnerWallet = await getTopBidderWallet(auction.id);
+    const winnerWallet = await getTopBidderWallet(auction.id, client);
     if (winnerWallet) {
       await issueProgressiveNonPaymentStrike(winnerWallet, auction.id);
-      await appendExcludedWallet(auction.id, winnerWallet);
+      await appendExcludedWallet(auction.id, winnerWallet, client);
       await notifySellerActionRequired(synced);
     }
   }
@@ -370,11 +383,12 @@ export async function syncUnpaidAuctionState(auction: Auction): Promise<Auction>
 }
 
 export async function fetchUnpaidAuctionActions(
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<UnpaidAuctionAction[]> {
   const wallet = sellerWallet.trim();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .eq("seller_wallet", wallet)
@@ -408,7 +422,7 @@ export async function fetchUnpaidAuctionActions(
 
   for (const row of data ?? []) {
     let auction = parseAuctionRow(row as Record<string, unknown>);
-    auction = await syncUnpaidAuctionState(auction);
+    auction = await syncUnpaidAuctionState(auction, client);
     if (!needsSellerUnpaidAction(auction)) {
       console.log("[fetchUnpaidAuctionActions] skipped after filter:", {
         id: auction.id,
@@ -421,14 +435,14 @@ export async function fetchUnpaidAuctionActions(
       continue;
     }
 
-    const winnerWallet = (await getTopBidderWallet(auction.id)) ?? "";
+    const winnerWallet = (await getTopBidderWallet(auction.id, client)) ?? "";
     const excluded = uniqueWallets([
       winnerWallet,
       ...(auction.payment_excluded_wallets ?? []),
       ...(auction.next_bidder_wallet ? [auction.next_bidder_wallet] : []),
     ]);
 
-    const nextBidders = await fetchNextHighestBidders(auction.id, excluded);
+    const nextBidders = await fetchNextHighestBidders(auction.id, excluded, client);
 
     actions.push({
       auction,
@@ -452,9 +466,10 @@ export async function fetchUnpaidAuctionActions(
 async function insertOfferSystemMessage(
   threadId: string,
   payload: NextBidderOfferPayload,
-  sellerWallet: string
+  sellerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<void> {
-  const { error } = await supabase.from("direct_messages").insert({
+  const { error } = await client.from("direct_messages").insert({
     thread_id: threadId,
     sender_wallet: sellerWallet,
     content: JSON.stringify(payload),
@@ -473,8 +488,8 @@ export async function offerToNextBidder({
   auctionId: string;
   sellerWallet: string;
   bidderWallet: string;
-}): Promise<void> {
-  const { data: row, error } = await supabase
+}, client: SupabaseClient = supabase): Promise<void> {
+  const { data: row, error } = await client
     .from("auctions")
     .select("*")
     .eq("id", auctionId)
@@ -488,7 +503,7 @@ export async function offerToNextBidder({
     throw new Error("This auction does not need seller action right now.");
   }
 
-  const bidAmount = await getBidAmount(auctionId, bidderWallet);
+  const bidAmount = await getBidAmount(auctionId, bidderWallet, client);
   if (bidAmount == null) {
     throw new Error("Selected bidder has no bid on this auction.");
   }
@@ -496,7 +511,7 @@ export async function offerToNextBidder({
   const responseDeadline = new Date(Date.now() + NEXT_BIDDER_RESPONSE_MS);
   const nowIso = new Date().toISOString();
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("auctions")
     .update({
       next_bidder_wallet: bidderWallet,
@@ -514,7 +529,8 @@ export async function offerToNextBidder({
     bidderWallet,
     sellerWallet,
     auction.title,
-    { skipWelcomeMessage: true }
+    { skipWelcomeMessage: true },
+    client
   );
 
   const offerPayload: NextBidderOfferPayload = {
@@ -528,7 +544,7 @@ export async function offerToNextBidder({
     item_title: auction.title,
   };
 
-  await insertOfferSystemMessage(thread.id, offerPayload, sellerWallet);
+  await insertOfferSystemMessage(thread.id, offerPayload, sellerWallet, client);
 
   await createNotification(
     bidderWallet,
@@ -556,8 +572,8 @@ export async function acceptNextBidderOffer({
   auctionId: string;
   bidderWallet: string;
   threadId: string;
-}): Promise<void> {
-  const { data: row, error } = await supabase
+}, client: SupabaseClient = supabase): Promise<void> {
+  const { data: row, error } = await client
     .from("auctions")
     .select("*")
     .eq("id", auctionId)
@@ -572,7 +588,7 @@ export async function acceptNextBidderOffer({
 
   const paymentDeadline = new Date(Date.now() + NEXT_BIDDER_PAYMENT_MS);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("auctions")
     .update({
       next_bidder_response_deadline: paymentDeadline.toISOString(),
@@ -584,7 +600,7 @@ export async function acceptNextBidderOffer({
 
   if (updateError) throw updateError;
 
-  const bidAmount = (await getBidAmount(auctionId, bidderWallet)) ?? 0;
+  const bidAmount = (await getBidAmount(auctionId, bidderWallet, client)) ?? 0;
 
   const offerPayload: NextBidderOfferPayload = {
     type: "next_bidder_offer",
@@ -597,9 +613,9 @@ export async function acceptNextBidderOffer({
     item_title: auction.title,
   };
 
-  await insertOfferSystemMessage(threadId, offerPayload, auction.seller_wallet);
+  await insertOfferSystemMessage(threadId, offerPayload, auction.seller_wallet, client);
 
-  await supabase.from("direct_messages").insert({
+  await client.from("direct_messages").insert({
     thread_id: threadId,
     sender_wallet: bidderWallet,
     content:
@@ -617,8 +633,8 @@ export async function declineNextBidderOffer({
   auctionId: string;
   bidderWallet: string;
   threadId: string;
-}): Promise<void> {
-  const { data: row, error } = await supabase
+}, client: SupabaseClient = supabase): Promise<void> {
+  const { data: row, error } = await client
     .from("auctions")
     .select("*")
     .eq("id", auctionId)
@@ -631,9 +647,9 @@ export async function declineNextBidderOffer({
     throw new Error("This offer is not assigned to your wallet.");
   }
 
-  await appendExcludedWallet(auctionId, bidderWallet);
+  await appendExcludedWallet(auctionId, bidderWallet, client);
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("auctions")
     .update({
       next_bidder_wallet: null,
@@ -645,7 +661,7 @@ export async function declineNextBidderOffer({
 
   if (updateError) throw updateError;
 
-  const bidAmount = (await getBidAmount(auctionId, bidderWallet)) ?? 0;
+  const bidAmount = (await getBidAmount(auctionId, bidderWallet, client)) ?? 0;
 
   await insertOfferSystemMessage(
     threadId,
@@ -659,7 +675,8 @@ export async function declineNextBidderOffer({
       status: "declined",
       item_title: auction.title,
     },
-    auction.seller_wallet
+    auction.seller_wallet,
+    client
   );
 
   await createNotification(
@@ -697,8 +714,8 @@ export async function publishRelist({
   sellerWallet: string;
   startPrice: number;
   durationHours: number;
-}): Promise<string> {
-  const { data: sourceRow, error } = await supabase
+}, client: SupabaseClient = supabase): Promise<string> {
+  const { data: sourceRow, error } = await client
     .from("auctions")
     .select("*")
     .eq("id", sourceAuctionId)
@@ -723,14 +740,14 @@ export async function publishRelist({
     internationalShippingUsd: source.international_shipping_usd,
   });
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await client
     .from("auctions")
     .update({ relisted_auction_id: newAuction.id })
     .eq("id", sourceAuctionId);
 
   if (updateError) throw updateError;
 
-  const { data: bidderRows, error: biddersError } = await supabase
+  const { data: bidderRows, error: biddersError } = await client
     .from("bids")
     .select("bidder_wallet")
     .eq("auction_id", sourceAuctionId);
@@ -759,9 +776,10 @@ export async function publishRelist({
 
 async function wasNextBidderOfferAccepted(
   threadId: string,
-  bidderWallet: string
+  bidderWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("direct_messages")
     .select("content")
     .eq("thread_id", threadId)
@@ -783,9 +801,11 @@ async function wasNextBidderOfferAccepted(
   return false;
 }
 
-export async function syncExpiredNextBidderOffers(): Promise<void> {
+export async function syncExpiredNextBidderOffers(
+  client: SupabaseClient = supabase
+): Promise<void> {
   const nowIso = new Date().toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .not("next_bidder_wallet", "is", null)
@@ -800,19 +820,19 @@ export async function syncExpiredNextBidderOffers(): Promise<void> {
     const wallet = auction.next_bidder_wallet;
     if (!wallet) continue;
 
-    const threadId = await getAuctionThreadId(auction.id, wallet);
+    const threadId = await getAuctionThreadId(auction.id, wallet, client);
     const accepted = threadId
-      ? await wasNextBidderOfferAccepted(threadId, wallet)
+      ? await wasNextBidderOfferAccepted(threadId, wallet, client)
       : false;
 
     if (accepted) {
       await issueProgressiveNonPaymentStrike(wallet, auction.id);
-      await appendExcludedWallet(auction.id, wallet);
+      await appendExcludedWallet(auction.id, wallet, client);
     } else {
-      await appendExcludedWallet(auction.id, wallet);
+      await appendExcludedWallet(auction.id, wallet, client);
     }
 
-    await supabase
+    await client
       .from("auctions")
       .update({
         next_bidder_wallet: null,
@@ -824,7 +844,7 @@ export async function syncExpiredNextBidderOffers(): Promise<void> {
       .eq("id", auction.id);
 
     if (threadId) {
-      const bidAmount = (await getBidAmount(auction.id, wallet)) ?? 0;
+      const bidAmount = (await getBidAmount(auction.id, wallet, client)) ?? 0;
       await insertOfferSystemMessage(
         threadId,
         {
@@ -839,7 +859,8 @@ export async function syncExpiredNextBidderOffers(): Promise<void> {
           status: "expired",
           item_title: auction.title,
         },
-        auction.seller_wallet
+        auction.seller_wallet,
+        client
       );
     }
 
@@ -857,9 +878,10 @@ export async function syncExpiredNextBidderOffers(): Promise<void> {
 
 export async function getRelistSuggestion(
   auctionId: string,
-  excludeWallets: string[]
+  excludeWallets: string[],
+  client: SupabaseClient = supabase
 ): Promise<number> {
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("bidder_wallet, amount")
     .eq("auction_id", auctionId)
