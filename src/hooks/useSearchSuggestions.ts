@@ -12,14 +12,17 @@ import { auctionMatchesSearchQuery } from "@/lib/auction-search";
 import { normalizeSearchQuery } from "@/lib/search";
 import { resolveCategoryLabels } from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getVendorDirectory, type VendorDirectoryEntry } from "@/lib/vendors";
 
 async function fetchBidCounts(
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient = supabase
 ): Promise<Map<string, number>> {
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id")
     .in("auction_id", auctionIds);
@@ -36,14 +39,15 @@ async function fetchBidCounts(
 
 async function fetchMatchingAuctions(
   query: string,
-  sellerWallets: string[] | null
+  sellerWallets: string[] | null,
+  client: SupabaseClient = supabase
 ): Promise<AuctionSuggestionSource[]> {
   const q = normalizeSearchQuery(query);
   if (q.length < 2) return [];
 
   const resolvedLabels = resolveCategoryLabels(query);
   const requests = [
-    supabase
+    client
       .from("auctions")
       .select(
         "id, title, description, condition, category, item_details, seller_wallet, current_bid, status, end_time"
@@ -56,7 +60,7 @@ async function fetchMatchingAuctions(
 
   if (resolvedLabels.length) {
     requests.push(
-      supabase
+      client
         .from("auctions")
         .select(
           "id, title, description, condition, category, item_details, seller_wallet, current_bid, status, end_time"
@@ -67,7 +71,7 @@ async function fetchMatchingAuctions(
   }
 
   requests.push(
-    supabase
+    client
       .from("auctions")
       .select(
         "id, title, description, condition, category, item_details, seller_wallet, current_bid, status, end_time"
@@ -95,7 +99,7 @@ async function fetchMatchingAuctions(
   if (!rowsById.size) return [];
 
   const auctionIds = [...rowsById.keys()];
-  const bidCounts = await fetchBidCounts(auctionIds);
+  const bidCounts = await fetchBidCounts(auctionIds, client);
 
   return auctionIds
     .map((id) => {
@@ -138,6 +142,7 @@ export function useSearchSuggestions({
   groupOrder?: SuggestionGroupOrder;
   maxTotal?: number;
 }) {
+  const { client } = useSupabaseClient();
   const [fetchedVendors, setFetchedVendors] = useState<VendorDirectoryEntry[]>(
     []
   );
@@ -156,7 +161,7 @@ export function useSearchSuggestions({
 
     async function loadVendors() {
       try {
-        const data = await getVendorDirectory();
+        const data = await getVendorDirectory(client);
         if (!cancelled) setFetchedVendors(data);
       } catch {
         if (!cancelled) setFetchedVendors([]);
@@ -169,7 +174,7 @@ export function useSearchSuggestions({
     return () => {
       cancelled = true;
     };
-  }, [fetchVendors]);
+  }, [fetchVendors, client]);
 
   useEffect(() => {
     if (!queryReady || (fetchVendors && vendorsLoading)) {
@@ -184,7 +189,7 @@ export function useSearchSuggestions({
         : null;
 
     async function loadAuctions() {
-      const data = await fetchMatchingAuctions(query, wallets);
+      const data = await fetchMatchingAuctions(query, wallets, client);
       if (!cancelled) setMatchingAuctions(data);
     }
 
@@ -192,7 +197,7 @@ export function useSearchSuggestions({
     return () => {
       cancelled = true;
     };
-  }, [query, queryReady, vendors, scope, fetchVendors, vendorsLoading]);
+  }, [query, queryReady, vendors, scope, fetchVendors, vendorsLoading, client]);
 
   const suggestionGroups = useMemo(
     () =>

@@ -9,6 +9,7 @@ import {
   getSellerWalletsWithMatchingAuctionTitles,
 } from "@/lib/search";
 import type { VendorDirectoryEntry } from "@/lib/vendors";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 
 type FilterTab = "all" | "verified" | "top-rated" | "most-followers";
 type SortOption = "followers" | "rating" | "sales" | "newest";
@@ -69,6 +70,7 @@ export default function VendorDirectory({
 }: {
   vendors: VendorDirectoryEntry[];
 }) {
+  const { client } = useSupabaseClient();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
@@ -87,7 +89,7 @@ export default function VendorDirectory({
       }
 
       try {
-        const wallets = await getSellerWalletsWithMatchingAuctionTitles(search);
+        const wallets = await getSellerWalletsWithMatchingAuctionTitles(search, client);
         if (!cancelled) setTitleMatchWallets(wallets);
       } catch {
         if (!cancelled) setTitleMatchWallets(new Set());
@@ -98,7 +100,7 @@ export default function VendorDirectory({
     return () => {
       cancelled = true;
     };
-  }, [search]);
+  }, [search, client]);
 
   const filtered = useMemo(() => {
     let result = filterVendorEntries(vendors, search, titleMatchWallets);
