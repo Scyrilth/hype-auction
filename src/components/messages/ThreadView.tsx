@@ -667,7 +667,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         auctionId: thread.auction_id,
         bidderWallet: wallet,
         threadId,
-      });
+      }, client);
 
       let shippingUsd: number;
       let bidAmount: number;
@@ -744,7 +744,7 @@ export default function ThreadView({ threadId }: { threadId: string }) {
         auctionId: thread.auction_id,
         bidderWallet: wallet,
         threadId,
-      });
+      }, client);
       showToast("Offer declined.");
       await loadThread();
     } catch (error) {

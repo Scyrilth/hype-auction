@@ -6,6 +6,7 @@ import { useState } from "react";
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import { useSolPrice } from "@/hooks/useSolPrice";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage } from "@/lib/errors";
 import { formatSol, shortenAddress, displaySocialHandle } from "@/lib/format";
 import {
@@ -133,6 +134,7 @@ export default function UnpaidAuctionCard({
   sellerWallet: string;
   onRefresh: () => void;
 }) {
+  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const { solPrice } = useSolPrice();
   const { auction, winnerWallet, nextBidders } = action;
@@ -149,7 +151,7 @@ export default function UnpaidAuctionCard({
         auctionId: auction.id,
         sellerWallet,
         bidderWallet: topBidder.wallet,
-      });
+      }, client);
       showToast(`Offer sent to ${formatSol(topBidder.amount)} bidder.`);
       setOfferOpen(false);
       onRefresh();

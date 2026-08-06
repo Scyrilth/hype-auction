@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useToast } from "@/components/ui/Toast";
 import { useSolPrice } from "@/hooks/useSolPrice";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import type { Auction } from "@/lib/database.types";
 import { resolveAuctionImageUrl } from "@/lib/auction-images";
 import { getErrorMessage } from "@/lib/errors";
@@ -34,6 +35,7 @@ export default function RelistAuctionModal({
   onClose: () => void;
   onRelisted: () => void;
 }) {
+  const { client } = useSupabaseClient();
   const router = useRouter();
   const { showToast } = useToast();
   const { solPrice } = useSolPrice();
@@ -51,7 +53,7 @@ export default function RelistAuctionModal({
       return;
     }
 
-    void getRelistSuggestion(auction.id, excludeWallets).then((suggested) => {
+    void getRelistSuggestion(auction.id, excludeWallets, client).then((suggested) => {
       if (suggested > 0) {
         setSuggestedPrice(suggested);
         setStartPrice(suggested.toFixed(2));
@@ -64,7 +66,7 @@ export default function RelistAuctionModal({
         }
       }
     });
-  }, [auction, excludeWallets, open]);
+  }, [auction, excludeWallets, open, client]);
 
   useEffect(() => {
     if (!open) return;
@@ -113,7 +115,7 @@ export default function RelistAuctionModal({
         sellerWallet,
         startPrice: price,
         durationHours: hours,
-      });
+      }, client);
       showToast("Item relisted successfully.");
       onRelisted();
       router.push(`/auction/${newAuctionId}`);

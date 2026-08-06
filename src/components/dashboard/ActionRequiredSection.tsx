@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import UnpaidAuctionCard from "@/components/dashboard/UnpaidAuctionCard";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import {
   fetchUnpaidAuctionActions,
   syncExpiredNextBidderOffers,
@@ -16,6 +17,7 @@ export default function ActionRequiredSection({
   sellerWallet: string;
   onRefresh?: () => void;
 }) {
+  const { client } = useSupabaseClient();
   const [actions, setActions] = useState<UnpaidAuctionAction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,8 +25,8 @@ export default function ActionRequiredSection({
     setLoading(true);
     try {
       console.log("[ActionRequiredSection] loading for seller:", sellerWallet);
-      await syncExpiredNextBidderOffers();
-      const items = await fetchUnpaidAuctionActions(sellerWallet);
+      await syncExpiredNextBidderOffers(client);
+      const items = await fetchUnpaidAuctionActions(sellerWallet, client);
       console.log("[ActionRequiredSection] fetched actions:", items);
       setActions(items);
     } catch (error) {
@@ -33,7 +35,7 @@ export default function ActionRequiredSection({
     } finally {
       setLoading(false);
     }
-  }, [sellerWallet]);
+  }, [sellerWallet, client]);
 
   useEffect(() => {
     void load();
