@@ -65,11 +65,21 @@ export function WalletAuthProvider({
       }
 
       const storedSession = getWalletAuthSession();
+      console.log("[WalletAuthProvider] checking stored session", {
+        hasStoredSession: Boolean(storedSession),
+        storedWallet: storedSession?.wallet,
+        currentWallet: walletAddress,
+        walletsMatch: storedSession?.wallet === walletAddress,
+        storedExpiresAt: storedSession?.expiresAt,
+        now: Date.now(),
+        notExpired: storedSession ? storedSession.expiresAt > Date.now() : null,
+      });
       if (
         storedSession &&
         storedSession.wallet === walletAddress &&
         storedSession.expiresAt > Date.now()
       ) {
+        console.log("[WalletAuthProvider] restoring from sessionStorage, skipping re-auth");
         authWalletRef.current = storedSession.wallet;
         expiresAtRef.current = storedSession.expiresAt;
         setIsAuthenticated(true);
