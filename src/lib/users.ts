@@ -66,6 +66,13 @@ export async function acceptAgeAndTerms(
 
   if (error) {
     logSupabaseError("acceptAgeAndTerms", error);
+    console.error("[acceptAgeAndTerms] upsert failed", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      error,
+    });
     throw error;
   }
 

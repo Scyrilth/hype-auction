@@ -57,6 +57,12 @@ export default function AgeAndTermsGate() {
       .catch((error) => {
         if (cancelled) return;
         console.error("AgeAndTermsGate: failed to load user", error);
+        console.error("AgeAndTermsGate: error details", {
+          message: error?.message,
+          code: error?.code,
+          status: error?.status,
+          name: error?.name,
+        });
         setOpen(true);
         setResolved(true);
       });
