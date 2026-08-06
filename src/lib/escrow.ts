@@ -22,6 +22,7 @@ import { notifyDisputeResolved } from "@/lib/notifications";
 import { postPaymentSecuredNotifications } from "@/lib/payment-notifications-client";
 import { lockThreadShippingAddressForAuction } from "@/lib/thread-shipping";
 import { supabase } from "@/lib/supabase";
+import type { SupabaseClient } from "@/lib/supabase";
 
 const DEVNET_PROGRAM_ID = "CsBnH378WLH2bUr9FBzCcXUW3dtFMPj4ucdjtqJv8CKs";
 const MAINNET_PROGRAM_ID = "DWvYLFF7iYYsZF97mYP7EhkEXXf1FPxs6SieTfgT5dYT";
@@ -259,7 +260,8 @@ export async function initiatePayment(
   sellerWallet: string,
   platformWallet: string = PLATFORM_WALLET,
   attemptNumber = 1,
-  threadId?: string | null
+  threadId?: string | null,
+  client: SupabaseClient = supabase
 ): Promise<EscrowPaymentResult> {
   try {
     const amountLamports = Math.ceil(bidAmountSol * LAMPORTS_PER_SOL);
@@ -326,9 +328,9 @@ export async function initiatePayment(
     const buyerWallet = wallet.publicKey.toBase58();
     const resolvedThreadId =
       threadId?.trim() ||
-      (await getAuctionThreadId(auctionId, buyerWallet));
+      (await getAuctionThreadId(auctionId, buyerWallet, client));
 
-    const { error } = await supabase
+    const { error } = await client
       .from("auctions")
       .update(escrowUpdate)
       .eq("id", auctionId);
@@ -420,7 +422,8 @@ export async function resolveDisputeOnChain(
   provider: AnchorProvider,
   sellerWallet: string,
   buyerWallet: string,
-  releaseToSeller: boolean
+  releaseToSeller: boolean,
+  client: SupabaseClient = supabase
 ): Promise<EscrowTxResult> {
   try {
     const auctionIdArg = auctionIdToBytes(auctionId);
@@ -438,7 +441,7 @@ export async function resolveDisputeOnChain(
       .rpc()) as TransactionSignature;
 
     const nextState = releaseToSeller ? "complete" : "refunded";
-    const { error } = await supabase
+    const { error } = await client
       .from("auctions")
       .update({ escrow_state: nextState })
       .eq("id", auctionId);
@@ -449,12 +452,12 @@ export async function resolveDisputeOnChain(
 
     try {
       const [{ data: auctionRow }, { data: threadRow }] = await Promise.all([
-        supabase
+        client
           .from("auctions")
           .select("title, escrow_pda, escrow_amount_lamports")
           .eq("id", auctionId)
           .maybeSingle(),
-        supabase
+        client
           .from("message_threads")
           .select("id")
           .eq("auction_id", auctionId)
@@ -553,7 +556,8 @@ export async function autoReleaseOnChain(
 export async function autoRefundOnChain(
   auctionId: string,
   buyerWallet: string,
-  provider: AnchorProvider
+  provider: AnchorProvider,
+  client: SupabaseClient = supabase
 ): Promise<EscrowTxResult> {
   try {
     const auctionIdArg = auctionIdToBytes(auctionId);
@@ -568,7 +572,7 @@ export async function autoRefundOnChain(
       })
       .rpc()) as TransactionSignature;
 
-    const { error } = await supabase
+    const { error } = await client
       .from("auctions")
       .update({ escrow_state: "refunded" })
       .eq("id", auctionId);
@@ -578,7 +582,7 @@ export async function autoRefundOnChain(
     }
 
     try {
-      const { data: auctionRow } = await supabase
+      const { data: auctionRow } = await client
         .from("auctions")
         .select("escrow_pda, escrow_amount_lamports")
         .eq("id", auctionId)
@@ -590,7 +594,7 @@ export async function autoRefundOnChain(
       const totalLamports = Number(auctionRow?.escrow_amount_lamports ?? 0);
 
       if (totalLamports > 0) {
-        const { data: threadRow } = await supabase
+        const { data: threadRow } = await client
           .from("message_threads")
           .select("id")
           .eq("auction_id", auctionId)
@@ -624,7 +628,8 @@ export async function adminReleaseToSeller(
   wallet: EscrowWallet,
   provider: AnchorProvider,
   sellerWallet: string,
-  buyerWallet: string
+  buyerWallet: string,
+  client: SupabaseClient = supabase
 ): Promise<EscrowTxResult> {
   if (escrowState === "disputed") {
     return resolveDisputeOnChain(
@@ -633,11 +638,12 @@ export async function adminReleaseToSeller(
       provider,
       sellerWallet,
       buyerWallet,
-      true
+      true,
+      client
     );
   }
 
-  const { error } = await supabase
+  const { error } = await client
     .from("auctions")
     .update({ escrow_state: "released" })
     .eq("id", auctionId);
