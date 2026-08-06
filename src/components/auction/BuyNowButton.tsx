@@ -8,6 +8,7 @@ import ThreadShippingAddressModal from "@/components/messages/ThreadShippingAddr
 import FiatValue from "@/components/ui/FiatValue";
 import { useToast } from "@/components/ui/Toast";
 import { usePhantomConnect } from "@/hooks/usePhantomConnect";
+import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { verifyBuyNowPaymentShipping } from "@/lib/buy-now";
 import { isShippingExemptAuction } from "@/lib/auction-shipping";
 import type { Auction } from "@/lib/database.types";
@@ -86,6 +87,7 @@ export default function BuyNowButton({
   variant?: "detail" | "card";
   className?: string;
 }) {
+  const { client } = useSupabaseClient();
   const router = useRouter();
   const { showToast } = useToast();
   const connectPhantom = usePhantomConnect();
@@ -181,7 +183,8 @@ export default function BuyNowButton({
           auction.seller_wallet,
           PLATFORM_WALLET,
           auction.escrow_attempt_number || 1,
-          resolvedThreadId
+          resolvedThreadId,
+          client
         );
 
         if (!result.success) {
