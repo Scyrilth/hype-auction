@@ -13,6 +13,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { getErrorMessage } from "@/lib/errors";
 import {
   clearWalletAuthSession,
+  getWalletAuthSession,
   setWalletAuthSession,
   uint8ArrayToBase64,
 } from "@/lib/wallet-auth-client";
@@ -59,6 +60,18 @@ export function WalletAuthProvider({
         expiresAtRef.current &&
         expiresAtRef.current > Date.now()
       ) {
+        setIsAuthenticated(true);
+        return;
+      }
+
+      const storedSession = getWalletAuthSession();
+      if (
+        storedSession &&
+        storedSession.wallet === walletAddress &&
+        storedSession.expiresAt > Date.now()
+      ) {
+        authWalletRef.current = storedSession.wallet;
+        expiresAtRef.current = storedSession.expiresAt;
         setIsAuthenticated(true);
         return;
       }
