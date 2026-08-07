@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { getTopFeaturedAuctionIds } from "@/lib/auction-labels";
 import { parseAuctionRow } from "@/lib/parse-auction";
 import { getVendorReviewCount } from "@/lib/reviews";
@@ -35,12 +37,13 @@ export interface AuctionDetailData {
 }
 
 export async function getBidCountsInLast24Hours(
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient = supabase
 ): Promise<Map<string, number>> {
   if (!auctionIds.length) return new Map();
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id")
     .in("auction_id", auctionIds)
@@ -62,11 +65,13 @@ export interface AuctionWithBidCount24h {
 }
 
 export async function getTrendingAuctions(
-  limit = 10
+  limit = 10,
+  client: SupabaseClient = supabase
 ): Promise<AuctionWithBidCount24h[]> {
-  const liveAuctions = await getAllLiveAuctions();
+  const liveAuctions = await getAllLiveAuctions(client);
   const bidCounts = await getBidCountsInLast24Hours(
-    liveAuctions.map((auction) => auction.id)
+    liveAuctions.map((auction) => auction.id),
+    client
   );
 
   return liveAuctions
@@ -83,8 +88,10 @@ export async function getTrendingAuctions(
 }
 
 /** Fetches every active live auction (no row cap). PostgREST max is ~1000 rows. */
-export async function getAllLiveAuctions(): Promise<Auction[]> {
-  const { data, error } = await supabase
+export async function getAllLiveAuctions(
+  client: SupabaseClient = supabase
+): Promise<Auction[]> {
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .eq("status", "live")
@@ -95,8 +102,11 @@ export async function getAllLiveAuctions(): Promise<Auction[]> {
   return (data ?? []).map((row) => parseAuctionRow(row as Record<string, unknown>));
 }
 
-export async function getAuctionById(id: string): Promise<Auction | null> {
-  const { data, error } = await supabase
+export async function getAuctionById(
+  id: string,
+  client: SupabaseClient = supabase
+): Promise<Auction | null> {
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .eq("id", id)
@@ -117,11 +127,12 @@ function parseBid(row: Record<string, unknown>): Bid {
 }
 
 export async function getBidCountsForAuctions(
-  auctionIds: string[]
+  auctionIds: string[],
+  client: SupabaseClient = supabase
 ): Promise<Map<string, number>> {
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from("bids")
     .select("auction_id")
     .in("auction_id", auctionIds);
@@ -137,18 +148,19 @@ export async function getBidCountsForAuctions(
 }
 
 export async function getAuctionDetailData(
-  id: string
+  id: string,
+  client: SupabaseClient = supabase
 ): Promise<AuctionDetailData | null> {
-  const auction = await getAuctionById(id);
+  const auction = await getAuctionById(id, client);
   if (!auction || !auction.id) return null;
 
     const [sellerResponse, bidsResponse, sellerReviewCount] = await Promise.all([
-      supabase
+      client
         .from("users")
         .select("*")
         .eq("wallet_address", auction.seller_wallet)
         .maybeSingle(),
-      supabase
+      client
         .from("bids")
         .select("*")
         .eq("auction_id", id)
@@ -207,7 +219,7 @@ export async function getAuctionDetailData(
 
     let usernameByWallet = new Map<string, string | null>();
     if (bidderWallets.length) {
-      const { data: bidders, error: biddersError } = await supabase
+      const { data: bidders, error: biddersError } = await client
         .from("users")
         .select("wallet_address, username")
         .in("wallet_address", bidderWallets);
@@ -251,15 +263,18 @@ export async function getAuctionDetailData(
   };
 }
 
-async function getAuctionBidStats(auctionId: string) {
-  const { count, error: countError } = await supabase
+async function getAuctionBidStats(
+  auctionId: string,
+  client: SupabaseClient = supabase
+) {
+  const { count, error: countError } = await client
     .from("bids")
     .select("*", { count: "exact", head: true })
     .eq("auction_id", auctionId);
 
   if (countError) throw countError;
 
-  const { data: topBids, error: topBidError } = await supabase
+  const { data: topBids, error: topBidError } = await client
     .from("bids")
     .select("*")
     .eq("auction_id", auctionId)
@@ -275,14 +290,17 @@ async function getAuctionBidStats(auctionId: string) {
 }
 
 export async function enrichLiveAuction(
-  auction: Auction
+  auction: Auction,
+  client: SupabaseClient = supabase
 ): Promise<LiveAuctionView> {
-  const stats = await getAuctionBidStats(auction.id);
+  const stats = await getAuctionBidStats(auction.id, client);
   return { auction, ...stats };
 }
 
-export async function getUpcomingAuctions(): Promise<Auction[]> {
-  const { data, error } = await supabase
+export async function getUpcomingAuctions(
+  client: SupabaseClient = supabase
+): Promise<Auction[]> {
+  const { data, error } = await client
     .from("auctions")
     .select("*")
     .eq("status", "draft")
@@ -293,15 +311,17 @@ export async function getUpcomingAuctions(): Promise<Auction[]> {
   return (data ?? []).map((row) => parseAuctionRow(row as Record<string, unknown>));
 }
 
-export async function getAuctionsPageData() {
+export async function getAuctionsPageData(
+  client: SupabaseClient = supabase
+) {
   const [liveAuctions, upcomingAuctions] = await Promise.all([
-    getAllLiveAuctions(),
-    getUpcomingAuctions(),
+    getAllLiveAuctions(client),
+    getUpcomingAuctions(client),
   ]);
 
   const [enrichedLive, bidCounts24h] = await Promise.all([
-    Promise.all(liveAuctions.map((auction) => enrichLiveAuction(auction))),
-    getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id)),
+    Promise.all(liveAuctions.map((auction) => enrichLiveAuction(auction, client))),
+    getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id), client),
   ]);
 
   // Keep ending-soonest first (matches LiveAuctionsGrid "Ending Soon" default).

@@ -194,8 +194,8 @@ export async function getVendorShopData(
     (auction) => auction.id
   );
   const [bidCounts, bidCounts24h] = await Promise.all([
-    getBidCountsForAuctions(allAuctionIds),
-    getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id)),
+    getBidCountsForAuctions(allAuctionIds, client),
+    getBidCountsInLast24Hours(liveAuctions.map((auction) => auction.id), client),
   ]);
 
   const labelMaps: AuctionLabelMaps = {
