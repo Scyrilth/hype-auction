@@ -127,9 +127,12 @@ function enrichAuctions(
   }));
 }
 
-async function loadSellerReviews(wallet: string): Promise<ReviewWithReviewer[]> {
+async function loadSellerReviews(
+  wallet: string,
+  client: SupabaseClient = supabase
+): Promise<ReviewWithReviewer[]> {
   try {
-    return await getVendorReviews(wallet);
+    return await getVendorReviews(wallet, client);
   } catch (error) {
     console.warn("[getSellerDashboardData] reviews query failed", error);
     return [];
@@ -209,7 +212,7 @@ export async function getSellerDashboardData(
 
   const [followRows, reviews] = await Promise.all([
     loadRecentFollows(wallet, client),
-    loadSellerReviews(wallet),
+    loadSellerReviews(wallet, client),
   ]);
 
   if (auctionsResponse.error) throw auctionsResponse.error;
