@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { getCategoryLabels } from "@/lib/categories";
 import type { Auction, ListingType } from "@/lib/database.types";
 import { AUCTION_CONDITIONS } from "@/lib/grading";
@@ -39,40 +41,43 @@ export async function getSellerAuctions(
   );
 }
 
-export async function createAuction({
-  sellerWallet,
-  title,
-  description,
-  category,
-  condition,
-  startPrice,
-  durationHours,
-  imageUrl,
-  additionalImages = [],
-  itemDetails = {},
-  domesticShippingUsd = 0,
-  internationalShippingUsd = 0,
-  listingType = "auction",
-  buyNowPrice,
-  goodTillCancelled = false,
-}: {
-  sellerWallet: string;
-  title: string;
-  description: string;
-  category: string;
-  condition: string;
-  startPrice: number;
-  durationHours: number;
-  imageUrl?: string;
-  additionalImages?: string[];
-  itemDetails?: Record<string, string>;
-  domesticShippingUsd?: number;
-  internationalShippingUsd?: number;
-  listingType?: ListingType;
-  buyNowPrice?: number | null;
-  goodTillCancelled?: boolean;
-}) {
-  await upsertUser(sellerWallet);
+export async function createAuction(
+  {
+    sellerWallet,
+    title,
+    description,
+    category,
+    condition,
+    startPrice,
+    durationHours,
+    imageUrl,
+    additionalImages = [],
+    itemDetails = {},
+    domesticShippingUsd = 0,
+    internationalShippingUsd = 0,
+    listingType = "auction",
+    buyNowPrice,
+    goodTillCancelled = false,
+  }: {
+    sellerWallet: string;
+    title: string;
+    description: string;
+    category: string;
+    condition: string;
+    startPrice: number;
+    durationHours: number;
+    imageUrl?: string;
+    additionalImages?: string[];
+    itemDetails?: Record<string, string>;
+    domesticShippingUsd?: number;
+    internationalShippingUsd?: number;
+    listingType?: ListingType;
+    buyNowPrice?: number | null;
+    goodTillCancelled?: boolean;
+  },
+  client: SupabaseClient = supabase
+) {
+  await upsertUser(sellerWallet, client);
 
   const isFixedPrice = listingType === "fixed_price";
   const isAuctionBuyNow = listingType === "auction_buy_now";
@@ -125,7 +130,7 @@ export async function createAuction({
       good_till_cancelled: gtc,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from("auctions")
       .insert(insertPayload)
       .select()

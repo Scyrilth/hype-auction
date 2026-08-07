@@ -738,7 +738,7 @@ export async function publishRelist({
     itemDetails: source.item_details,
     domesticShippingUsd: source.domestic_shipping_usd,
     internationalShippingUsd: source.international_shipping_usd,
-  });
+  }, client);
 
   const { error: updateError } = await client
     .from("auctions")
