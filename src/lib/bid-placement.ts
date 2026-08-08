@@ -13,7 +13,7 @@ import {
   notifyBidPlaced,
 } from "@/lib/notifications";
 import { getDefaultShippingAddress } from "@/lib/shipping";
-import { getAuthenticatedClient, supabase } from "@/lib/supabase";
+import { getNotificationClient, supabase } from "@/lib/supabase";
 import { upsertUser } from "@/lib/users";
 
 export const MAX_BID_AMOUNT_SOL = 10_000;
@@ -132,7 +132,7 @@ export async function placeBidWithValidation({
     seller_wallet: auction.seller_wallet as string,
   });
 
-  const authClient = getAuthenticatedClient(bidderWallet);
+  const authClient = getNotificationClient();
 
   const defaultAddress = await getDefaultShippingAddress(
     bidderWallet,
