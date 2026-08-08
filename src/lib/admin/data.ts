@@ -96,9 +96,10 @@ function daysBetween(from: string, to = new Date()): number {
 }
 
 async function getTopBidders(auctionIds: string[]): Promise<Map<string, string>> {
+  const db = getNotificationClient();
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("bids")
     .select("auction_id, bidder_wallet, amount")
     .in("auction_id", auctionIds)
@@ -334,10 +335,11 @@ export async function fetchAdminOverview(
 export async function fetchFlaggedOrders(
   showDummyData: boolean
 ): Promise<FlaggedOrder[]> {
+  const db = getNotificationClient();
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("auctions")
     .select("*")
     .eq("status", "ended")
@@ -393,7 +395,8 @@ export async function fetchEarlyEndedAuctions(
 export async function fetchAdminLiveAuctions(
   showDummyData: boolean
 ): Promise<AdminLiveAuctionRow[]> {
-  const { data, error } = await supabase
+  const db = getNotificationClient();
+  const { data, error } = await db
     .from("auctions")
     .select("id, title, seller_wallet, current_bid, start_price, end_time, is_dummy")
     .eq("status", "live")
@@ -408,7 +411,7 @@ export async function fetchAdminLiveAuctions(
 
   const bidCounts = new Map<string, number>();
   if (ids.length) {
-    const { data: bids, error: bidsError } = await supabase
+    const { data: bids, error: bidsError } = await db
       .from("bids")
       .select("auction_id")
       .in("auction_id", ids);

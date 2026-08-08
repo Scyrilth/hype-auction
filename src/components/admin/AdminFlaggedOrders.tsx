@@ -10,11 +10,6 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useToast } from "@/components/ui/Toast";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { getErrorMessage } from "@/lib/errors";
-import {
-  fetchAdminLiveAuctions,
-  fetchEarlyEndedAuctions,
-  fetchFlaggedOrders,
-} from "@/lib/admin/data";
 import type {
   AdminLiveAuctionRow,
   EarlyEndedAuctionRow,
@@ -47,21 +42,58 @@ export default function AdminFlaggedOrders() {
     row: FlaggedOrder;
   } | null>(null);
 
+  async function adminFlaggedOrdersFetch(params: string) {
+    const wallet = publicKey?.toBase58();
+    if (!wallet) return null;
+    const response = await fetch(`/api/admin/flagged-orders?${params}`, {
+      headers: {
+        "x-wallet-address": wallet,
+        ...getWalletAuthHeaders(),
+      },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  }
+
+  async function fetchFlaggedOrdersViaApi(showDummy: boolean) {
+    return (
+      (await adminFlaggedOrdersFetch(
+        `action=flagged&showDummyData=${showDummy ? "true" : "false"}`
+      )) ?? []
+    );
+  }
+
+  async function fetchEarlyEndedAuctionsViaApi(showDummy: boolean) {
+    return (
+      (await adminFlaggedOrdersFetch(
+        `action=early-ended&showDummyData=${showDummy ? "true" : "false"}`
+      )) ?? []
+    );
+  }
+
+  async function fetchAdminLiveAuctionsViaApi(showDummy: boolean) {
+    return (
+      (await adminFlaggedOrdersFetch(
+        `action=live&showDummyData=${showDummy ? "true" : "false"}`
+      )) ?? []
+    );
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [flagged, earlyEnded, live] = await Promise.all([
-        fetchFlaggedOrders(showDummyData),
-        fetchEarlyEndedAuctions(showDummyData),
-        fetchAdminLiveAuctions(showDummyData),
+        fetchFlaggedOrdersViaApi(showDummyData),
+        fetchEarlyEndedAuctionsViaApi(showDummyData),
+        fetchAdminLiveAuctionsViaApi(showDummyData),
       ]);
-      setRows(flagged);
-      setEarlyEndedRows(earlyEnded);
-      setLiveRows(live);
+      setRows(flagged as FlaggedOrder[]);
+      setEarlyEndedRows(earlyEnded as EarlyEndedAuctionRow[]);
+      setLiveRows(live as AdminLiveAuctionRow[]);
     } finally {
       setLoading(false);
     }
-  }, [showDummyData]);
+  }, [showDummyData, publicKey]);
 
   useEffect(() => {
     void load();
