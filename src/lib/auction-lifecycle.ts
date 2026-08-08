@@ -12,10 +12,11 @@ import {
   notifySellerAuctionNoSale,
 } from "@/lib/notifications";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { getAuthenticatedClient, supabase, type SupabaseClient } from "@/lib/supabase";
+import { getNotificationClient, supabase, type SupabaseClient } from "@/lib/supabase";
 
 function getWinnerFlowClient(sellerWallet: string): SupabaseClient {
-  return getAuthenticatedClient(sellerWallet);
+  void sellerWallet;
+  return getNotificationClient();
 }
 
 export interface AuctionSummaryPayload {
@@ -206,7 +207,7 @@ export async function createWinnerThread(
           amount: winnerBidAmount,
           threadId: thread.id,
         },
-        getAuthenticatedClient(winnerWallet)
+        getNotificationClient()
       );
       console.error("[winner-flow] createWinnerThread: winner notification sent", {
         auctionId: auction.id,
