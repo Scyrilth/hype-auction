@@ -108,8 +108,7 @@ export default function AdminUserManagement() {
           user.wallet_address,
           "Account notice",
           `A platform ${pendingAction.replace(/_/g, " ")} has been applied to your account.`,
-          "/profile",
-          client
+          "/profile"
         );
         showToast("Action applied.");
       }

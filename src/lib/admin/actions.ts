@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { getNotificationClient, supabase } from "@/lib/supabase";
 import type { SupabaseClient } from "@/lib/supabase";
 
 export type StrikeAction =
@@ -55,7 +55,7 @@ export async function sendAdminNotification(
   title: string,
   body: string,
   link?: string | null,
-  client: SupabaseClient = supabase
+  client: SupabaseClient = getNotificationClient()
 ): Promise<void> {
   const { error } = await client.from("notifications").insert({
     wallet_address: wallet,

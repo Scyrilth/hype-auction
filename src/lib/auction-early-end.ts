@@ -141,7 +141,7 @@ export async function endAuctionEarlyWithBids({
     auctionTitle: updatedAuction.title,
     amount: winningBid.amount,
     threadId,
-    client,
+    client: getNotificationClient(),
   });
 
   await notifyEarlyEndSeller({
