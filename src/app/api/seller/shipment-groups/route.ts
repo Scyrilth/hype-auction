@@ -9,7 +9,7 @@ import {
   finalizeShipmentGroupTracking,
   recordBundleRefundSent,
 } from "@/lib/shipment-groups";
-import { getAuthenticatedClient } from "@/lib/supabase";
+import { getNotificationClient } from "@/lib/supabase";
 import {
   assertWalletMatchesSession,
   requireWalletSession,
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const client = getAuthenticatedClient(sellerWallet);
+      const client = getNotificationClient();
       const group = await finalizeShipmentGroupTracking({
         groupId,
         sellerWallet,
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const client = getAuthenticatedClient(sellerWallet);
+      const client = getNotificationClient();
       const group = await recordBundleRefundSent({
         groupId,
         sellerWallet,
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      const client = getAuthenticatedClient(sellerWallet);
+      const client = getNotificationClient();
       const group = await dismissBundleRefundNudge({
         groupId,
         sellerWallet,
@@ -276,7 +276,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const client = getAuthenticatedClient(sellerWallet);
+    const client = getNotificationClient();
     const result = await createShipmentGroup({
       sellerWallet,
       auctionIds,

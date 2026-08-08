@@ -4,7 +4,7 @@ import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError, isSafeUserFacingMessage } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 import { submitThreadShippingTracking } from "@/lib/seller-orders";
-import { getAuthenticatedClient } from "@/lib/supabase";
+import { getNotificationClient } from "@/lib/supabase";
 import {
   assertWalletMatchesSession,
   requireWalletSession,
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const client = getAuthenticatedClient(sellerWallet);
+    const client = getNotificationClient();
     const thread = await submitThreadShippingTracking({
       threadId,
       sellerWallet,
