@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -9,11 +10,6 @@ import { useToast } from "@/components/ui/Toast";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
-  fetchRecentUsers,
-  fetchUserStrikes,
-  searchAdminUser,
-} from "@/lib/admin/data";
-import {
   issueBuyerStrike,
   liftBuyerRestrictions,
   sendAdminNotification,
@@ -21,6 +17,7 @@ import {
 } from "@/lib/admin/actions";
 import type { AdminUserProfile, BuyerStrikeRow, RecentUserRow } from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 function statusBadge(status: AdminUserProfile["status"]) {
   switch (status) {
@@ -36,6 +33,7 @@ function statusBadge(status: AdminUserProfile["status"]) {
 }
 
 export default function AdminUserManagement() {
+  const { publicKey } = useWallet();
   const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [query, setQuery] = useState("");
@@ -47,9 +45,36 @@ export default function AdminUserManagement() {
   const [pendingAction, setPendingAction] = useState<StrikeAction | "lift" | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  async function adminUsersFetch(params: string) {
+    const wallet = publicKey?.toBase58();
+    if (!wallet) return null;
+    const response = await fetch(`/api/admin/users?${params}`, {
+      headers: {
+        "x-wallet-address": wallet,
+        ...getWalletAuthHeaders(),
+      },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  }
+
+  async function fetchRecentUsersViaApi() {
+    return (await adminUsersFetch("action=recent")) ?? [];
+  }
+
+  async function searchAdminUserViaApi(query: string) {
+    return await adminUsersFetch(`action=search&query=${encodeURIComponent(query)}`);
+  }
+
+  async function fetchUserStrikesViaApi(wallet: string) {
+    return (await adminUsersFetch(`action=strikes&wallet=${encodeURIComponent(wallet)}`)) ?? [];
+  }
+
   useEffect(() => {
-    void fetchRecentUsers().then(setRecent);
-  }, []);
+    void fetchRecentUsersViaApi().then((rows) => {
+      setRecent(rows as RecentUserRow[]);
+    });
+  }, [publicKey]);
 
   const runSearch = useCallback(async () => {
     if (!query.trim()) {
@@ -58,15 +83,17 @@ export default function AdminUserManagement() {
     }
     setLoading(true);
     try {
-      const found = await searchAdminUser(query);
+      const found = (await searchAdminUserViaApi(query)) as AdminUserProfile | null;
       setUser(found);
       if (found) {
-        setStrikes(await fetchUserStrikes(found.wallet_address));
+        setStrikes(
+          (await fetchUserStrikesViaApi(found.wallet_address)) as BuyerStrikeRow[]
+        );
       }
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, publicKey]);
 
   const executeAction = async () => {
     if (!user || !pendingAction) return;
@@ -86,8 +113,12 @@ export default function AdminUserManagement() {
         );
         showToast("Action applied.");
       }
-      setStrikes(await fetchUserStrikes(user.wallet_address));
-      const refreshed = await searchAdminUser(user.wallet_address);
+      setStrikes(
+        (await fetchUserStrikesViaApi(user.wallet_address)) as BuyerStrikeRow[]
+      );
+      const refreshed = (await searchAdminUserViaApi(
+        user.wallet_address
+      )) as AdminUserProfile | null;
       if (refreshed) setUser(refreshed);
     } catch (err) {
       logSupabaseError("AdminUserManagement.action", err);
@@ -238,10 +269,13 @@ export default function AdminUserManagement() {
                 type="button"
                 onClick={() => {
                   setQuery(u.username ?? u.wallet);
-                  void searchAdminUser(u.username ?? u.wallet).then((found) => {
-                    if (found) {
-                      setUser(found);
-                      void fetchUserStrikes(found.wallet_address).then(setStrikes);
+                  void searchAdminUserViaApi(u.username ?? u.wallet).then((found) => {
+                    const profile = found as AdminUserProfile | null;
+                    if (profile) {
+                      setUser(profile);
+                      void fetchUserStrikesViaApi(profile.wallet_address).then((rows) => {
+                        setStrikes(rows as BuyerStrikeRow[]);
+                      });
                     }
                   });
                 }}

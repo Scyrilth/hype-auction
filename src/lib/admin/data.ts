@@ -13,7 +13,7 @@ import {
 import { fetchEarlyEndedAuctions as loadEarlyEndedAuctions } from "@/lib/auction-early-end";
 import { getEffectiveBid } from "@/lib/parse-auction";
 import { parseAuctionRow } from "@/lib/parse-auction";
-import { supabase } from "@/lib/supabase";
+import { supabase, getNotificationClient } from "@/lib/supabase";
 
 import { isRealAuction, passesDummyFilter } from "./filters";
 import {
@@ -688,7 +688,8 @@ function deriveUserStatus(strikes: BuyerStrikeRow[]): AdminUserProfile["status"]
 }
 
 export async function fetchRecentUsers(): Promise<RecentUserRow[]> {
-  const { data: users, error } = await supabase
+  const db = getNotificationClient();
+  const { data: users, error } = await db
     .from("users")
     .select("wallet_address, username, avatar_url, created_at")
     .order("created_at", { ascending: false })
@@ -698,7 +699,7 @@ export async function fetchRecentUsers(): Promise<RecentUserRow[]> {
 
   const wallets = (users ?? []).map((u) => u.wallet_address as string);
   const { data: strikes } = wallets.length
-    ? await supabase
+    ? await db
         .from("buyer_strikes")
         .select("*")
         .in("wallet_address", wallets)
@@ -729,12 +730,13 @@ export async function fetchRecentUsers(): Promise<RecentUserRow[]> {
 export async function searchAdminUser(
   query: string
 ): Promise<AdminUserProfile | null> {
+  const db = getNotificationClient();
   const trimmed = query.trim().replace(/^@+/, "");
   if (!trimmed) return null;
 
   let userRow = null;
 
-  const byWallet = await supabase
+  const byWallet = await db
     .from("users")
     .select("*")
     .eq("wallet_address", trimmed)
@@ -742,7 +744,7 @@ export async function searchAdminUser(
 
   if (byWallet.data) userRow = byWallet.data;
   else {
-    const byUsername = await supabase
+    const byUsername = await db
       .from("users")
       .select("*")
       .ilike("username", trimmed)
@@ -755,24 +757,24 @@ export async function searchAdminUser(
   const wallet = userRow.wallet_address as string;
 
   const [listings, sales, bids, reviews, strikes] = await Promise.all([
-    supabase
+    db
       .from("auctions")
       .select("id", { count: "exact", head: true })
       .eq("seller_wallet", wallet),
-    supabase
+    db
       .from("auctions")
       .select("id", { count: "exact", head: true })
       .eq("seller_wallet", wallet)
       .in("escrow_state", ["released", "complete"]),
-    supabase
+    db
       .from("bids")
       .select("id", { count: "exact", head: true })
       .eq("bidder_wallet", wallet),
-    supabase
+    db
       .from("reviews")
       .select("id", { count: "exact", head: true })
       .or(`vendor_wallet.eq.${wallet},reviewer_wallet.eq.${wallet}`),
-    supabase.from("buyer_strikes").select("*").eq("wallet_address", wallet),
+    db.from("buyer_strikes").select("*").eq("wallet_address", wallet),
   ]);
 
   const strikeRows = (strikes.data ?? []) as BuyerStrikeRow[];
@@ -812,7 +814,8 @@ export async function searchAdminUser(
 }
 
 export async function fetchUserStrikes(wallet: string): Promise<BuyerStrikeRow[]> {
-  const { data, error } = await supabase
+  const db = getNotificationClient();
+  const { data, error } = await db
     .from("buyer_strikes")
     .select("*")
     .eq("wallet_address", wallet)
