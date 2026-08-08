@@ -370,6 +370,7 @@ export async function initiatePayment(
         await lockThreadShippingAddressForAuction({
           threadId: resolvedThreadId,
           auctionId,
+          client,
         });
       } catch (lockError) {
         console.error("Failed to lock shipping address:", lockError);
