@@ -178,7 +178,9 @@ export async function placeBidWithValidation({
     throw new Error("Unable to place bid. Please try again.");
   }
 
-  const { error: bidError } = await supabase.from("bids").insert({
+  const writeClient = getNotificationClient();
+
+  const { error: bidError } = await writeClient.from("bids").insert({
     auction_id: auctionId,
     bidder_wallet: bidderWallet,
     amount,
@@ -189,7 +191,7 @@ export async function placeBidWithValidation({
     throw new Error("Unable to place bid. Please try again.");
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await writeClient
     .from("auctions")
     .update({ current_bid: amount })
     .eq("id", auctionId);
