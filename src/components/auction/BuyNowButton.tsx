@@ -239,6 +239,7 @@ export default function BuyNowButton({
     void verifyBuyNowPaymentShipping({
       auctionId: auction.id,
       buyerWallet: wallet,
+      client,
     })
       .then(({ shippingUsd }) =>
         calculatePaymentBreakdown(buyNowPrice, shippingUsd)
@@ -252,7 +253,7 @@ export default function BuyNowButton({
     return () => {
       cancelled = true;
     };
-  }, [auction.id, buyNowPrice, threadId, wallet]);
+  }, [auction.id, buyNowPrice, client, threadId, wallet]);
 
   if (!visible) return null;
 

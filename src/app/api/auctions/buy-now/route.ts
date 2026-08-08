@@ -8,6 +8,7 @@ import {
 import { corsHeaders } from "@/lib/cors";
 import { logSupabaseError } from "@/lib/errors";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
+import { getNotificationClient } from "@/lib/supabase";
 import {
   assertWalletMatchesSession,
   requireWalletSession,
@@ -90,6 +91,7 @@ export async function POST(request: Request) {
         auctionId,
         buyerWallet,
         addressId,
+        client: getNotificationClient(),
       });
       return NextResponse.json({ success: true, ...result }, { headers });
     }
@@ -99,6 +101,7 @@ export async function POST(request: Request) {
         auctionId,
         buyerWallet,
         threadId: threadId || null,
+        client: getNotificationClient(),
       });
       return NextResponse.json({ success: true, ...result }, { headers });
     }
