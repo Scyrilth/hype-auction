@@ -118,9 +118,10 @@ async function getTopBidders(auctionIds: string[]): Promise<Map<string, string>>
 async function getThreadIdsByAuction(
   auctionIds: string[]
 ): Promise<Map<string, string>> {
+  const db = getNotificationClient();
   if (!auctionIds.length) return new Map();
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from("message_threads")
     .select("id, auction_id")
     .in("auction_id", auctionIds);
@@ -442,7 +443,8 @@ export async function fetchDisputes(
   resolved: boolean,
   solUsdRate: number
 ): Promise<DisputeRow[]> {
-  const { data, error } = await supabase
+  const db = getNotificationClient();
+  const { data, error } = await db
     .from("auctions")
     .select("*")
     .in(
@@ -473,7 +475,7 @@ export async function fetchDisputes(
   const [topBidders, threads, sellers] = await Promise.all([
     getTopBidders(ids),
     getThreadIdsByAuction(ids),
-    supabase
+    db
       .from("users")
       .select("wallet_address, username")
       .in(
@@ -829,7 +831,8 @@ export async function fetchUserStrikes(wallet: string): Promise<BuyerStrikeRow[]
 }
 
 export async function fetchAdminThreadMessages(threadId: string) {
-  const { data, error } = await supabase
+  const db = getNotificationClient();
+  const { data, error } = await db
     .from("direct_messages")
     .select("*")
     .eq("thread_id", threadId)

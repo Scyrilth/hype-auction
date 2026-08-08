@@ -1,5 +1,6 @@
 "use client";
 
+import { useWallet } from "@solana/wallet-adapter-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -10,15 +11,16 @@ import { useToast } from "@/components/ui/Toast";
 import { getErrorMessage } from "@/lib/errors";
 import { useAdminEscrow } from "@/hooks/useAdminEscrow";
 import { useSolPrice } from "@/hooks/useSolPrice";
-import { fetchAdminThreadMessages, fetchDisputes } from "@/lib/admin/data";
 import type { DisputeRow } from "@/lib/admin/types";
 import { getProfileSlug } from "@/lib/profile-links";
 import { shortenAddress } from "@/lib/format";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 import { useAdminContext } from "./AdminContext";
 
 export default function AdminDisputes() {
   const { showDummyData } = useAdminContext();
+  const { publicKey } = useWallet();
   const { solPrice } = useSolPrice();
   const rate = solPrice ?? 132.5;
   const { showToast } = useToast();
@@ -33,14 +35,42 @@ export default function AdminDisputes() {
     sellerWins: boolean;
   } | null>(null);
 
+  async function adminDisputesFetch(params: string) {
+    const wallet = publicKey?.toBase58();
+    if (!wallet) return null;
+    const response = await fetch(`/api/admin/disputes?${params}`, {
+      headers: {
+        "x-wallet-address": wallet,
+        ...getWalletAuthHeaders(),
+      },
+    });
+    if (!response.ok) return null;
+    return response.json();
+  }
+
+  async function fetchDisputesViaApi(showDummy: boolean, resolved: boolean, rate: number) {
+    const params = new URLSearchParams({
+      action: "disputes",
+      showDummyData: String(showDummy),
+      resolved: String(resolved),
+      solUsdRate: String(rate),
+    });
+    return (await adminDisputesFetch(params.toString())) ?? [];
+  }
+
+  async function fetchAdminThreadMessagesViaApi(threadId: string) {
+    const params = new URLSearchParams({ action: "thread-messages", threadId });
+    return (await adminDisputesFetch(params.toString())) ?? [];
+  }
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await fetchDisputes(showDummyData, tab === "resolved", rate));
+      setRows(await fetchDisputesViaApi(showDummyData, tab === "resolved", rate));
     } finally {
       setLoading(false);
     }
-  }, [showDummyData, tab, rate]);
+  }, [showDummyData, tab, rate, publicKey]);
 
   useEffect(() => {
     void load();
@@ -50,7 +80,7 @@ export default function AdminDisputes() {
     const next = expanded === row.auctionId ? null : row.auctionId;
     setExpanded(next);
     if (next && row.threadId && !messages[row.auctionId]) {
-      const msgs = await fetchAdminThreadMessages(row.threadId);
+      const msgs = await fetchAdminThreadMessagesViaApi(row.threadId);
       setMessages((m) => ({ ...m, [row.auctionId]: msgs }));
     }
   };
