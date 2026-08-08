@@ -147,10 +147,11 @@ export async function fetchAdminOverview(
   topVendors: AdminVendorRow[];
   topCategories: AdminCategoryRow[];
 }> {
+  const db = getNotificationClient();
   const [auctionsRes, usersRes, liveRes] = await Promise.all([
-    supabase.from("auctions").select("*"),
-    supabase.from("users").select("wallet_address, created_at"),
-    supabase
+    db.from("auctions").select("*"),
+    db.from("users").select("wallet_address, created_at"),
+    db
       .from("auctions")
       .select("id", { count: "exact", head: true })
       .eq("status", "live"),
@@ -259,7 +260,7 @@ export async function fetchAdminOverview(
 
   const vendorWallets = [...vendorStats.keys()];
   const { data: vendorUsers } = vendorWallets.length
-    ? await supabase
+    ? await db
         .from("users")
         .select("wallet_address, username")
         .in("wallet_address", vendorWallets)

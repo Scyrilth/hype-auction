@@ -1,16 +1,36 @@
 "use client";
 
+import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import FiatValue from "@/components/ui/FiatValue";
 import { useSolPrice } from "@/hooks/useSolPrice";
-import { fetchAdminOverview } from "@/lib/admin/data";
+import type {
+  AdminCategoryGmv,
+  AdminCategoryRow,
+  AdminGmvMonth,
+  AdminOverviewStats,
+  AdminStatusCount,
+  AdminUsersMonth,
+  AdminVendorRow,
+} from "@/lib/admin/types";
 import { shortenAddress } from "@/lib/format";
 import { getProfileSlug } from "@/lib/profile-links";
+import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
 
 import { useAdminContext } from "./AdminContext";
+
+type AdminOverviewData = {
+  stats: AdminOverviewStats;
+  gmvByMonth: AdminGmvMonth[];
+  usersByMonth: AdminUsersMonth[];
+  categoryGmv: AdminCategoryGmv[];
+  statusCounts: AdminStatusCount[];
+  topVendors: AdminVendorRow[];
+  topCategories: AdminCategoryRow[];
+};
 
 const AdminOverviewCharts = dynamic(
   () => import("@/components/admin/AdminOverviewCharts"),
@@ -19,15 +39,36 @@ const AdminOverviewCharts = dynamic(
 
 export default function AdminOverview() {
   const { showDummyData } = useAdminContext();
+  const { publicKey } = useWallet();
   const { solPrice } = useSolPrice();
   const rate = solPrice ?? 132.5;
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchAdminOverview>> | null>(null);
+  const [data, setData] = useState<AdminOverviewData | null>(null);
+
+  async function fetchAdminOverviewViaApi(
+    showDummy: boolean,
+    rate: number
+  ): Promise<AdminOverviewData | null> {
+    const wallet = publicKey?.toBase58();
+    if (!wallet) return null;
+    const params = new URLSearchParams({
+      showDummyData: String(showDummy),
+      solUsdRate: String(rate),
+    });
+    const response = await fetch(`/api/admin/overview?${params}`, {
+      headers: {
+        "x-wallet-address": wallet,
+        ...getWalletAuthHeaders(),
+      },
+    });
+    if (!response.ok) return null;
+    return response.json() as Promise<AdminOverviewData>;
+  }
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    void fetchAdminOverview(showDummyData, rate)
+    void fetchAdminOverviewViaApi(showDummyData, rate)
       .then((result) => {
         if (!cancelled) setData(result);
       })
@@ -37,7 +78,7 @@ export default function AdminOverview() {
     return () => {
       cancelled = true;
     };
-  }, [showDummyData, rate]);
+  }, [showDummyData, rate, publicKey]);
 
   if (loading || !data) {
     return (
