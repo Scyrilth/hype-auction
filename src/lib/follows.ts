@@ -12,7 +12,7 @@ export async function isFollowing(
     .from("follows")
     .select("follower_wallet")
     .eq("follower_wallet", followerWallet)
-    .eq("following_wallet", followingWallet)
+    .eq("vendor_wallet", followingWallet)
     .maybeSingle();
 
   if (error) throw error;
@@ -91,7 +91,7 @@ export async function toggleFollow(
       .from("follows")
       .delete()
       .eq("follower_wallet", followerWallet)
-      .eq("following_wallet", followingWallet);
+      .eq("vendor_wallet", followingWallet);
 
     if (deleteError) throw deleteError;
 
@@ -117,7 +117,7 @@ export async function toggleFollow(
 
   const { error: insertError } = await client.from("follows").insert({
     follower_wallet: followerWallet,
-    following_wallet: followingWallet,
+    vendor_wallet: followingWallet,
   });
 
   if (insertError) throw insertError;

@@ -141,7 +141,7 @@ export interface Message {
 
 export interface Follow {
   follower_wallet: string;
-  following_wallet: string;
+  vendor_wallet: string;
   created_at: string;
 }
 
@@ -264,7 +264,7 @@ export interface Database {
       follows: {
         Row: Follow;
         Insert: Omit<Follow, "created_at"> & { created_at?: string };
-        Update: Partial<Omit<Follow, "follower_wallet" | "following_wallet">>;
+        Update: Partial<Omit<Follow, "follower_wallet" | "vendor_wallet">>;
         Relationships: [];
       };
       reviews: {

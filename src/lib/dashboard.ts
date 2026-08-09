@@ -143,7 +143,7 @@ async function loadRecentFollows(wallet: string, client: SupabaseClient) {
   const response = await client
     .from("follows")
     .select("follower_wallet, created_at")
-    .eq("following_wallet", wallet)
+    .eq("vendor_wallet", wallet)
     .order("created_at", { ascending: false })
     .limit(20);
 
