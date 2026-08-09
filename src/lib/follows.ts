@@ -28,7 +28,12 @@ export async function toggleFollow(
     throw new Error("You cannot follow yourself.");
   }
 
-  await upsertUser(followerWallet, client);
+  try {
+    await upsertUser(followerWallet, client);
+  } catch (upsertError) {
+    console.error("[toggleFollow] upsertUser failed", upsertError);
+    throw upsertError;
+  }
 
   const { data: rpcResult, error: rpcError } = await client.rpc(
     "toggle_follow",
@@ -38,6 +43,15 @@ export async function toggleFollow(
     }
   );
 
+  if (rpcError) {
+    console.error("[toggleFollow] RPC error", {
+      message: rpcError.message,
+      code: rpcError.code,
+      details: rpcError.details,
+      hint: rpcError.hint,
+    });
+  }
+
   if (!rpcError) {
     const { data: vendor, error: vendorError } = await client
       .from("users")
@@ -45,7 +59,10 @@ export async function toggleFollow(
       .eq("wallet_address", followingWallet)
       .single();
 
-    if (vendorError) throw vendorError;
+    if (vendorError) {
+      console.error("[toggleFollow] followers_count select failed", vendorError);
+      throw vendorError;
+    }
 
     const isFollowingNow = Boolean(rpcResult);
     if (isFollowingNow) {

@@ -7,6 +7,7 @@ import { notifyListingLive } from "@/lib/notifications";
 import { isRateLimited, RATE_LIMIT_MESSAGE } from "@/lib/rate-limiter";
 import { sanitizeText } from "@/lib/sanitize";
 import { createAuction } from "@/lib/seller";
+import { getNotificationClient } from "@/lib/supabase";
 import {
   assertWalletMatchesSession,
   requireWalletSession,
@@ -204,7 +205,7 @@ export async function POST(request: Request) {
       listingType,
       buyNowPrice: isAuctionBuyNow || isFixedPrice ? buyNowPrice : null,
       goodTillCancelled,
-    });
+    }, getNotificationClient());
 
     try {
       await notifyListingLive({
