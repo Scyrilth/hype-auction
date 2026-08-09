@@ -12,7 +12,7 @@ import {
   notifyNewMessage,
   notifyTransactionComplete,
 } from "@/lib/notifications";
-import { supabase, type SupabaseClient } from "@/lib/supabase";
+import { getNotificationClient, supabase, type SupabaseClient } from "@/lib/supabase";
 import { incrementVendorSaleStats } from "@/lib/vendors";
 import { upsertUser } from "@/lib/users";
 import { getWalletAuthHeaders } from "@/lib/wallet-auth-client";
@@ -983,7 +983,7 @@ export async function confirmReceipt(
       await incrementVendorSaleStats(
         existingThread.seller_wallet as string,
         saleAmount,
-        client
+        getNotificationClient()
       );
     }
 

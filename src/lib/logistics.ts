@@ -65,12 +65,13 @@ async function notifyBuyerShipment({
       buyerWallet,
       sellerWallet,
       auctionTitle,
-      { skipWelcomeMessage: true }
+      { skipWelcomeMessage: true },
+      client
     );
     threadId = created.id;
   }
 
-  await insertThreadSystemMessage(threadId, content, sellerWallet);
+  await insertThreadSystemMessage(threadId, content, sellerWallet, client);
 
   await notifyItemShipped({
     buyerWallet,
