@@ -35,6 +35,8 @@ export async function placeBidWithValidation({
   bidderWallet: string;
   amount: number;
 }) {
+  const writeClient = getNotificationClient();
+
   if (!auctionId?.trim()) {
     throw new BidPlacementError("Auction is required.");
   }
@@ -171,14 +173,12 @@ export async function placeBidWithValidation({
   }
 
   try {
-    await upsertUser(bidderWallet);
-    await upsertUser(auction.seller_wallet as string);
+    await upsertUser(bidderWallet, writeClient);
+    await upsertUser(auction.seller_wallet as string, writeClient);
   } catch (userError) {
     logSupabaseError("placeBidWithValidation: upsert user", userError);
     throw new Error("Unable to place bid. Please try again.");
   }
-
-  const writeClient = getNotificationClient();
 
   const { error: bidError } = await writeClient.from("bids").insert({
     auction_id: auctionId,
@@ -208,7 +208,7 @@ export async function placeBidWithValidation({
     previousTopBid.bidder_wallet !== bidderWallet
   ) {
     try {
-      await upsertUser(previousTopBid.bidder_wallet as string);
+      await upsertUser(previousTopBid.bidder_wallet as string, writeClient);
     } catch (userError) {
       logSupabaseError("placeBidWithValidation: upsert previous bidder", userError);
     }
