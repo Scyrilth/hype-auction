@@ -1,25 +1,33 @@
 -- ============================================================================
--- REVERT SCRIPT — restores RLS policies to their exact pre-S32 state
+-- REVERT SCRIPT (v2) — restores RLS policies to their exact pre-S32 state
 -- ============================================================================
 -- Captures the original policy definitions exactly as pulled from pg_policies
--- at the START of the S32 RLS policy-writing phase, BEFORE any of tonight's
--- changes were applied. Run this if live testing next month reveals that any
--- of tonight's tightened policies broke real functionality.
+-- at the START of the S32 RLS policy-writing phase, BEFORE any changes were
+-- applied. Run this if live testing next month (once funded) reveals that
+-- any of the S32 policy changes broke real functionality.
 --
--- Covers all 8 tables touched so far in the S32 RLS policy-writing phase:
+-- Covers ALL 18 tables touched during the S32 RLS policy-writing phase:
 -- escrow_transactions, buyer_strikes, direct_messages, message_threads,
--- shipping_addresses, shipping_profiles, shipment_groups, notifications.
+-- shipping_addresses, shipping_profiles, shipment_groups, notifications,
+-- bids, users, auctions, messages, reviews, follows, watchlist,
+-- collections, collection_items, collection_likes, collection_comments.
+--
+-- This SUPERSEDES the original supabase/revert-rls-s32.sql, which only
+-- covered the first 8 tables. This version (v2) is the complete safety net.
 --
 -- NOTE: this restores the OLD (weaker) policies, including the dead
--- app.wallet checks and the redundant permissive `true` policies on
--- shipping_profiles/shipment_groups/notifications that were bugs. This is a
--- deliberate full revert to the exact prior state, not a "fixed" version —
--- use only if tonight's changes need to be fully undone.
+-- app.wallet checks, redundant permissive `true` policies, and duplicate
+-- SELECT policies that were bugs. This is a deliberate full revert to the
+-- exact prior state, not a "fixed" version — use only if S32's changes need
+-- to be fully undone.
 --
 -- Does NOT touch: request_verified_wallet_address(), verify_wallet_jwt(),
--- or any app-code changes (those are safe to leave in place regardless of
--- which RLS policies are active, and reverting app code separately via git
--- is a different concern from reverting SQL).
+-- or any app-code changes made during S32 (e.g. bid-placement.ts,
+-- logistics.ts, messages.ts, seller.ts, api/listings/route.ts client fixes).
+-- Those app-code changes are safe to leave in place regardless of which RLS
+-- policies are active — reverting SQL and reverting app code are separate
+-- concerns. If app code also needs reverting, use git to check out the
+-- relevant commits individually.
 -- ============================================================================
 
 -- ── escrow_transactions ──────────────────────────────────────────────────
@@ -178,6 +186,176 @@ FOR UPDATE
 USING (true)
 WITH CHECK (true);
 
+-- ── bids ─────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "bids are viewable by everyone" ON public.bids;
+DROP POLICY IF EXISTS "bids insert by bidder" ON public.bids;
+
+CREATE POLICY "bids are viewable by everyone"
+ON public.bids
+FOR SELECT
+USING (true);
+
+CREATE POLICY "bids can be inserted by anyone"
+ON public.bids
+FOR INSERT
+WITH CHECK (true);
+
+-- ── users ────────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "users can update own record only" ON public.users;
+
+CREATE POLICY "users can update own record only"
+ON public.users
+FOR UPDATE
+USING (
+  wallet_address = ((current_setting('request.headers'::text, true))::json ->> 'x-wallet-address'::text)
+);
+-- Note: "users are viewable by everyone" (SELECT true) and
+-- "users can be created by anyone" (INSERT true) were never changed by S32
+-- and remain in place regardless.
+
+-- ── auctions ─────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "auctions are viewable by everyone" ON public.auctions;
+DROP POLICY IF EXISTS "auctions insert by owner" ON public.auctions;
+DROP POLICY IF EXISTS "auctions update by owner buyer or expiry" ON public.auctions;
+
+CREATE POLICY "auctions are viewable by everyone"
+ON public.auctions
+FOR SELECT
+USING (true);
+
+CREATE POLICY "auctions can be created by anyone"
+ON public.auctions
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "auctions current_bid can be updated"
+ON public.auctions
+FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+-- ── messages (public auction chat) ──────────────────────────────────────
+DROP POLICY IF EXISTS "messages are viewable by everyone" ON public.messages;
+DROP POLICY IF EXISTS "messages insert by sender" ON public.messages;
+
+CREATE POLICY "messages are viewable by everyone"
+ON public.messages
+FOR SELECT
+USING (true);
+
+CREATE POLICY "messages can be inserted by anyone"
+ON public.messages
+FOR INSERT
+WITH CHECK (true);
+
+-- ── reviews ──────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "reviews are viewable by everyone" ON public.reviews;
+DROP POLICY IF EXISTS "reviews insert by reviewer" ON public.reviews;
+DROP POLICY IF EXISTS "reviews update by reviewer or vendor" ON public.reviews;
+
+CREATE POLICY "reviews are viewable by everyone"
+ON public.reviews
+FOR SELECT
+USING (true);
+
+CREATE POLICY "reviews viewable by everyone"
+ON public.reviews
+FOR SELECT
+USING (true);
+
+CREATE POLICY "reviews can be inserted by anyone"
+ON public.reviews
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "reviews can be updated by anyone"
+ON public.reviews
+FOR UPDATE
+USING (true)
+WITH CHECK (true);
+
+-- ── follows ──────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "follows viewable by everyone" ON public.follows;
+DROP POLICY IF EXISTS "follows insert by follower" ON public.follows;
+DROP POLICY IF EXISTS "follows delete by follower" ON public.follows;
+
+CREATE POLICY "follows viewable by everyone"
+ON public.follows
+FOR SELECT
+USING (true);
+
+CREATE POLICY "follows can be inserted by anyone"
+ON public.follows
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "follows can be deleted by anyone"
+ON public.follows
+FOR DELETE
+USING (true);
+
+-- ── watchlist ────────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "watchlist owner only" ON public.watchlist;
+
+CREATE POLICY "watchlist is viewable"
+ON public.watchlist
+FOR SELECT
+USING (true);
+
+CREATE POLICY "watchlist viewable by owner"
+ON public.watchlist
+FOR ALL
+USING (true);
+
+CREATE POLICY "watchlist can be inserted"
+ON public.watchlist
+FOR INSERT
+WITH CHECK (true);
+
+CREATE POLICY "watchlist can be deleted"
+ON public.watchlist
+FOR DELETE
+USING (true);
+
+-- ── collections ──────────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "collections viewable by everyone" ON public.collections;
+DROP POLICY IF EXISTS "collections insert by owner" ON public.collections;
+DROP POLICY IF EXISTS "collections update by owner or view count" ON public.collections;
+DROP POLICY IF EXISTS "collections delete by owner" ON public.collections;
+
+CREATE POLICY "collections access"
+ON public.collections
+FOR ALL
+USING (true);
+
+-- ── collection_items ─────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "collection_items viewable by everyone" ON public.collection_items;
+DROP POLICY IF EXISTS "collection_items owner only write" ON public.collection_items;
+
+CREATE POLICY "collection_items access"
+ON public.collection_items
+FOR ALL
+USING (true);
+
+-- ── collection_likes ─────────────────────────────────────────────────────
+DROP POLICY IF EXISTS "collection_likes viewable by everyone" ON public.collection_likes;
+DROP POLICY IF EXISTS "collection_likes insert by liker" ON public.collection_likes;
+DROP POLICY IF EXISTS "collection_likes delete by liker" ON public.collection_likes;
+
+CREATE POLICY "collection_likes access"
+ON public.collection_likes
+FOR ALL
+USING (true);
+
+-- ── collection_comments ──────────────────────────────────────────────────
+DROP POLICY IF EXISTS "collection_comments viewable by everyone" ON public.collection_comments;
+DROP POLICY IF EXISTS "collection_comments insert by commenter" ON public.collection_comments;
+
+CREATE POLICY "collection_comments access"
+ON public.collection_comments
+FOR ALL
+USING (true);
+
 -- ============================================================================
--- END REVERT SCRIPT
+-- END REVERT SCRIPT (v2)
 -- ============================================================================
