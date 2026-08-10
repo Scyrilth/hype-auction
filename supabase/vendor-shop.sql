@@ -1,4 +1,10 @@
 -- Vendor shop system — run in Supabase SQL Editor
+-- NOTE (S32): This file no longer reflects the live database exactly.
+-- The "follows" table's real column is vendor_wallet, not following_wallet
+-- (fixed below to match). The RLS policies section below is HISTORICAL —
+-- superseded by supabase/revert-rls-s32.sql and the live policies applied
+-- directly in Supabase during the S32 RLS hardening pass. Do not treat this
+-- file's RLS section as current; verify against a live pg_policies query.
 
 -- ---------------------------------------------------------------------------
 -- Extend users for vendor profiles
@@ -25,16 +31,17 @@ create unique index if not exists users_username_lower_idx
 -- follows
 -- ---------------------------------------------------------------------------
 create table if not exists public.follows (
+  id               uuid primary key default gen_random_uuid(),
   follower_wallet  text not null references public.users (wallet_address) on delete cascade,
-  following_wallet text not null references public.users (wallet_address) on delete cascade,
+  vendor_wallet    text not null references public.users (wallet_address) on delete cascade,
   created_at       timestamptz not null default now(),
 
-  primary key (follower_wallet, following_wallet),
-  constraint follows_no_self check (follower_wallet <> following_wallet)
+  unique (follower_wallet, vendor_wallet),
+  constraint follows_no_self check (follower_wallet <> vendor_wallet)
 );
 
-create index if not exists follows_following_wallet_idx
-  on public.follows (following_wallet);
+create index if not exists follows_vendor_wallet_idx
+  on public.follows (vendor_wallet);
 
 -- ---------------------------------------------------------------------------
 -- reviews
@@ -111,11 +118,11 @@ begin
     select 1
     from public.follows
     where follower_wallet = p_follower
-      and following_wallet = p_following
+      and vendor_wallet = p_following
   ) then
     delete from public.follows
     where follower_wallet = p_follower
-      and following_wallet = p_following;
+      and vendor_wallet = p_following;
 
     update public.users
     set followers_count = greatest(followers_count - 1, 0)
@@ -124,7 +131,7 @@ begin
     return false;
   end if;
 
-  insert into public.follows (follower_wallet, following_wallet)
+  insert into public.follows (follower_wallet, vendor_wallet)
   values (p_follower, p_following);
 
   update public.users
