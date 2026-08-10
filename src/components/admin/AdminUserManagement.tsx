@@ -7,11 +7,8 @@ import { adminActionButtonClass } from "@/components/admin/admin-button-styles";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { useToast } from "@/components/ui/Toast";
-import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { getErrorMessage, logSupabaseError } from "@/lib/errors";
 import {
-  issueBuyerStrike,
-  liftBuyerRestrictions,
   sendAdminNotification,
   type StrikeAction,
 } from "@/lib/admin/actions";
@@ -34,7 +31,6 @@ function statusBadge(status: AdminUserProfile["status"]) {
 
 export default function AdminUserManagement() {
   const { publicKey } = useWallet();
-  const { client } = useSupabaseClient();
   const { showToast } = useToast();
   const [query, setQuery] = useState("");
   const [user, setUser] = useState<AdminUserProfile | null>(null);
@@ -99,11 +95,32 @@ export default function AdminUserManagement() {
     if (!user || !pendingAction) return;
     setActionLoading(true);
     try {
+      const wallet = publicKey?.toBase58();
+      if (!wallet) throw new Error("Wallet not connected.");
+
       if (pendingAction === "lift") {
-        await liftBuyerRestrictions(user.wallet_address, client);
+        const response = await fetch("/api/admin/user-actions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-wallet-address": wallet,
+            ...getWalletAuthHeaders(),
+          },
+          body: JSON.stringify({ action: "lift", wallet: user.wallet_address }),
+        });
+        if (!response.ok) throw new Error("Failed to lift restrictions.");
         showToast("Restrictions lifted.");
       } else {
-        await issueBuyerStrike(user.wallet_address, pendingAction, null, client);
+        const response = await fetch("/api/admin/user-actions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-wallet-address": wallet,
+            ...getWalletAuthHeaders(),
+          },
+          body: JSON.stringify({ action: "strike", wallet: user.wallet_address, reason: pendingAction }),
+        });
+        if (!response.ok) throw new Error("Failed to apply strike.");
         await sendAdminNotification(
           user.wallet_address,
           "Account notice",
