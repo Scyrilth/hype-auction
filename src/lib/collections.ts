@@ -308,20 +308,9 @@ export async function incrementCollectionViews(
   id: string,
   client: SupabaseClient = supabase
 ): Promise<void> {
-  const { data, error: fetchError } = await client
-    .from("collections")
-    .select("view_count")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (fetchError) throw fetchError;
-  if (!data) return;
-
-  const { error } = await client
-    .from("collections")
-    .update({ view_count: Number(data.view_count ?? 0) + 1 })
-    .eq("id", id);
-
+  const { error } = await client.rpc("increment_collection_views", {
+    p_collection_id: id,
+  });
   if (error) throw error;
 }
 
